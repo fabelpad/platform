@@ -1,5 +1,7 @@
 # Fabelpad — website, webapp en native Android
 
+> Historische prototypeoverdracht. De actuele implementatie, DG-runtime en verificatie staan in [PROJECTPROFIEL.md](PROJECTPROFIEL.md), [RUNBOOK.md](RUNBOOK.md) en [LOKALE-VALIDATIE.md](LOKALE-VALIDATIE.md).
+
 Datum: 4 november 2026. Dit document beschrijft het prototype en de route naar de productie-implementatie op de eigen development-VPS. Broncode, bestaande illustraties, verhaalteksten en het mobiele starterproject horen bij dezelfde repository.
 
 ## Status en ontwerpbesluiten

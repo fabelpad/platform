@@ -1,4 +1,3 @@
-/// <reference types="vite/client" />
 
 export interface BeforeInstallPromptEvent extends Event {
   readonly platforms?: string[];
@@ -8,7 +7,7 @@ export interface BeforeInstallPromptEvent extends Event {
 
 /** Registers the offline shell on the published app, never on the dev server. */
 export function registerPwa(): void {
-  if (!import.meta.env.PROD || typeof window === 'undefined' || !('serviceWorker' in navigator)) return;
+  if (process.env.NODE_ENV !== 'production' || typeof window === 'undefined' || !('serviceWorker' in navigator)) return;
 
   const register = () => {
     navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(() => {

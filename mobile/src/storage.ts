@@ -1,8 +1,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { Store } from './types';
+import { createStorageQueue } from './storageQueue';
 
 const KEY = 'fabelpad-native-prototype-v1';
-let writes: Promise<void> = Promise.resolve();
+const queue = createStorageQueue(AsyncStorage, KEY);
 export function freshStore(contentVersion: string): Store {
   return { schemaVersion: 1, contentVersion, activeId: 'demo-child', profiles: [{ id: 'demo-child', name: 'Avonturier', avatar: 0, picks: {}, favorites: [], calm: false, largeText: false }] };
 }
@@ -10,10 +11,10 @@ export async function loadStore(contentVersion: string, storyIds: string[]): Pro
   const raw = await AsyncStorage.getItem(KEY);
   if (!raw) return { store: freshStore(contentVersion), contentChanged: false };
   const value = JSON.parse(raw) as Store;
-  if (value.schemaVersion !== 1 || !Array.isArray(value.profiles) || !value.profiles.length || value.profiles.length > 5) throw new Error('De opgeslagen demo heeft een onbekend formaat.');
+  if (!value || value.schemaVersion !== 1 || typeof value.contentVersion !== 'string' || !Array.isArray(value.profiles) || !value.profiles.length || value.profiles.length > 5) throw new Error('De opgeslagen demo heeft een onbekend formaat.');
   const ids = new Set<string>();
   for (const p of value.profiles) {
-    if (!p || typeof p.id !== 'string' || ids.has(p.id) || typeof p.name !== 'string' || !p.name.trim() || !p.picks || typeof p.picks !== 'object' || !Array.isArray(p.favorites)) throw new Error('Een demo-kindprofiel kan niet worden ingelezen.');
+    if (!p || typeof p.id !== 'string' || !p.id || ids.has(p.id) || typeof p.name !== 'string' || !p.name.trim() || !p.picks || typeof p.picks !== 'object' || Array.isArray(p.picks) || !Array.isArray(p.favorites)) throw new Error('Een demo-kindprofiel kan niet worden ingelezen.');
     ids.add(p.id);
     p.name = p.name.slice(0, 20);
     p.avatar = Number.isInteger(p.avatar) && p.avatar >= 0 && p.avatar < 4 ? p.avatar : 0;
@@ -28,9 +29,6 @@ export async function loadStore(contentVersion: string, storyIds: string[]): Pro
   return { store: value, contentChanged: value.contentVersion !== contentVersion };
 }
 export function persistStore(value: Store): Promise<void> {
-  const serialized = JSON.stringify(value);
-  const operation = writes.catch(() => {}).then(() => AsyncStorage.setItem(KEY, serialized));
-  writes = operation;
-  return operation;
+  return queue.persist(value);
 }
-export async function removeStore(): Promise<void> { await writes.catch(() => {}); await AsyncStorage.removeItem(KEY); }
+export function removeStore(): Promise<void> { return queue.remove(); }

@@ -1,12 +1,16 @@
-import { env } from 'cloudflare:workers';
-
+import { getBackendStatus } from '../../../lib/supabase/config';
 export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 export async function GET() {
-  const headers = { 'Cache-Control': 'no-store', 'Content-Type': 'application/json; charset=utf-8' };
-  try {
-    if (!env.DB) return new Response(JSON.stringify({ ok: false, database: 'unavailable' }), { status: 503, headers });
-    const result = await env.DB.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name IN ('parent_accounts','family_documents')").all<{ name: string }>();
-    if (result.results?.length !== 2) return new Response(JSON.stringify({ ok: false, database: 'initializing' }), { status: 503, headers });
-    return new Response(JSON.stringify({ ok: true, database: 'ready', schemaVersion: 1 }), { headers });
-  } catch { return new Response(JSON.stringify({ ok: false, database: 'unavailable' }), { status: 503, headers }); }
+  const revision = process.env.FABELPAD_RELEASE_SHA;
+  const configured = getBackendStatus().configured;
+  return Response.json({
+    ok: true,
+    service: 'fabelpad',
+    runtime: 'nextjs-node',
+    environment: process.env.FABELPAD_DEPLOY_ENV || 'local',
+    revision: revision && /^[a-f0-9]{40}$/.test(revision) ? revision : null,
+    backend: configured ? 'configured-unverified' : 'not-configured',
+    scope: 'process-liveness-only',
+  }, { headers: { 'Cache-Control': 'no-store' } });
 }

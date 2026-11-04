@@ -3,21 +3,30 @@
   "version": "0.1.0",
   "private": true,
   "main": "index.ts",
-  "engines": { "node": ">=22.13.0" },
+  "engines": {
+    "node": ">=22.13.0"
+  },
   "scripts": {
     "start": "expo start",
     "android": "expo run:android",
     "check": "tsc --noEmit",
     "export:android": "expo export --platform android",
-    "content": "node ../scripts/export-native-content.mjs"
+    "content": "node ../scripts/export-native-content.mjs",
+    "test:runtime": "node ../scripts/native-runtime-check.mjs",
+    "prebuild:android": "expo prebuild --platform android --no-install"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "2.2.0",
     "expo": "58.0.23",
+    "expo-secure-store": "58.0.2",
     "expo-speech": "58.0.3",
+    "expo-system-ui": "58.0.7",
     "react": "19.3.0",
     "react-native": "0.88.1",
-    "react-native-safe-area-context": "5.11.1"
+    "react-native-gesture-handler": "3.3.0",
+    "react-native-reanimated": "4.7.1",
+    "react-native-safe-area-context": "5.11.1",
+    "react-native-worklets": "0.13.0"
   },
   "devDependencies": {
     "@types/react": "19.3.0",

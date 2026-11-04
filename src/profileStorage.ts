@@ -72,9 +72,9 @@ export function readChild<T>(childId: string, field: string, fallback: T): T {
   if (['string', 'number', 'boolean'].includes(typeof fallback) && typeof value !== typeof fallback) return fallback;
   return value as T;
 }
-export function saveChild(childId: string, field: string, value: unknown): void {
-  if (!(CHILD_FIELDS as readonly string[]).includes(field)) return;
-  try { setRaw(childKey(childId, field), JSON.stringify(value)); } catch { /* Unserialisable data is never stored. */ }
+export function saveChild(childId: string, field: string, value: unknown): boolean {
+  if (!(CHILD_FIELDS as readonly string[]).includes(field)) return false;
+  try { setRaw(childKey(childId, field), JSON.stringify(value)); return !volatileKeys.has(physical(childKey(childId, field))); } catch { return false; }
 }
 export function createChild(name: string, avatar: number): ChildProfile {
   const id = typeof globalThis.crypto?.randomUUID === 'function' ? globalThis.crypto.randomUUID() : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 13)}`;
@@ -149,11 +149,12 @@ function notifySoon() {
 }
 
 /** Preview is returned only to its eligible parent; nothing is uploaded here. */
-export function legacySnapshotForParent(parentId: string): FamilySnapshot | null {
+export function legacySnapshotForParent(parentId: string, includeDemo = false): FamilySnapshot | null {
   const owner = getPhysical(IMPORT_OWNER_KEY);
   if (owner && owner !== parentId) return null;
   const previous = scope; silent += 1; scope = '';
   try {
+    if (includeDemo && !getRaw(FAMILY_KEY) && !getRaw('fabelpad-profile')) scope = `fabelpad-scope-${encodeURIComponent('prototype-demo')}`;
     const existing = getRaw(FAMILY_KEY) || getRaw('fabelpad-profile') || getRaw('fabelpad-started') || WORLD_IDS.some(id => getRaw(`fabelpad-story-${id}`));
     if (!existing) return null;
     const snapshot = exportSnapshot();
@@ -162,3 +163,5 @@ export function legacySnapshotForParent(parentId: string): FamilySnapshot | null
   } finally { scope = previous; silent -= 1; }
 }
 export function markLegacyImported(parentId: string): void { setPhysical(IMPORT_OWNER_KEY, parentId); }
+
+export function isLocalStorageDurable(): boolean { return ![...volatileKeys].some(key => !scope || key.startsWith(`${scope}::`)); }

@@ -1,8 +1,7 @@
-node_modules/
-.expo/
-dist/
-android/
-ios/
-*.keystore
-credentials.json
-.env.local
+/node_modules/
+/android/
+/ios/
+/dist/
+/.expo/
+/.env*
+!.env.example

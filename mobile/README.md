@@ -1,15 +1,17 @@
 # Fabelpad native prototype
 
-Een zelfstandige Expo/React Native-prototypeapp met echte native componenten, geen WebView. Deze broncode hoort bij het Fabelpad-prototype. Er is in deze sessie geen APK/AAB gebouwd en geen toesteltest uitgevoerd.
+Een zelfstandige Expo/React Native-demo met echte native componenten. Deze app werkt lokaal zonder account of backend. De Android-bouwstatus en nog niet uitgevoerde toestelcontroles staan in `VALIDATIE.md`.
 
 ## Wat zit erin?
 
 - Dertien verhalen met alle 403 bereikbare scènes en 416 eindroutes uit dezelfde bestaande verhaallogica als de webapp.
 - Gebundelde illustraties en logo, bibliotheek, zoeken, favorieten, vijf lokale kindprofielen, aparte routevoortgang, hervatten en schatkist.
 - Native Android-terugknop, veilige schermranden, telefoon- en tabletindeling, grotere tekst en verminderde beweging.
+- Native stationsspeelprent: Dibbel helpen met zijn kaartje, het kastje openen, instappen en de wissel bedienen. Gesture Handler verwerkt de knoppen en Reanimated beweegt de trein/wissel. Dubbele tikken verwerken maximaal één keuze; verlaten en achtergrond annuleren oude timers.
 - Voorlezen via de apparaatstem. Android ondersteunt in `expo-speech` stoppen en opnieuw beginnen, geen pauze/hervatten; die onjuiste belofte staat daarom niet in de UI. Een Nederlandse/offline stem moet op het toestel beschikbaar zijn.
 - Seriële AsyncStorage-schrijfacties. Een mislukte opslag wordt zichtbaar; de app claimt dan niet dat gegevens duurzaam zijn opgeslagen. AsyncStorage is niet versleuteld en bevat uitsluitend demo-kindprofielen/voortgang, nooit secrets of authenticatietokens.
 - Een gewijzigde contenthash blokkeert het automatisch voortzetten van oude keuzes. De productieversie moet oude verhaalreleases blijven aanbieden; de demo biedt een expliciete, bevestigde herstart.
+- Een afzonderlijke SecureStore-adapter is voorbereid voor toekomstige native authenticatietokens; er wordt nu geen Supabase-sessie gemaakt of gesynchroniseerd.
 
 ## Starten op de development-VPS
 
@@ -20,10 +22,25 @@ node scripts/export-native-content.mjs
 cd mobile
 npm ci
 npm run check
+npm run test:runtime
 npm start
 ```
 
-Als er nog geen lockfile aanwezig is, voer dan één keer `npm install` uit en commit de gegenereerde `package-lock.json`; gebruik daarna `npm ci`. Gebruik een passende Expo Go-versie of een eigen development build. Voor de eigen Android-build moet de VPS een passende JDK/Android SDK hebben; `npm run android` genereert en bouwt het Android-project via Expo prebuild. Een headless VPS heeft voor interactief testen een apart toestel/emulator en netwerkverbinding nodig. De package-ID's in `app.config.ts` zijn voorstellen en moeten vóór de eerste Play-publicatie definitief worden vastgelegd.
+De lockfile is aanwezig; gebruik `npm ci`. Gebruik een passende Expo Go-versie of een eigen development build. Een headless VPS heeft voor interactief testen een apart toestel/emulator nodig.
+
+Voor een zelfstandige arm64-demo-APK, vanuit de repository:
+
+```bash
+JAVA_HOME=/pad/naar/jdk-21 \
+ANDROID_HOME=/pad/naar/android-sdk \
+bash scripts/native-build-demo.sh
+```
+
+Het script controleert schijfruimte, inodes, toolchain, TypeScript, runtimecontracten en Expo-dependencies. Daarna genereert Expo het Android-project en bouwt Gradle met één worker, maximaal 1 GiB Java-heap en gebundelde JavaScript/assets. De doelmap is `artifacts/native/fabelpad-demo-arm64.apk`. De SDK moet API 37, Build-Tools 37.0.0 en NDK 27.1.12297006 bevatten; Gradle kan daarnaast de vereiste CMake-versie installeren. Raadpleeg `VALIDATIE.md` voor de werkelijk gebruikte versies en uitkomst.
+
+De demo gebruikt `nl.dgwebservices.fabelpad.demo`, versie 0.1.0/versionCode 1 en de gegenereerde Android-debugsleutel. Deze lokale identiteit en sleutel zijn uitsluitend voor de demo. `FABELPAD_VARIANT=production` vereist expliciet `FABELPAD_ANDROID_PACKAGE`; de definitieve productie-ID, uploadkey, backend en publicatie zijn nog niet ingericht. Het demoscript bouwt altijd de demovariant.
+
+Installeer het gebouwde bestand op een aangesloten arm64 Android-toestel met `adb install -r artifacts/native/fabelpad-demo-arm64.apk`, of kopieer het bestand naar het toestel en open het daar. Toestemming om lokaal een APK te installeren kan nodig zijn. Start de app één keer zonder Metro-server, schakel daarna internet uit en test ook na volledig sluiten/heropenen. Dit zijn nog uit te voeren toestelcontroles, geen bouwbewijs.
 
 `npm run export:android` maakt een Metro/JavaScript-export. Dat is geen APK en geen bewijs van een geslaagde native Android-build. De productie-AAB moet later met Gradle of een lokale Expo-build worden gemaakt en ondertekend.
 
@@ -33,7 +50,7 @@ Expo SDK 58 is officieel uitgebracht op 15 oktober 2026. De pins zijn gecontrole
 
 ## Grenzen van dit prototype
 
-Het browserprototype en deze native app hebben elk hun eigen lokale demo-opslag. Ze zijn niet aan elkaar gekoppeld en niet verbonden met Supabase. De bestaande Sites/D1-backend is geen Supabase-implementatie. OTP/Resend, gezinsisolatie via RLS, echte synchronisatie, downloads van nieuwe releases, Play Billing, aankoopherstel en productiesigning blijven implementatiewerk op de VPS. Het native prototype gebruikt basisovergangen via `Animated` met native driver; de uitgebreide stationsspeelprent en Reanimated/Gesture Handler/Skia-effecten volgen als native interactielaag. Geen 60-fps-resultaat wordt geclaimd zonder releasebuild en meting op echte toestellen.
+Het browserprototype en deze native app hebben elk hun eigen lokale demo-opslag. Ze zijn niet aan elkaar gekoppeld en de native app is niet verbonden met Supabase. Native OTP/Google-login, gezinsisolatie via de backend, echte synchronisatie, downloads van nieuwe releases, Play Billing, aankoopherstel, accountverwijdering en productiesigning blijven open werk. De gebundelde verhalen zijn lokaal leesbaar; een Nederlandse/offline apparaatstem is afhankelijk van het toestel. Skia is niet toegevoegd: de begrensde stationsinteractie gebruikt native weergaven, Reanimated en Gesture Handler. Er is geen 60-fps-resultaat zonder meting op echte toestellen.
 
 Browserbeheerderswijzigingen staan lokaal in de browser; de export haalt de repositoryverhalen op, niet de browser-localStorage. Voor productie moet de beheeromgeving gepubliceerde, onveranderlijke contentreleases leveren die zowel web als app kunnen laden.
 

@@ -11,9 +11,9 @@ const root = new URL('../', import.meta.url);
 const temporary = await mkdtemp(join(tmpdir(), 'fabelpad-family-tests-'));
 const sqlite = new DatabaseSync(':memory:');
 try {
-  const { handleFamilyRequest } = await import(await compileSource(new URL('lib/familyRepository.ts', root), temporary));
+  const { handleFamilyRequest } = await import(await compileSource(new URL('legacy/d1/familyRepository.ts', root), temporary));
   const { validateFamilySnapshot, MAX_FAMILY_BYTES } = await import(await compileSource(new URL('lib/familyValidation.ts', root), temporary));
-  const migrationDirectory = new URL('drizzle/', root);
+  const migrationDirectory = new URL('legacy/d1/', root);
   const migrationFiles = (await readdir(migrationDirectory)).filter(name => name.endsWith('.sql')).sort();
   assert.ok(migrationFiles.length, 'Generate the D1 migration before running the backend checks.');
   sqlite.exec('PRAGMA foreign_keys=ON;');

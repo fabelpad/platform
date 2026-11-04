@@ -28,7 +28,7 @@ export default function MarketingSite({ onOpenApp, onOpenParents, onOpenStory }:
     <a className="skip-link" href="#marketing-main">Naar de inhoud</a>
     <header className="mk-header mk-wrap">
       <a href="#marketing-main" className="mk-brand" aria-label="Fabelpad, naar boven"><img src="/brand/logo.webp" width="210" height="84" alt="Fabelpad" /></a>
-      <nav className="mk-navigation" aria-label="Website-navigatie"><a href="#mk-stories">De verhalen</a><a href="#mk-how">Zo werkt het</a><a href="#mk-parents">Voor ouders</a></nav>
+      <nav className="mk-navigation" aria-label="Website-navigatie"><a href="#mk-stories">De verhalen</a><a href="#mk-how">Zo werkt het</a><a href="#mk-parents">Voor ouders</a><a href="/inloggen">Inloggen</a></nav>
       <button className="mk-button mk-button-small mk-button-dark" onClick={onOpenApp}>Probeer de demo <ArrowUpRight size={17} /></button>
     </header>
 
@@ -69,6 +69,6 @@ export default function MarketingSite({ onOpenApp, onOpenParents, onOpenStory }:
       <section className="mk-final-cta"><div className="mk-wrap"><span className="mk-final-star" aria-hidden="true">✦</span><span className="mk-eyebrow">HET VERHAAL BEGINT BIJ JOU</span><h2>Zullen we eens kijken<br />waar we uitkomen?</h2><button className="mk-button mk-button-yellow" onClick={onOpenApp}><Play size={17} fill="currentColor" />Ja, op avontuur!<ArrowRight size={18} /></button><span className="mk-final-small-star" aria-hidden="true">✧</span></div></section>
     </main>
 
-    <footer className="mk-footer mk-wrap"><div className="mk-footer-main"><img src="/brand/logo.webp" alt="Fabelpad" width="170" height="70" loading="lazy" /><p>Jij kiest het avontuur.<br /><span>Er is altijd nog een ander pad.</span></p><div><a href="#mk-stories">De verhalen</a><button onClick={onOpenParents}>Voor ouders</button><button onClick={onOpenApp}>Open de demo <ArrowUpRight size={15} /></button></div></div><div className="mk-footer-bottom"><span>© {new Date().getFullYear()} Fabelpad</span><span>Interactief prototype · geen echte aankopen</span><span><Heart size={12} />Met ruimte voor fantasie</span></div></footer>
+    <footer className="mk-footer mk-wrap"><div className="mk-footer-main"><img src="/brand/logo.webp" alt="Fabelpad" width="170" height="70" loading="lazy" /><p>Jij kiest het avontuur.<br /><span>Er is altijd nog een ander pad.</span></p><div><a href="#mk-stories">De verhalen</a><button onClick={onOpenParents}>Voor ouders</button><button onClick={onOpenApp}>Open de demo <ArrowUpRight size={15} /></button><a href="/support">Hulp</a><a href="/privacy">Privacy</a><a href="/account-verwijderen">Account verwijderen</a></div></div><div className="mk-footer-bottom"><span>© {new Date().getFullYear()} Fabelpad</span><span>Interactief prototype · geen echte aankopen</span><span><Heart size={12} />Met ruimte voor fantasie</span></div></footer>
   </div>;
 }

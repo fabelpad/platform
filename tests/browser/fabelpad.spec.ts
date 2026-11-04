@@ -1,0 +1,138 @@
+import { test, expect } from '@playwright/test';
+
+test('website, child library, family and admin routes stay distinct', async ({ page, request }) => {
+  const errors: string[] = [];
+  page.on('pageerror', error => errors.push(error.message));
+  await page.goto('/');
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('Er was eens');
+  await expect(page.getByRole('complementary', { name: 'Fabelpad prototype-onderdelen' })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Probeer de demo', exact: true }).first().click();
+  await expect(page).toHaveURL(/\/lezen$/);
+  await expect(page.locator('.world-card')).toHaveCount(13);
+  await expect(page.getByRole('complementary', { name: 'Fabelpad prototype-onderdelen' })).toHaveCount(0);
+  await page.goto('/demo');
+  await expect(page.getByRole('complementary', { name: 'Fabelpad prototype-onderdelen' })).toBeVisible();
+  await page.goto('/inloggen');
+  await expect(page.getByText('Ouderaccounts zijn nog niet aangesloten.')).toBeVisible();
+  await expect(page.getByRole('textbox')).toHaveCount(0);
+  await page.goto('/studio');
+  await expect(page.getByText('De beheeromgeving is nog niet aangesloten.')).toBeVisible();
+  const response = await request.put('/api/content/drafts/station', { data: { baseRevision: 0, draft: {} } });
+  expect(response.status()).toBe(503);
+  expect((await request.get('/api/family')).status()).toBe(503);
+  const catalog = await (await request.get('/api/content')).json();
+  expect(catalog.stories).toHaveLength(13);
+  const release = await (await request.get('/api/content/station')).json();
+  expect(Object.keys(release.release.scenes)).toHaveLength(31);
+  expect(Object.keys(release.release.endings)).toHaveLength(32);
+  const invalid = await request.get('/api/content/station?version=0000000000000000');
+  expect(invalid.status()).toBe(404);
+  expect(errors).toEqual([]);
+});
+
+test('story persists its route/version, rejects double taps and retains a prior edition', async ({ page }) => {
+  await page.goto('/lezen?story=dream');
+  const dialog = page.getByRole('dialog', { name: /Droompost/i });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByText('Deel 1 van 5', { exact: true })).toBeVisible();
+  await page.locator('.reader-choice').first().evaluate(button => { (button as HTMLButtonElement).click(); (button as HTMLButtonElement).click(); });
+  await expect(dialog.getByText('Deel 2 van 5', { exact: true })).toBeVisible();
+  const savedBefore = await page.evaluate(() => Object.entries(localStorage).find(([key]) => key.includes('story-dream'))?.[1]);
+  expect(JSON.parse(savedBefore!).picks).toEqual([0]);
+  expect(JSON.parse(savedBefore!).contentVersion).toMatch(/^[a-f0-9]{16}$/);
+  await page.reload();
+  await expect(dialog.getByText('Deel 2 van 5', { exact: true })).toBeVisible();
+  // A new local publication cannot rewrite a route pinned to the prior edition.
+  await page.evaluate(() => localStorage.setItem('fabelpad-prototype-editorial-v1', JSON.stringify({ schemaVersion:1,drafts:{},published:{dream:{metadata:{title:'Gewijzigde editie',description:'Een nieuwe uitgave',image:'/art/dream.webp'},chapters:{'1':{text:'Deze tekst is pas later gepubliceerd.'}},updatedAt:new Date().toISOString(),publishedAt:new Date().toISOString(),version:1}} })));
+  await page.reload();
+  await expect(page.locator('.reader-story-text')).not.toContainText('Deze tekst is pas later gepubliceerd.');
+  for (let part = 2; part <= 5; part++) {
+    await expect(page.getByText(`Deel ${part} van 5`, { exact: true })).toBeVisible();
+    await page.locator('.reader-choice').first().click();
+  }
+  await expect(page.getByText('Jouw avontuur is compleet', { exact: true })).toBeVisible();
+  await expect(page.locator('.reader-keepsake strong')).not.toBeEmpty();
+  await page.getByRole('button', { name: 'Verhaal sluiten' }).click();
+  await page.getByRole('button', { name: 'Schatkist', exact: true }).first().click();
+  await expect(page.locator('.stamp-card.unlocked').first()).toBeVisible();
+});
+
+test('phone layout and storage failures remain usable and truthful', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.addInitScript(() => { Storage.prototype.setItem = () => { throw new DOMException('Unavailable', 'QuotaExceededError'); }; });
+  await page.goto('/lezen?story=toy');
+  await expect(page.locator('.reader-saved')).toContainText('Bewaren lukt niet');
+  await expect(page.locator('.reader-choice')).toHaveCount(2);
+  await page.locator('.reader-choice').first().click();
+  await expect(page.getByText('Deel 2 van 5', { exact: true })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
+});
+
+test('station actions advance once and closing cancels the departing scene', async ({ page }) => {
+  await page.goto('/lezen?story=station');
+  await page.getByRole('button', { name: 'Help Dibbel met zijn gescheurde kaartje' }).click();
+  await page.getByRole('button', { name: /sterrensticker/i }).click();
+  const board = page.getByRole('button', { name: /instappen/i });
+  await board.evaluate(button => { (button as HTMLButtonElement).click(); (button as HTMLButtonElement).click(); });
+  await expect(page.getByText('Deel 2 van 5', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Zet de wissel naar het muziekbos' }).click();
+  await page.getByRole('button', { name: 'Verhaal sluiten' }).click();
+  const saved = await page.evaluate(() => JSON.parse(Object.entries(localStorage).find(([key]) => key.includes('story-station'))![1]).picks);
+  expect(saved.length).toBeLessThanOrEqual(2);
+  await page.waitForTimeout(700); // Wait beyond the departing scene's scheduled callback.
+  expect(await page.evaluate(() => JSON.parse(Object.entries(localStorage).find(([key]) => key.includes('story-station'))![1]).picks)).toEqual(saved);
+});
+
+test('family UI uses server metadata, isolates siblings and opens parent settings (mocked session)', async ({ page }) => {
+  const parent = { id: 'test-parent-a', email: 'parent@example.test', displayName: 'Testouder' };
+  let snapshot = { schemaVersion:1, family:{version:1,children:[{id:'test-mila',name:'Mila',avatar:0},{id:'test-bo',name:'Bo',avatar:1}],activeId:'test-mila'},data:{'test-mila':{},'test-bo':{}} };
+  let revision = 1;
+  await page.route('**/api/auth/session', route => route.fulfill({json:{configured:true,parent,admin:false,providers:{email:true,google:false}}}));
+  await page.route('**/api/family', async route => {
+    if (route.request().method() === 'PUT') { snapshot = route.request().postDataJSON().snapshot; revision++; }
+    await route.fulfill({json:{parent,revision,snapshot}});
+  });
+  await page.addInitScript(() => localStorage.setItem('fabelpad-prototype-editorial-v1', JSON.stringify({ schemaVersion:1,drafts:{},published:{dream:{metadata:{title:'Uitsluitend demoversie',description:'Lokale tekst',image:'/art/dream.webp'},chapters:{},updatedAt:new Date().toISOString(),publishedAt:new Date().toISOString(),version:1}} })));
+  await page.goto('/gezin');
+  await expect(page.locator('.world-card')).toHaveCount(13);
+  await expect(page.locator('.world-grid')).not.toContainText('Uitsluitend demoversie');
+  await page.getByRole('button', { name: 'Open De Droompost' }).click();
+  await page.locator('.reader-choice').first().click();
+  await expect(page.getByText('Deel 2 van 5', { exact:true })).toBeVisible();
+  await page.getByRole('button', { name:'Verhaal sluiten' }).click();
+  await page.getByRole('button', { name:'Kindprofiel kiezen' }).click();
+  await page.getByRole('button', { name:'Verder als Bo',exact:true }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Open De Droompost' }).click();
+  await expect(page.getByText('Deel 1 van 5', { exact:true })).toBeVisible();
+  await page.getByRole('button', { name:'Verhaal sluiten' }).click();
+  await page.getByRole('button', { name:'Voor ouders',exact:true }).first().click();
+  await page.locator('#parent-answer').fill('12');
+  await page.getByRole('button', { name:'Naar het ouderhoekje' }).click();
+  await expect(page.getByRole('heading', { name:'Ons gezin.' })).toBeVisible();
+  await expect(page.getByRole('button', { name:'Gezinsgegevens downloaden' })).toBeVisible();
+});
+
+test('studio prevents edits while saving a server concept (mocked admin session)', async ({ page }) => {
+  const parent = {id:'test-admin',email:'admin@example.test',displayName:'Beheerder'};
+  let draft = {metadata:{title:'Het Verdwaalde Station',description:'Een verhaal',image:'/art/station.webp'},chapters:{},updatedAt:''};
+  let finishSave: (()=>void) | undefined;
+  await page.route('**/api/auth/session', route => route.fulfill({json:{configured:true,parent,admin:true}}));
+  await page.route('**/api/content/drafts/station', async route => {
+    if (route.request().method() === 'PUT') {
+      draft = route.request().postDataJSON().draft;
+      await new Promise<void>(resolve => { finishSave=resolve; });
+      await route.fulfill({json:{saved:true,revision:1,draft}});
+    } else await route.fulfill({json:{storyId:'station',revision:0,draft}});
+  });
+  await page.goto('/studio');
+  const title = page.getByRole('textbox', {name:'Verhaaltitel',exact:true});
+  await title.fill('Een nieuwe stationseditie');
+  await page.getByRole('button', {name:'Concept bewaren',exact:true}).click();
+  await expect(title).toBeDisabled();
+  await expect.poll(()=>!!finishSave).toBeTruthy();
+  finishSave!();
+  await expect(title).toBeEnabled();
+  await expect(page.getByText('Concept op de server bewaard. Lezers zien de huidige publicatie.')).toBeVisible();
+  await expect(title).toHaveValue('Een nieuwe stationseditie');
+});

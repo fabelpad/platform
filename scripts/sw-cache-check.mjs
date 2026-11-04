@@ -32,7 +32,7 @@ function request(path, navigation = false) {
   return answer;
 }
 assert.equal(request('/api/family'), undefined);
-assert.equal(request('/signin-with-chatgpt?return_to=%2F', true), undefined);
+assert.equal(request('/auth/callback', true), undefined);
 const before = puts.length;
 const online = await request('/', true);
 assert((await online.text()).includes('private-parent-identity'));
@@ -40,6 +40,7 @@ assert.equal(puts.length, before, 'Personalized HTML must never enter CacheStora
 mode = 'offline';
 const offline = await request('/', true);
 assert.equal(offline.status, 503);
+assert.equal((await request('/gezin', true)).status, 503, 'Cold family navigation returns only the neutral offline page.');
 assert(!(await offline.text()).includes('private-parent-identity'));
 assert.equal(puts.length, before);
 console.log('PWA privacy checks passed: no auth/API/parent HTML cached; neutral offline page only.');

@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import '../src/styles.css';
+import '../src/account.css';
 import '@fontsource-variable/fredoka';
 import '@fontsource-variable/nunito';
 import ClientRuntime from '../src/ClientRuntime';

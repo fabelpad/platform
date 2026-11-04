@@ -39,7 +39,7 @@ self.addEventListener('fetch', event => {
   const request = event.request;
   const url = new URL(request.url);
   if (request.method !== 'GET' || url.origin !== self.location.origin) return;
-  if (request.mode === 'navigate' && (url.pathname === '/' || url.pathname === '/index.html')) {
+  if (request.mode === 'navigate' && !url.pathname.startsWith('/api/') && !url.pathname.startsWith('/auth/')) {
     event.respondWith(fetch(request).catch(offlinePage)); return;
   }
   if (!permittedPath(url.pathname) || url.search) return;

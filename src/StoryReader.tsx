@@ -6,15 +6,16 @@ import { readChild, saveChild } from './profileStorage';
 import { backfillStoryMemory, continuityGreeting, getStoryMemory, openStoryThread, recordStoryProgress } from './storyMemory';
 import { isStoryId, STORY_PARTS } from './storyCatalog';
 import { worlds } from './worlds';
-import { getPublishedMetadata, getPublishedScene } from './editorialStore';
+import { loadContentRelease, personalText } from './contentClient';
+import type { ContentRelease } from '../lib/server/content';
 import StationPlayScene from './StationPlayScene';
 import { lockBodyScroll } from './modalScroll';
 import './reader.css';
 import './memory.css';
 import './reader-extended.css';
 
-type Props = { profileId: string; worldId: string; childName: string; muted: boolean; reducedMotion: boolean; textSize?: 'normal' | 'large'; previewLimit?: number; onRequestParents?: () => void; onClose: () => void; onComplete: (worldId: string, endingTitle: string) => void };
-type Saved = { picks: number[]; updatedAt: number };
+type Props = { profileId: string; worldId: string; childName: string; muted: boolean; reducedMotion: boolean; textSize?: 'normal' | 'large'; cloudContent?: boolean; previewLimit?: number; onRequestParents?: () => void; onClose: () => void; onComplete: (worldId: string, endingTitle: string) => void };
+type Saved = { picks: number[]; updatedAt: number; contentVersion?: string; revision?: number; storyId?: string };
 const iconMap = { heart: Heart, sparkles: Sparkles, music: Music2, moon: Moon, leaf: Leaf, compass: Compass };
 const TOTAL = STORY_PARTS;
 
@@ -25,10 +26,15 @@ function loadPicks(profileId: string, world: string): number[] {
   } catch { return []; }
 }
 
-export default function StoryReader({ profileId, worldId, childName, muted, reducedMotion, textSize, previewLimit, onRequestParents, onClose, onComplete }: Props) {
+export default function StoryReader({ profileId, worldId, childName, muted, reducedMotion, textSize, cloudContent = false, previewLimit, onRequestParents, onClose, onComplete }: Props) {
   const world = isStoryId(worldId) ? worldId : 'station';
-  const [publication] = useState(() => ({ metadata: getPublishedMetadata(world), scenes: Array.from({ length: TOTAL }, (_, i) => getPublishedScene(world, i)) }));
-  const metadata = { ...worlds.find(item => item.id === world)!, ...publication.metadata };
+  const [saved] = useState(() => readChild<Saved | null>(profileId, `story-${world}`, null));
+  const [release, setRelease] = useState<ContentRelease | null>(null);
+  const [releaseError, setReleaseError] = useState('');
+  const [durable, setDurable] = useState(false);
+  const revision = useRef(saved?.revision || 0);
+  const metadata = { ...worlds.find(item => item.id === world)!, ...release?.metadata };
+  useEffect(() => { let active = true; loadContentRelease(world, saved?.contentVersion, cloudContent).then(value => { if (active) setRelease(value); }).catch(error => { if (active) setReleaseError(error.message || 'Dit verhaal kan nu niet worden geopend. Je keuzes blijven bewaard.'); }); return () => { active = false; }; }, [world, saved?.contentVersion, cloudContent]);
   const [picks, setPicks] = useState(() => loadPicks(profileId, world));
   const [voiceState, setVoiceState] = useState<'idle' | 'speaking' | 'paused'>('idle');
   const [playEnabled, setPlayEnabled] = useState(true);
@@ -48,11 +54,10 @@ export default function StoryReader({ profileId, worldId, childName, muted, redu
   const accessLocked = previewLimit !== undefined && picks.length >= previewLimit;
   const canPlay = !accessLocked && world === 'station' && picks.length < 2;
   const showPlay = canPlay && playEnabled && !closing;
-  const ending = getEnding(world, picks, childName);
-  const sceneStep = Math.min(picks.length, TOTAL - 1);
-  const originalScene = getScene(world, sceneStep, picks, childName);
-  const sceneOverride = publication.scenes[sceneStep];
-  const scene = { ...originalScene, ...(sceneOverride?.title === undefined ? {} : { title: sceneOverride.title.replaceAll('{{naam}}', childName) }), ...(sceneOverride?.text === undefined ? {} : { text: sceneOverride.text.replaceAll('{{naam}}', childName) }) };
+  const rawEnding = release?.endings[picks.join('')] || getEnding(world, picks, childName);
+  const ending = { ...rawEnding, title: personalText(rawEnding.title, childName), text: personalText(rawEnding.text, childName), keepsake: personalText(rawEnding.keepsake, childName) };
+  const originalScene = release?.scenes[picks.slice(0, TOTAL - 1).join('')] || getScene(world, Math.min(picks.length, TOTAL - 1), picks, childName);
+  const scene = { ...originalScene, title: personalText(originalScene.title, childName), text: personalText(originalScene.text, childName), choices: originalScene.choices.map(choice => ({...choice,label:personalText(choice.label,childName),hint:personalText(choice.hint,childName)})) };
   const speechAvailable = typeof window !== 'undefined' && 'speechSynthesis' in window;
   const activeText = accessLocked ? 'Dit avontuur gaat verder in het gezinspakket. Vraag een grote avonturier om samen te kijken.' : complete ? `${ending.title}. ${ending.text}` : `${picks.length === 0 && greeting ? `${greeting} ` : ''}${scene.title}. ${scene.text}`;
 
@@ -89,15 +94,21 @@ export default function StoryReader({ profileId, worldId, childName, muted, redu
   }, []);
 
   useEffect(() => {
-    saveChild(profileId, `story-${world}`, { picks, updatedAt: Date.now() });
+    if (release) setDurable(saveChild(profileId, `story-${world}`, { picks, updatedAt: saved?.updatedAt || Date.now(), storyId: world, contentVersion: release.contentVersion, revision: revision.current }));
     voiceToken.current += 1;
     if (speechAvailable) window.speechSynthesis.cancel();
     setVoiceState('idle');
-  }, [picks, profileId, world, speechAvailable]);
+  }, [release, profileId, world, speechAvailable]);
 
   useEffect(() => {
     if (muted && speechAvailable) { voiceToken.current += 1; window.speechSynthesis.cancel(); setVoiceState('idle'); }
   }, [muted, speechAvailable]);
+
+  useEffect(() => {
+    const stop = (event: Event) => { if (event.type === 'pagehide' || document.visibilityState === 'hidden') { voiceToken.current += 1; if (speechAvailable) window.speechSynthesis.cancel(); setVoiceState('idle'); } };
+    document.addEventListener('visibilitychange', stop); window.addEventListener('pagehide', stop);
+    return () => { document.removeEventListener('visibilitychange', stop); window.removeEventListener('pagehide', stop); };
+  }, [speechAvailable]);
 
   function requestClose() {
     if (closeRequested.current) return;
@@ -109,13 +120,16 @@ export default function StoryReader({ profileId, worldId, childName, muted, redu
   }
 
   function choose(index: number) {
-    if (accessLocked || closeRequested.current || (index !== 0 && index !== 1) || picks.length >= TOTAL || currentPicks.current.length !== picks.length) return;
+    if (!release || accessLocked || closeRequested.current || (index !== 0 && index !== 1) || picks.length >= TOTAL || currentPicks.current.length !== picks.length) return;
     const next = [...picks, index];
     currentPicks.current = next;
+    revision.current += 1;
+    setDurable(saveChild(profileId, `story-${world}`, { picks: next, updatedAt: Date.now(), storyId: world, contentVersion: release.contentVersion, revision: revision.current }));
+    voiceToken.current += 1; if (speechAvailable) window.speechSynthesis.cancel(); setVoiceState('idle');
     recordStoryProgress(profileId, world, next, childName);
     focusNextScene.current = true;
     setPicks(next);
-    if (next.length === TOTAL) onComplete(world, getEnding(world, next, childName).title);
+    if (next.length === TOTAL) onComplete(world, personalText(release.endings[next.join('')].title, childName));
   }
 
   function readText(text: string) {
@@ -143,6 +157,8 @@ export default function StoryReader({ profileId, worldId, childName, muted, redu
     readText(activeText);
   }
 
+  if (!release || releaseError) return <div className="reader-backdrop"><div className="modal" role="dialog" aria-modal="true" aria-label="Verhaal openen"><h2>{releaseError ? 'Een klein omweggetje.' : 'We leggen je verhaal klaar…'}</h2><p role="status">{releaseError || 'De tekst en de bewaarde verhaalversie worden opgehaald.'}</p><button className="account-primary" onClick={requestClose}>Terug naar de verhalen</button></div></div>;
+
   return <motion.div className="reader-backdrop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: reducedMotion ? 0 : .22 }}>
     <div ref={dialogRef} className={`reader-shell reader-world-${world} ${textSize === 'large' ? 'reader-large-text' : ''}`} role="dialog" aria-modal="true" aria-labelledby="reader-story-title">
       <header className="reader-topbar">
@@ -169,11 +185,11 @@ export default function StoryReader({ profileId, worldId, childName, muted, redu
               <div className="reader-story-text">{(complete ? ending.text : scene.text).split(/\n\s*\n/u).map((paragraph, index) => <p key={index}>{paragraph}</p>)}</div>
               {complete ? <>
                 <div className="reader-keepsake"><Sparkles size={23} /><div><span>Een herinnering voor je verzameling</span><strong>{ending.keepsake}</strong></div></div>
-                <div className="reader-ending-actions"><button className="reader-primary" onClick={requestClose}>Terug naar de wereld <ArrowRight size={18} /></button><button className="reader-restart" onClick={() => { focusNextScene.current = true; setGreeting(continuityGreeting(getStoryMemory(profileId), world, childName)); openStoryThread(profileId, world, []); currentPicks.current = []; setPicks([]); }}><RotateCcw size={17} />Een ander pad ontdekken</button></div>
+                <div className="reader-ending-actions"><button className="reader-primary" onClick={requestClose}>Terug naar de wereld <ArrowRight size={18} /></button><button className="reader-restart" onClick={() => { focusNextScene.current = true; setGreeting(continuityGreeting(getStoryMemory(profileId), world, childName)); openStoryThread(profileId, world, []); currentPicks.current = []; revision.current += 1; setDurable(saveChild(profileId, `story-${world}`, { picks: [], updatedAt: Date.now(), storyId: world, contentVersion: release.contentVersion, revision: revision.current })); setPicks([]); }}><RotateCcw size={17} />Een ander pad ontdekken</button></div>
               </> : showPlay ? <div className="reader-play-hint"><Sparkles size={20} /><div><strong>Jouw keuze komt tot leven.</strong><p>Speel in de prent, of kies leesmodus om de knoppen te gebruiken.</p></div><button onClick={() => playPanel.current?.scrollIntoView({ behavior: reducedMotion ? 'instant' : 'smooth', block: 'start' })}>Naar de speelprent <ArrowRight size={16} /></button></div> : <div className="reader-choices"><p>Wat kies jij?</p>{scene.choices.map((choice, i) => { const Icon = iconMap[choice.icon]; return <motion.button key={choice.label} className="reader-choice" onClick={() => choose(i)} whileHover={reducedMotion ? undefined : { y: -3 }} whileTap={reducedMotion ? undefined : { scale: .98 }}><span className="reader-choice-icon"><Icon size={23} /></span><span><strong>{choice.label}</strong><small>{choice.hint}</small></span><ArrowRight className="reader-choice-arrow" size={20} /></motion.button>; })}</div>}
             </motion.div>
           </AnimatePresence>}
-          <footer className="reader-controls"><button className={`reader-speech ${voiceState !== 'idle' ? 'is-speaking' : ''}`} disabled={!speechAvailable || muted} onClick={toggleSpeech} title={!speechAvailable ? 'Voorlezen is niet beschikbaar in deze browser' : muted ? 'Zet het geluid aan in het ouderhoekje om te luisteren' : undefined}>{muted ? <VolumeX size={17} /> : voiceState === 'speaking' ? <Pause size={17} /> : <Play size={17} fill="currentColor" />}<span>{!speechAvailable ? 'Lees gezellig samen' : muted ? 'Geluid staat uit' : voiceState === 'speaking' ? 'Even pauzeren' : voiceState === 'paused' ? 'Verder luisteren' : 'Lees voor'}</span></button><span className="reader-saved"><Check size={13} />Je plek blijft bewaard</span></footer>
+          <footer className="reader-controls"><button className={`reader-speech ${voiceState !== 'idle' ? 'is-speaking' : ''}`} disabled={!speechAvailable || muted} onClick={toggleSpeech} title={!speechAvailable ? 'Voorlezen is niet beschikbaar in deze browser' : muted ? 'Zet het geluid aan in het ouderhoekje om te luisteren' : undefined}>{muted ? <VolumeX size={17} /> : voiceState === 'speaking' ? <Pause size={17} /> : <Play size={17} fill="currentColor" />}<span>{!speechAvailable ? 'Lees gezellig samen' : muted ? 'Geluid staat uit' : voiceState === 'speaking' ? 'Even pauzeren' : voiceState === 'paused' ? 'Verder luisteren' : 'Lees voor'}</span></button><span className="reader-saved" role="status"><Check size={13} />{durable ? 'Je plek staat op dit apparaat' : 'Bewaren lukt niet · houd dit venster open'}</span></footer>
         </div>
       </div>
     </div>

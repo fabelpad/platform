@@ -1,0 +1,49 @@
+name: Lokale bouw en contentcontrole
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: verify-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      CI: '1'
+      NEXT_TELEMETRY_DISABLED: '1'
+      FABELPAD_DEPLOY_ENV: local
+      FABELPAD_RELEASE_SHA: ${{ github.sha }}
+      npm_config_cache: ${{ runner.temp }}/fabelpad-npm-cache
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version-file: .nvmrc
+      - name: Installeer vastgelegde pnpm-versie
+        run: npm install --global pnpm@11.25.0
+      - name: Controleer toolchain, bytes en inodes
+        run: node scripts/local-preflight.mjs --android
+      - name: Installeer webdependencies uit lockfile
+        run: pnpm install --frozen-lockfile
+      - name: Webtypen, domeincontracten en Next.js-productiebuild
+        run: bash scripts/local-build.sh
+      - name: Installeer native dependencies uit lockfile
+        run: npm ci --prefix mobile --no-audit --no-fund
+      - name: Native TypeScript en Metro-export
+        run: |
+          npm run check --prefix mobile
+          npm run export:android --prefix mobile
+
+# Deze workflow bouwt lokaal op een GitHub-runner. Er is geen release, remote
+# migratie, self-hosted deployment of Play-publicatie aan deze workflow gekoppeld.
