@@ -1,0 +1,33 @@
+{
+  "method": "built-in image_gen",
+  "createdFor": "Fabelpad — speelbaar station",
+  "assets": [
+    {
+      "file": "station-platform.webp",
+      "transparent": false,
+      "prompt": "Use case: illustration-story. Asset type: layered background for a premium Dutch interactive children's storybook, ages 4–8. Create one complete landscape 1536x1024 illustration, a cozy whimsical fairy-tale railway platform at golden hour in green rolling hills. Warm cinematic premium 3D storybook rendering, tactile wood and brass, soft rounded architecture, lush tiny flowers, delicate firefly sparkles. The platform is a broad flat open foreground terrace with clean space for separately animated characters. Railway tracks enter the lower foreground and curve away into the distance. At the rear side is a charming small station wall, a wooden bench and a little closed wooden cupboard with a distinct simple door, suitable as a clickable object. Peaceful green hills, soft trees and a warm pastel sky beyond. Keep the center and lower foreground visually calm. No train, no animals, no people, no characters, no lettering, no signs with words, no logo, no watermark. Full bleed landscape image, nothing framed.",
+      "relativePath": "public/art/play/station-platform.webp",
+      "generatedSource": "exec-820d20c8-e7e6-4587-9efe-c4c5bd004fd8.png"
+    },
+    {
+      "file": "dibbel.png",
+      "transparent": true,
+      "prompt": "Use case: illustration-story. Asset type: transparent character cutout for an interactive premium children's storybook, ages 4–8. One lovable small green baby dragon, Dibbel, full body in a three-quarter front view, looking gently toward the viewer. Soft rounded 3D cinematic toy-like rendering, tactile fine velvety green scales, warm golden cream belly, two tiny rounded horns, small folded wings, expressive large warm eyes, friendly slightly hopeful smile. The dragon holds a single simple blank cream railway ticket in its two front paws; the ticket has an obvious jagged tear near its center but the two sides are still together, as if waiting for a sticker repair. Ticket has NO marks or letters. Stubby feet visible, cute modest body proportions, no sharp scary features. Centered isolated full body with margin above head and around wings and feet. Soft warm golden light and subtle dimensional shading that matches a fairy-tale woodland station. Transparent background with genuine alpha, no backdrop, no floor or cast rectangular shadow, no text, no logo, no watermark. Square 1024x1024.",
+      "relativePath": "public/art/play/dibbel.png",
+      "generatedSource": "exec-e56b9aef-06f3-4d9e-8f52-3ab56b1bb63b.png"
+    },
+    {
+      "file": "train.png",
+      "transparent": true,
+      "prompt": "Use case: illustration-story. Asset type: transparent movable train cutout for a premium interactive children's storybook, ages 4–8. Create one complete small emerald-green and warm brass steam locomotive with one miniature matching passenger carriage attached behind it. Strict side profile pointing RIGHT, all wheels visibly aligned horizontally, entire locomotive and carriage fully inside the canvas with comfortable transparent margins. Cozy rounded cinematic 3D fairy-tale toy rendering, tactile painted green metal, warm golden brass trim, golden glowing headlight on the RIGHT front, amber carriage windows, rich dimensional materials, clear wheels so the image reads as a train even when small. Charming, luxurious and child-friendly. No character or driver. No railway tracks, no floor, no scenery, no background, NO steam or smoke; those will be animated separately. Genuine transparent alpha background. No letters, numbers, logo or watermark. Landscape 1536x1024.",
+      "relativePath": "public/art/play/train.png",
+      "generatedSource": "exec-58eb4e64-e3d2-407f-8508-f2e55fda61e5.png",
+      "cleanupEditPrompt": "Edit target: the supplied green-and-brass toy train image. Preserve the exact locomotive, matching one carriage, side profile facing RIGHT, all materials, wheels, windows and proportions. Remove ALL brown atmospheric glow, dark vignette, shadows and background pixels around the train. Output a clean isolated train cutout with genuinely empty alpha around the silhouette; the train itself should be fully opaque. No floor, no scenery, no smoke, no extra objects. Keep the full train inside landscape canvas. Do not redraw or change the train. Transparent background."
+    }
+  ],
+  "validation": "Visually inspected. Transparent character and train PNGs retain alpha; platform converted to WebP quality 85. Train faces right.",
+  "webOptimizations": {
+    "dibbel.webp": "WebP sibling, quality87; original alpha verified identical to PNG",
+    "train.webp": "WebP sibling, quality87; original alpha verified identical to PNG"
+  }
+}

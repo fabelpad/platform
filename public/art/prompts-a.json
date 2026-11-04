@@ -1,0 +1,32 @@
+{
+  "generator": "Built-in image_gen",
+  "usage": "Fabelpad story illustrations",
+  "created": "2026-11-03",
+  "assets": [
+    {
+      "id": "weather",
+      "path": "/art/weather-v2.webp",
+      "prompt": "Use case: illustration-story. Asset type: premium children's story cover for Fabelpad. A friendly fluffy little cloud wearing round brass glasses runs a cozy tiny wooden weather shop amid warm rolling green hills. The cloud floats at the open counter, soft kind expression and expressive large eyes. Glass jars contain miniature golden sunshine and sparkling raindrops, shelves of weather magic, flowers beside the shop, a delicate rainbow over the hills. Polished cinematic 3D storybook art with tactile fluffy and wooden materials, detailed magical scenery, warm golden volumetric light, gentle depth of field, inviting and safe for children age 4–8. Full bleed landscape 1536x1024. Keep the cloud and shop in the central two thirds so a card crop works. No human children. Absolutely no words, letters, signage, numbers, logos or watermark."
+    },
+    {
+      "id": "moonbakery",
+      "path": "/art/moonbakery.webp",
+      "prompt": "Use case: illustration-story. A cream-colored rabbit baker named Mies in a simple warm white baker apron stands proudly beside a tray of golden star-shaped buns inside a tiny crescent-moon-shaped bakery. Round golden bread oven glowing warmly, flour on the wooden counter, lavender night sky through a rounded window, twinkling stars outside, inviting whimsical bedtime atmosphere. Polished cinematic 3D storybook illustration with beautifully tactile materials, richly detailed magical scenery, expressive friendly large eyes, cozy volumetric light, gentle depth of field. Premium Fabelpad picture book art for children age 4–8. Full bleed landscape 1536x1024, key subject centrally framed with room for card crop. No humans. Absolutely no words, letters, signage, numbers, logos or watermark."
+    },
+    {
+      "id": "ocean",
+      "path": "/art/ocean.webp",
+      "prompt": "Use case: illustration-story. A small friendly turquoise sea turtle named Tiko and a little salmon-pink seahorse explore a magical coral garden together. Soft glowing bubbles float among peach, lavender and mint coral, sandy path with shells, clear turquoise sunlit underwater world, warm light rays from above, gentle joyful scene, no danger. Polished cinematic 3D storybook illustration with beautifully tactile materials, richly detailed magical scenery, expressive friendly large eyes, cozy volumetric light, gentle depth of field. Premium Fabelpad picture book art for children age 4–8. Full bleed landscape 1536x1024, key subject centrally framed with room for card crop. No humans. Absolutely no words, letters, signage, numbers, logos or watermark."
+    },
+    {
+      "id": "garden",
+      "path": "/art/garden.webp",
+      "prompt": "Use case: illustration-story. Pip, a small cute hedgehog with soft brown quills and a round friendly face, stands beside a tiny wooden wheelbarrow in a garden of gigantic flowers. Enormous daisies and bellflowers tower gently overhead, sparkling dewdrops on broad green leaves, mossy stepping stones, warm sunny morning, playful sense of tiny scale and botanical wonder. Polished cinematic 3D storybook illustration with beautifully tactile materials, richly detailed magical scenery, expressive friendly large eyes, cozy volumetric light, gentle depth of field. Premium Fabelpad picture book art for children age 4–8. Full bleed landscape 1536x1024, key subject centrally framed with room for card crop. No humans. Absolutely no words, letters, signage, numbers, logos or watermark."
+    },
+    {
+      "id": "clock",
+      "path": "/art/clock.webp",
+      "prompt": "Use case: illustration-story. Tik, a friendly small brown mouse wearing a blue knitted scarf, stands inside a big cozy clock built into a hollow tree. Warm wooden clockwork wheels and rounded golden bells fill the room, a big clock dial without digits, leafy round windows, tiny wooden workbench, honey-colored light, whimsical timekeeping workshop, approachable rounded gears, no danger. Polished cinematic 3D storybook illustration with beautifully tactile materials, richly detailed magical scenery, expressive friendly large eyes, cozy volumetric light, gentle depth of field. Premium Fabelpad picture book art for children age 4–8. Full bleed landscape 1536x1024, key subject centrally framed with room for card crop. No humans. Absolutely no words, letters, signage, numbers, logos or watermark."
+    }
+  ]
+}

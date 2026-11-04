@@ -1,0 +1,15 @@
+@layer reset, base, components, responsive;
+@layer components {
+  .demo-loading{min-height:100dvh;display:grid;place-items:center;background:#fcf9f0;color:#31573e;font:800 15px 'Nunito Variable',sans-serif}
+  .demo-login-control{position:relative;flex:none}
+  .demo-login-button{display:flex;align-items:center;justify-content:center;gap:7px;min-height:42px;padding:10px 12px;border:1px solid #d8dfc9;border-radius:12px;background:#f3f4e8;color:#31573e;font:850 11px 'Nunito Variable',sans-serif;white-space:nowrap;cursor:pointer}
+  .demo-login-button:hover{background:#e8efd9}.demo-login-button:focus-visible{outline:3px solid #d9b557;outline-offset:3px}
+  .demo-login-status{position:absolute;right:0;top:calc(100% + 5px);white-space:nowrap;font-size:9px;font-weight:800;color:#6d8059}
+  .demo-login-status:empty{display:none}
+}
+@layer responsive {
+  @media(max-width:1100px){.demo-login-button{font-size:10px;padding-inline:9px;gap:5px}.demo-login-status{font-size:8px}}
+  @media(max-width:640px){.demo-login-button{min-height:40px;padding:9px;font-size:9px;gap:4px}.demo-login-button svg{width:14px;height:14px}.demo-login-status{display:none}}
+  @media(max-width:650px){.header-inner{gap:10px;padding-inline:16px}.brand-button img{width:150px}.header-actions{gap:7px}.header-actions>.parent-button{display:none}}
+  @media(max-width:360px){.brand-button img{width:126px}}
+}

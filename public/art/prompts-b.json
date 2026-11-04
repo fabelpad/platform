@@ -1,0 +1,46 @@
+{
+  "project": "Fabelpad",
+  "purpose": "Original story illustrations for five new adventures",
+  "images": [
+    {
+      "id": "library",
+      "asset": "/art/library.webp",
+      "width": 1536,
+      "height": 1024,
+      "method": "Built-in image_gen",
+      "prompt": "Use case: illustration-story. Asset type: premium children's interactive storybook cover for Fabelpad, landscape 1536x1024. Create a warm, wondrous polished 3D fairy-tale illustration for ages 4–8: a cozy small wooden library building on four short friendly articulated mechanical feet walks through a sunny meadow of daisies. A small tawny owl named Loes with round glasses sits beside the welcoming open doorway; a few beautiful colorful books float gently around it. Rounded miniature architecture, carved wood, felt-like feathers, tactile materials, cinematic soft golden light, forest-green, cream and muted jewel colors, rich crafted detail, storybook atmosphere. One full-bleed scene, centered main subjects with generous environment suitable for wide and card cropping, eye-level three-quarter view. Absolutely no written text, no lettering, no logo, no watermark, no border. Friendly and comforting, no scary elements."
+    },
+    {
+      "id": "balloon",
+      "asset": "/art/balloon.webp",
+      "width": 1536,
+      "height": 1024,
+      "method": "Built-in image_gen",
+      "prompt": "Use case: illustration-story. Premium children's interactive storybook cover for Fabelpad, landscape 1536x1024. A small adorable terracotta-orange fox named Fiep wears green aviator goggles and stands on a round wooden sky-harbor platform floating between fluffy clouds. Behind Fiep float three elegant whimsical pastel hot air balloons shaped like a pear, a fish, and a star, each with a tiny wicker basket. A little wooden gangway, coiled ropes and flower pots make the harbor cozy. Warm morning sun, pale peach and mint clouds, turquoise sky, tactile fur and carved wood, highly polished warm 3D fairy-tale illustration for ages 4–8, rich dimensional cinematic lighting. Centered main character with enough surrounding scene for both wide and card cropping, full bleed. Absolutely no writing, text, letters, logos, watermark, or border; no scary elements."
+    },
+    {
+      "id": "forest",
+      "asset": "/art/forest.webp",
+      "width": 1536,
+      "height": 1024,
+      "method": "Built-in image_gen",
+      "prompt": "Use case: illustration-story. Premium children's interactive storybook cover for Fabelpad, landscape 1536x1024. An adorable small red squirrel named Roef wears a colorful spotted scarf and holds a soft round paintbrush in a friendly enchanted forest. The forest gently transforms across the scene: pale silvery-gray leaves and mushrooms at one side blend into vivid moss-green, turquoise, coral, and golden flowers and trees around the squirrel. The gray area is bright, soft, and peaceful, never gloomy. A little pot of glowing colorful paint and a painted leaf on a stump. Tactile detailed fur, carved bark, velvety moss and dew drops, warm sunlight shafts, polished 3D fairy-tale storybook art for ages 4–8. Centered squirrel and main scene safe for wide and card cropping, full bleed. Absolutely no text, lettering, logos, watermark, or border, no scary elements."
+    },
+    {
+      "id": "snow",
+      "asset": "/art/snow.webp",
+      "width": 1536,
+      "height": 1024,
+      "method": "Built-in image_gen",
+      "prompt": "Use case: illustration-story. Premium children's interactive storybook cover for Fabelpad, landscape 1536x1024. A cuddly little polar bear named Nori in a mustard-yellow knitted scarf and a cheerful little penguin stand beside a round smiling snowman in a cozy snow village. Rounded snow-covered wooden cottages with warm glowing windows and strings of softly glowing colored lanterns, little snow stars and simple festive decorations. They are preparing a friendly snow festival together; no Christmas branding. Soft blue twilight snow, honey-gold window light, coral and teal lanterns, tactile plush white fur and knit texture, cinematic polished 3D fairy-tale picture-book render for children ages 4–8. Central bear and penguin, full-bleed landscape with main subjects safe for wide and card crops. Absolutely no writing, no text, no letters, no logo, no watermark, no border, no scary elements."
+    },
+    {
+      "id": "stars",
+      "asset": "/art/stars.webp",
+      "width": 1536,
+      "height": 1024,
+      "method": "Built-in image_gen",
+      "prompt": "Use case: illustration-story. Premium children's interactive storybook cover for Fabelpad, landscape 1536x1024. A friendly adorable raccoon named Wisse wearing a soft blue apron stands on a cozy wooden terrace floating on fluffy clouds. He gently washes small rounded golden stars in a circular wooden wash tub with sparkling soap bubbles. A clothesline stretches behind him with clean glowing stars hanging from small wooden clothespins, and a basket of slightly dusty stars waits nearby. Soft indigo evening sky and a crescent moon in the distance, warm amber starlight lighting his detailed gray fur and wooden terrace. Charming miniature craft materials, cinematic soft illumination, rich premium polished 3D fairy-tale picture-book illustration for ages 4–8. Main raccoon and wash tub centered for safe wide and card cropping, full bleed. Absolutely no written text, lettering, logo, watermark, or border. Comforting and magical, no scary elements."
+    }
+  ]
+}

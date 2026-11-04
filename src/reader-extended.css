@@ -1,0 +1,12 @@
+.reader-story-text>p{margin:0 0 1.05em}.reader-story-text>p:last-child{margin-bottom:0}
+.reader-mode{border:1px solid #dce2ce;border-radius:20px;padding:9px 13px;min-height:42px;font:850 11px 'Nunito Variable',sans-serif;color:#3d6549;background:#f0f4e5;cursor:pointer;white-space:nowrap;margin-left:auto}
+.reader-mode:focus-visible{outline:3px solid #e4ba48;outline-offset:3px}
+.reader-play-panel{position:sticky;top:0;align-self:start;min-width:0;background:#dce9c5}
+.reader-play-hint{display:flex;align-items:flex-start;flex-wrap:wrap;gap:10px;border:1px dashed #d1dabc;border-radius:16px;padding:16px;background:#f3f5e9;color:#577342}
+.reader-play-hint>svg{flex:none}.reader-play-hint>div{flex:1;min-width:180px}.reader-play-hint strong{font:550 17px 'Fredoka Variable',sans-serif}.reader-play-hint p{font-size:12px;line-height:1.6;margin:5px 0 0}.reader-play-hint button{display:flex;gap:7px;align-items:center;color:#345c3f;font:850 11px 'Nunito Variable',sans-serif;background:#e2ebd3;padding:10px 12px;min-height:42px;border:0;border-radius:11px;cursor:pointer}
+@media(max-width:800px){.reader-play-panel{position:relative}.reader-has-play .reader-page{padding-top:25px}.reader-world-station .reader-book-title{font-size:11px;min-width:0}.reader-mode{font-size:10px;padding:7px 9px}.reader-topbar{gap:8px}.reader-world-station .reader-back span{display:none}.reader-world-station .reader-back{width:38px}}
+@media(max-width:480px){.reader-world-station .reader-book-title{max-width:120px;line-height:1.3}.reader-topbar{padding-left:10px;padding-right:10px}.reader-play-hint>div{min-width:145px}}
+
+.reader-large-text .reader-story-text p{font-size:clamp(19px,2.2vw,23px);line-height:1.9}
+
+.reader-access-gate{padding:35px 0;color:#31573d}.reader-access-gate>svg{color:#b99a42;margin-bottom:22px}.reader-access-gate>p{font-size:15px;line-height:1.9;margin:22px 0;color:#68795e}.reader-access-gate>button{margin:12px 0}.reader-access-gate>small{display:block;margin-top:25px;font-size:10px;color:#7c856e}
