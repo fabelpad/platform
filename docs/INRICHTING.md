@@ -1,10 +1,10 @@
 # Nog benodigde gegevens en inrichting
 
-4 november 2026. De lokale demo moet zonder externe accounts of secrets bouwen. Onderstaande lijst is de overdracht voor de volgende fase; ontbrekende waarden zijn niet als geconfigureerd beschouwd. Bestaande accounts kunnen worden gebruikt: een tweede organisatie of betaald Expo-buildaccount is niet vanzelf nodig.
+Bijgewerkt: 5 november 2026. De lokale demo moet zonder externe accounts of secrets bouwen. Onderstaande lijst is de overdracht voor de volgende fase; ontbrekende waarden zijn niet als geconfigureerd beschouwd. Bestaande accounts kunnen worden gebruikt: een tweede organisatie of betaald Expo-buildaccount is niet vanzelf nodig.
 
 ## Projectgegevens vóór koppelen of uitrollen
 
-- Bevestig productnaam **Fabelpad**, eigenaar en gewenste GitHub-organisatie/repository. Geef toegang aan de beheerders en runners die dit project daadwerkelijk onderhouden.
+- Repository vastgesteld: [`fabelpad/platform`](https://github.com/fabelpad/platform), gekoppeld als `origin`, met integratiebranch `main`. Geef nog de juiste beheerders-/runnerrechten en bevestig de verantwoordelijke organisatie.
 - Geef per omgeving de HTTPS-URL, site-ID, deployhost, Linux-gebruiker, checkout-/release-/shared-paden, interne loopbackpoort en Caddy-inrichting.
 - Geef de self-hosted runnernamen en exacte labels, GitHub environments `staging` en `production`, bestaand build-lock, bewaarbeleid en configuratieversie.
 - Lever het actuele `dg-site-deploy`-runbook: geïnstalleerde versie, configuratieallowlists, Next.js-startwijze, activatie-, health- en rollbackcontract. Het ontbrekende wrappercontract wordt niet in deze repository nagebootst.
@@ -16,7 +16,7 @@
 
 | Voorziening | Nodig voor | Wanneer |
 | --- | --- | --- |
-| GitHub-repository in de gewenste organisatie | Bron, review, CI en releasebewijs; environments en self-hosted runners | Vóór gedeelde CI/staging |
+| GitHub-repository `fabelpad/platform` | Gekoppeld; environments en self-hosted doelrunners nog in te richten | Bronpush beschikbaar; vóór staging runner-/environmentinrichting afronden |
 | Supabase-account/organisatie met **apart staging- en productieproject** | PostgreSQL, Auth, RLS en gecontroleerde opslag; projectref en regio vastleggen | Vóór echte accounts/gezinsdata |
 | Google Cloud-project met OAuth-configuratie | Web- en Android-Google-login, consentconfiguratie, exacte callbacks en signingcertificaten | Vóór Google-login aanzetten |
 | Resend-account, geverifieerd afzenderdomein en DNS-toegang | Verzending via de bestaande DG-mailgateway; providerwebhooks en aflevergebeurtenissen | Vóór OTP/applicatiemail aanzetten |

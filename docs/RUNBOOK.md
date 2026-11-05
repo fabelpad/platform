@@ -1,6 +1,6 @@
 # Lokaal bouwen en later releasen
 
-Dit runbook hoort bij de lokale opdracht van 4 november 2026. Er is nog geen Fabelpad-deployhost, remote repository, Supabase-project of werkend DG-wrappercontract geconfigureerd. Zie [PROJECTPROFIEL.md](PROJECTPROFIEL.md) en [INRICHTING.md](INRICHTING.md).
+Dit runbook hoort bij de lokale opdracht van 4 november 2026. De repository `https://github.com/fabelpad/platform.git` is als `origin` gekoppeld; `main` volgt `origin/main`. Een Fabelpad-deployhost, Supabase-project en werkend DG-wrappercontract moeten nog worden geconfigureerd. Zie [PROJECTPROFIEL.md](PROJECTPROFIEL.md) en [INRICHTING.md](INRICHTING.md).
 
 ## Voorcontrole en installatie
 
@@ -69,7 +69,7 @@ Productievariant vereist de expliciete definitieve package-ID. Uploadkeys, wacht
 
 `.github/workflows/verify.yml` installeert de gepinde toolchain, controleert capaciteit, gebruikt beide lockfiles en draait webcontroles, productiebuild, native TypeScript en Metro-export. De workflow heeft alleen leestoegang op broncode en bevat geen deploy-/Supabase-/Play-credentials. Voor pull requests is `github.sha` de werkelijk uitgecheckte testcommit; leg bij een release de volledige uiteindelijke bron-SHA apart vast.
 
-Een workflowbestand in de lokale repository is nog geen uitgevoerde GitHub-run. De huidige opdracht maakt geen remote repository aan en pusht niet naar een onbekende bestemming.
+Een workflowbestand alleen bewijst geen geslaagde GitHub-run. De push naar de opgegeven repository start de verificatieworkflow; controleer de uitslag op de volledige gepushte SHA via GitHub Actions.
 
 ## Later: DG-release en acceptatie
 

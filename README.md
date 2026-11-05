@@ -1,5 +1,7 @@
 # Fabelpad
 
+Repository: [fabelpad/platform](https://github.com/fabelpad/platform). De lokale branch `main` volgt `origin/main`.
+
 Nederlandstalige interactieve verhalenwereld voor kinderen van 4–8 jaar. Deze checkout bouwt lokaal met native Next.js en bevat een afzonderlijke Expo/React Native-app. Het aangeleverde prototype is behouden in importcommit `a7475c4573d3f125be337eb315c574945c64352c`; de pakketmetadata verwijst naar oorspronkelijke broncommit `97c3881d6bd94f41596ce77fb7a53d55936c6397`.
 
 ## Lokaal starten
@@ -67,6 +69,8 @@ Browserregressies staan in `tests/browser/`. Start eerst de gebouwde server op p
 
 ## Android
 
+[Download de Android-demo-APK via GitHub](https://github.com/fabelpad/platform/releases/tag/demo-android-0.1.0-045c863) (arm64, versie 0.1.0; toegang tot deze privérepository vereist).
+
 Zie [mobile/README.md](mobile/README.md) voor installatie, Expo/Gradle-toolchain, de lokale demo-APK en productievariabelen. [mobile/VALIDATIE.md](mobile/VALIDATIE.md) bevat het werkelijk behaalde bewijs en de resterende toestelchecks. Een Metro-export is geen APK; een APK is geen Play-release of prestatiemeting.
 
 ## Inrichting en release
@@ -77,6 +81,6 @@ Zie [mobile/README.md](mobile/README.md) voor installatie, Expo/Gradle-toolchain
 - [Lokale validatie en verificatiegrenzen](docs/LOKALE-VALIDATIE.md)
 - [Releasegates](.github/RELEASE-GATES.md)
 
-De DG-webstandaard is een native Next.js-serverrelease via `dg-site-deploy`, self-hosted doelrunners en Caddy. Staging en productie bouwen dezelfde volledige broncommit elk met eigen configuratie. Het werkelijke wrappercontract, domeinen, projectrefs en runnergegevens ontbreken nog; deze checkout verzint daarvoor geen deploymentcommando's. De CI-workflow valideert alleen en is pas een uitgevoerde CI-run nadat de repository daadwerkelijk is gekoppeld.
+De DG-webstandaard is een native Next.js-serverrelease via `dg-site-deploy`, self-hosted doelrunners en Caddy. Staging en productie bouwen dezelfde volledige broncommit elk met eigen configuratie. Het werkelijke wrappercontract, domeinen, projectrefs en runnergegevens ontbreken nog; deze checkout verzint daarvoor geen deploymentcommando's. De CI-workflow valideert alleen. De push naar `main` start GitHub Actions; de actuele uitslag staat onder [Actions](https://github.com/fabelpad/platform/actions).
 
 De oorspronkelijke [prototypeoverdracht](docs/FABELPAD-CODEX-OVERDRACHT.md) blijft historische context; de oude Docker-/SMTP-/Workers-voorstellen zijn niet het huidige releasepad.

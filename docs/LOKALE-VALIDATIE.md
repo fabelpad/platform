@@ -8,7 +8,8 @@
 | --- | --- |
 | Aangeleverde broncommit | `97c3881d6bd94f41596ce77fb7a53d55936c6397` volgens pakketmetadata |
 | Lokale importcommit | `a7475c4573d3f125be337eb315c574945c64352c` |
-| Huidige bron | Lokale branch `main`; volledige bron-SHA via `git rev-parse HEAD` en de artefactmanifesten |
+| Geteste broncommit web en APK | `045c863997b6c8aca57cd118b1723b2cbfb7997f`; schone werkboom bij de bouw |
+| Repositorykoppeling | `fabelpad/platform`, remote `origin`, branch/upstream `main` / `origin/main`; daarna uitsluitend documentatie en samenvoeging van de GitHub-initcommit |
 | Toolchain web | Node `24.18.0`, pnpm `11.25.0`, Next.js `16.3.4`, React `19.2.6` |
 | Host / gebruiker / checkout | `codex-worker-01` / `codex` / `/home/codex/repos/fabelpad` |
 | Geteste runtime | `pnpm start --port 3017`, `http://127.0.0.1:3017`; echte Next.js-productiebuild |
@@ -35,7 +36,7 @@
 | Native install/typecheck/Expo | Geslaagd; Expo Doctor 20/20, dependencycompatibiliteit gecontroleerd |
 | Metro-export | Geslaagd: 1156 modules, 15 assets, Android Hermes-bundle |
 | Android SDK-/Gradle-build | Standalone arm64-demo-APK gebouwd; package-, SDK-, signatuur- en ZIP-uitlijningscontrole geslaagd; zie `mobile/VALIDATIE.md` |
-| GitHub CI | Workflow voorbereid; geen remote gekoppeld en geen GitHub-run uitgevoerd |
+| GitHub CI | Verificatieworkflow aanwezig; de eerste push start een run. De actuele uitslag is afzonderlijk te controleren via [Actions](https://github.com/fabelpad/platform/actions) |
 | Staging/productie/Play | Niet uitgerold of gepubliceerd |
 
 De zes browserchecks bewijzen: gescheiden website-/lees-/review-/account-/beheerroutes; lezen, hervatten, beloning en behoud van een begonnen contentversie; dubbele tik; telefoonweergave en opslagfout; stationsactie en sluiten tijdens vertrek; en de gerepareerde ouder-/studioflows. De laatste twee gebruiken expliciet onderschepte sessie-/API-antwoorden om UI-regressies te testen. Zij bewijzen geen werkende externe authenticatie.
@@ -55,3 +56,5 @@ De PostgreSQL-test gebruikt beperkte Auth-stubs en één WASM-databaseverbinding
 - Productie-package-ID, uploadsigning, productie-AAB, interne Play-testdistributie en eventuele latere openbare release.
 
 De broncode bouwt en de lokale demo werkt; bovenstaande echte integraties zijn geen geslaagde productieacceptatie. De volledige benodigde gegevenslijst staat in [INRICHTING.md](INRICHTING.md).
+
+De Android-demo is als prerelease beschikbaar via [GitHub Releases](https://github.com/fabelpad/platform/releases/tag/demo-android-0.1.0-045c863). De APK hoort bij de geteste broncommit hierboven; documentatie-/integratiecommits daarna vormen geen nieuwe native build.

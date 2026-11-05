@@ -10,7 +10,7 @@
 | `npx expo install --check` | Geslaagd: dependencies up-to-date voor Expo 58.0.23 |
 | Expo Android prebuild | Geslaagd |
 | Metro tijdens de Gradle-releasebuild | Geslaagd: 1156 modules, 15 assets, gebundelde Hermes-JavaScript |
-| Gradle `app:assembleRelease` | Geslaagd in 6m 19s; 492 taken, waarvan 484 uitgevoerd en 8 up-to-date |
+| Gradle `app:assembleRelease` | Eerste volledige bouw geslaagd in 6m 19s; herbouw op de schone broncommit in 3m 9s, 492 taken (464 uitgevoerd / 28 up-to-date) |
 | APK-signatuur, package, SDK en architectuur | Geslaagd via Build-Tools 37 `apksigner` en `aapt2`: Android-debugcertificaat, v2-signatuur, demo-package, min SDK 24, target SDK 36, arm64-v8a |
 | APK ZIP-uitlijning | Geslaagd: `zipalign -c -P 16 4` |
 | APK-installatie en werking op Android-toestel/emulator | Niet uitgevoerd; geen toestel beschikbaar gesteld, geen emulator ingericht |
@@ -24,12 +24,12 @@
 - APK: `artifacts/native/fabelpad-demo-arm64.apk` vanuit de repositoryroot.
 - Controlemanifest: `artifacts/native/fabelpad-demo-arm64.json`.
 - Omvang: 35.671.087 bytes (ongeveer 34,0 MiB).
-- SHA-256: `d0c6720ec74c8bde079fe2e1da7064158dea94c914dbd35c9fb0d49ecd9991de`.
+- SHA-256: `6c4d87f433ec59ea89c26cb37ffa8110424e67564d45423f5b076869eb7e6266`.
 - Naam: Fabelpad Demo; package-ID `nl.dgwebservices.fabelpad.demo`; versie 0.1.0, versionCode 1.
 - Configuratie: lokaal gebundelde content, geen backend, geen Metro-server nodig.
 - Certificaat-SHA-256: `fac61745dc0903786fb9ede62a962b399f7348f0bb6f899b8332667591033b9c` (gegenereerde Android-debugsleutel, uitsluitend demo).
 
-Deze eerste APK is gebouwd uit de gewijzigde lokale werkboom boven basiscommit `a7475c4573d3f125be337eb315c574945c64352c`. Het manifest vermeldt daarom `workingTreeDirty: true`; dit is geen aan een schone releasecommit gekoppeld staging- of productieartefact. Een latere releasebouw moet de exacte definitieve bron-SHA en omgevingsconfiguratie vastleggen. APK-signatuur en ZIP-uitlijning zijn statische controles en bewijzen geen installatie, schermwerking of prestaties. Bij een volgende bouw is het gegenereerde manifest leidend voor hash en bronstatus.
+De geleverde APK is opnieuw gebouwd op schone broncommit `045c863997b6c8aca57cd118b1723b2cbfb7997f`; het manifest vermeldt `workingTreeDirty: false`. De latere GitHub-koppeling en documentatie veranderen de bronidentiteit van deze APK niet. Het blijft een lokale demo zonder stagingbackend of productieondertekening. APK-signatuur en ZIP-uitlijning zijn statische controles en bewijzen geen installatie, schermwerking of prestaties. Bij een volgende bouw is het gegenereerde manifest leidend voor hash en bronstatus.
 
 ## Gebruikte toolchain en capaciteit
 
@@ -49,4 +49,4 @@ Volg de installatie-instructies in `README.md`. Test minimaal het volledige stat
 
 De native demo gebruikt basisovergangen via native `Animated` en de stationsinteractie via Reanimated/Gesture Handler. Alle verhalen en illustraties zijn gebundeld; dit test nog geen download-/synchronisatiecontract. Productie-authenticatie krijgt de voorbereide SecureStore-adapter; AsyncStorage blijft uitsluitend voor demo-profielen en voortgang.
 
-De eerste APK is gebouwd vanuit de gewijzigde werkboom boven de importcommit. Een volgende gecontroleerde build op de uiteindelijke commit schrijft de exacte bron-SHA en de actuele APK-hash in `artifacts/native/fabelpad-demo-arm64.json`; dat manifest bepaalt welke bron bij het geleverde artefact hoort. Toestelchecks blijven ook na die herbouw niet uitgevoerd.
+De actuele APK en het controlemanifest worden samen aangeboden via [GitHub Releases](https://github.com/fabelpad/platform/releases/tag/demo-android-0.1.0-045c863). De APK vereist geen Metro-server. Toestelchecks blijven niet uitgevoerd.

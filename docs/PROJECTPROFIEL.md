@@ -1,6 +1,6 @@
 # Fabelpad — projectprofiel
 
-Bijgewerkt: 4 november 2026. Opdrachtscope: **lokaal bouwen** met de aangeleverde startprompt en DG-werkwijze; projectgegevens volgen. De ruimere staging-/publicatieopdracht in het aangeleverde document is geen opdracht om nu externe accounts aan te maken of omgevingen uit te rollen.
+Bijgewerkt: 5 november 2026. Opdrachtscope: **lokaal bouwen**, de broncode naar `main` van `fabelpad/platform` pushen en de repository aan deze checkout koppelen. Overige infrastructuurgegevens volgen. De ruimere staging-/publicatieopdracht in het aangeleverde document is geen opdracht om nu externe accounts aan te maken of omgevingen uit te rollen.
 
 ## Vastgesteld uit bron en lokale omgeving
 
@@ -10,7 +10,8 @@ Bijgewerkt: 4 november 2026. Opdrachtscope: **lokaal bouwen** met de aangeleverd
 | Aangeleverd pakket | `Fabelpad-Codex-Prototype-2026-11-04.zip` |
 | Oorspronkelijke pakketcommit | `97c3881d6bd94f41596ce77fb7a53d55936c6397` (pakketmetadata; geen lokale upstreamhistorie) |
 | Lokale importcommit | `a7475c4573d3f125be337eb315c574945c64352c` |
-| Branch | `main` |
+| Repository / remote | [`fabelpad/platform`](https://github.com/fabelpad/platform) / `origin=https://github.com/fabelpad/platform.git` |
+| Branch / upstream | `main` / `origin/main` |
 | Werkcheckout | `/home/codex/repos/fabelpad` |
 | Lokale host / gebruiker | `codex-worker-01` / `codex`; nog niet als DG-deployhost aangewezen |
 | Webtoolchain | Node `24.18.0` (`.nvmrc`), pnpm `11.25.0` (`packageManager`), `pnpm-lock.yaml` |
@@ -24,13 +25,13 @@ Bijgewerkt: 4 november 2026. Opdrachtscope: **lokaal bouwen** met de aangeleverd
 | Native productie-ID | Expliciet verplicht via `FABELPAD_ANDROID_PACKAGE` bij productievariant; definitieve waarde ontbreekt |
 | Release-identiteit | `FABELPAD_RELEASE_SHA` bevat bij een release de volledige checkout-SHA; lokale werkboomwijzigingen zijn geen gepubliceerde release |
 
-De uiteindelijk geteste commit, uitvoer en artefacten staan in [LOKALE-VALIDATIE.md](LOKALE-VALIDATIE.md). De importcommit is geen claim dat alle latere wijzigingen op die SHA zijn getest.
+De Android-demo is gebouwd op schone broncommit `045c863997b6c8aca57cd118b1723b2cbfb7997f`; de GitHub-koppeling wijzigt alleen documentatie en voegt de bestaande GitHub-historie samen. De uiteindelijk geteste commit, uitvoer en artefacten staan in [LOKALE-VALIDATIE.md](LOKALE-VALIDATIE.md). De importcommit is geen claim dat alle latere wijzigingen op die SHA zijn getest.
 
 ## Omgevingen en ontbrekende gegevens
 
 | Gegeven | Lokaal | Staging | Productie |
 | --- | --- | --- | --- |
-| GitHub owner/repository en remote | Nog niet opgegeven | Nog niet opgegeven | Dezelfde beheerde repository |
+| GitHub owner/repository en remote | `fabelpad/platform`; `origin` gekoppeld | Dezelfde repository | Dezelfde repository |
 | GitHub environment | Niet nodig | `staging`, nog aan te maken/in te richten | `production`, nog aan te maken/in te richten |
 | URL | Standaard `http://localhost:3000` (loopback) | Ontbreekt | Ontbreekt |
 | Site-ID | Niet nodig | Ontbreekt | Ontbreekt |
