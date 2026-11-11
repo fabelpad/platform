@@ -1,0 +1,97 @@
+name: Fabelpad dg-nxttrack-01 staging kandidaat bouwen
+run-name: Fabelpad staging kandidaat ${{ inputs.release_sha }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_sha:
+        description: Volledige goedgekeurde SHA op main (40 kleine hextekens)
+        type: string
+        required: true
+      config_id:
+        description: Bestaande onveranderlijke publieke buildconfiguratie-ID op de doelhost
+        type: string
+        required: true
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: fabelpad-nxttrack-staging-candidate
+  cancel-in-progress: false
+
+jobs:
+  preflight:
+    if: >-
+      github.repository == 'fabelpad/platform' &&
+      github.event_name == 'workflow_dispatch' &&
+      github.ref == 'refs/heads/main' &&
+      github.workflow_ref == 'fabelpad/platform/.github/workflows/fabelpad-dg-nxttrack-01-staging-candidate.yml@refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ github.workflow_sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version-file: .nvmrc
+      - name: Controleer configuratie-ID, exacte SHA en vereiste CI
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_SHA: ${{ inputs.release_sha }}
+          CONFIG_ID: ${{ inputs.config_id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$CONFIG_ID" =~ ^[a-z0-9][a-z0-9-]{0,62}$ ]] || exit 64
+          node scripts/deploy/verify-release-sha.mjs --sha "$RELEASE_SHA"
+
+  candidate:
+    needs: preflight
+    if: github.repository == 'fabelpad/platform' && github.ref == 'refs/heads/main'
+    # Register this dedicated runner only after enforcing the selected-workflow
+    # restriction for these exact manual workflow files at refs/heads/main.
+    runs-on: [self-hosted, Linux, X64, dg-nxttrack-01, fabelpad-nxttrack-staging]
+    timeout-minutes: 50
+    steps:
+      - name: Controleer host en afzonderlijk runneraccount
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$(hostname)" == dg-nxttrack-01 ]]
+          [[ "$(id -un)" == run-fab-nxt-stg ]]
+          [[ "$(uname -m)" == x86_64 ]]
+          [[ "$(cat /etc/machine-id)" == dff5b148cd5045c2977bbe887f89551d ]]
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ github.workflow_sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Hercontroleer CI en bouw uitsluitend een nieuwe kandidaat
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_SHA: ${{ inputs.release_sha }}
+          CONFIG_ID: ${{ inputs.config_id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$CONFIG_ID" =~ ^[a-z0-9][a-z0-9-]{0,62}$ ]] || exit 64
+          task_ci="$(/opt/node-v24.18.0-linux-x64/bin/node scripts/deploy/verify-release-sha.mjs --sha "$RELEASE_SHA")"
+          CI_TICKET="$task_ci" /opt/node-v24.18.0-linux-x64/bin/node --input-type=module -e '
+            import {spawnSync} from "node:child_process";
+            const ci = JSON.parse(process.env.CI_TICKET);
+            const result = spawnSync("sudo", ["-n", "/usr/local/libexec/fabelpad-nxttrack-staging/candidate-build.sh",
+              "--sha", process.env.RELEASE_SHA, "--config-id", process.env.CONFIG_ID,
+              "--run-id", process.env.GITHUB_RUN_ID, "--run-attempt", process.env.GITHUB_RUN_ATTEMPT,
+              "--ci-run-id", String(ci.ciRunId), "--ci-run-attempt", String(ci.ciRunAttempt), "--ci-job-id", String(ci.ciJobId)],
+              {input:JSON.stringify({githubToken:process.env.GH_TOKEN}), env:{PATH:"/usr/sbin:/usr/bin:/sbin:/bin"}, stdio:["pipe","inherit","inherit"]});
+            process.exit(result.status ?? 1);'
+          printf 'Kandidaat-ID: %s-%s-%s\n' "$RELEASE_SHA" "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT"
+
+# No environment, runtime secrets, migration, current switch, service start or
+# proxy change belongs to this build route. The installed root-owned dispatcher
+# repeats GitHub ancestry/CI verification and scrubs the build worker environment.

@@ -11,6 +11,7 @@
     "start": "next start --hostname 127.0.0.1",
     "typecheck": "tsc --noEmit",
     "check:config": "node scripts/config-check.mjs",
+    "check:deploy": "node --test scripts/deploy/*.test.mjs && python3 scripts/deploy/install-host.test.py",
     "check:content": "node scripts/local-checks.mjs",
     "check:profiles": "node --experimental-strip-types scripts/profile-storage-check.mjs",
     "content:export": "node scripts/export-native-content.mjs",

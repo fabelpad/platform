@@ -1,0 +1,7 @@
+# Deliberately outside /etc/caddy/sites/*.caddy.
+# An unset domain is rejected by the renderer. Verify ownership, DNS and the
+# later activation instruction before placing a rendered copy in that import.
+__VERIFIED_FABELPAD_DOMAIN__ {
+    encode zstd gzip
+    reverse_proxy 127.0.0.1:4176
+}

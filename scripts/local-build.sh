@@ -16,4 +16,5 @@ pnpm typecheck
 pnpm check:content
 pnpm check:backend
 pnpm check:native
+pnpm check:deploy
 pnpm build

@@ -1,6 +1,6 @@
 # Nog benodigde gegevens en inrichting
 
-Bijgewerkt: 5 november 2026. De lokale demo moet zonder externe accounts of secrets bouwen. Onderstaande lijst is de overdracht voor de volgende fase; ontbrekende waarden zijn niet als geconfigureerd beschouwd. Bestaande accounts kunnen worden gebruikt: een tweede organisatie of betaald Expo-buildaccount is niet vanzelf nodig.
+Bijgewerkt: 11 november 2026. De lokale demo moet zonder externe accounts of secrets bouwen. Voor het nieuwe stagingdoel op dg-nxttrack-01 staan de inmiddels vastgestelde host-, account-, runner- en padkeuzes in [DEPLOY-DG-NXTTRACK-01.md](DEPLOY-DG-NXTTRACK-01.md). Die gegevens vervangen voor dit doel de eerdere placeholders hieronder. De overige account-/providerlijst blijft van toepassing; ontbrekende waarden zijn niet als geconfigureerd beschouwd.
 
 ## Projectgegevens vóór koppelen of uitrollen
 
@@ -29,7 +29,7 @@ Bijgewerkt: 5 november 2026. De lokale demo moet zonder externe accounts of secr
 
 ## Variabelen die de huidige webcode daadwerkelijk gebruikt
 
-Plaats lokale waarden in `.env.local` op basis van `.env.example`. Plaats staging-/productiewaarden later in hun eigen GitHub environment en via de geverifieerde wrapperallowlists op de juiste build-/runtimeplek. `.env.example` bevat uitsluitend lege voorbeelden.
+Plaats lokale waarden in `.env.local` op basis van `.env.example`. Voor **fabelpad-nxttrack-staging** staan build- en runtimewaarden uitsluitend in de gescheiden root-owned hostbestanden uit het doelrunbook; de GitHub environment regelt de activatiegoedkeuring. Er worden geen runtimegeheimen via GitHub naar de build gestuurd. Productie krijgt later een afzonderlijk contract. De voorbeeldbestanden bevatten uitsluitend lege waarden.
 
 | Naam | Klasse en plek | Verplicht / betekenis |
 | --- | --- | --- |
@@ -64,7 +64,7 @@ Nog nodig: toegestane afzender, gecontroleerde testontvangers, welke processen A
 
 ## Deploysecrets en GitHub environments
 
-Leg `staging` en `production` afzonderlijk vast. Publieke buildconfiguratie, serverconfiguratie en deploymentbevoegdheid krijgen gescheiden allowlists. Runnerlabels, host, site-ID, paden, poorten, SHA en configuratieversie zijn **variabelen**, geen geheimen.
+Voor het nieuwe doel is de exact gekozen activatie-environment **fabelpad-nxttrack-staging**; de oudere generieke naam staging is daarvoor geen instructie. Productie blijft afzonderlijk en oningericht. Publieke buildconfiguratie, serverconfiguratie en deploymentbevoegdheid krijgen gescheiden allowlists. Runnerlabels, host, site-ID, paden, poorten, SHA en configuratieversie zijn **variabelen**, geen geheimen.
 
 Voor de deploy-/databasebeheerlaag kunnen Supabase CLI-toegang, een databaseverbinding, backupencryptie-/hersteltoegang en beperkte runnerbevoegdheden nodig zijn. Hun exacte secretnamen en scopes volgen uit het echte DG-releasecontract. Een self-hosted runner is geen reden om nu een breed SSH/PAT-secret te verzinnen. Deploycredentials worden niet aan `next build` of de app-runtime doorgegeven. Maak vóór schemawijzigingen de voorgeschreven versleutelde backup met herstelbewijs.
 

@@ -1,16 +1,29 @@
-# Releasepad nog te configureren
+# Releasevoorwaarden
 
-De huidige opdracht autoriseert een lokale build. `workflows/verify.yml` bewijst alleen installatie, controles en bundels op de uitgecheckte commit. Er is bewust nog geen muterende staging-/productieworkflow.
+De opdracht van 11 november 2026 bereidt het nieuwe doel
+**fabelpad-nxttrack-staging op dg-nxttrack-01** voor. Er is geen toestemming
+voor eerste activatie, verplaatsing of publieke ingebruikname.
+Het uitvoerbare contract staat in [het doelrunbook](../docs/DEPLOY-DG-NXTTRACK-01.md).
 
-Voeg het echte releasepad pas toe als de onderstaande gegevens en contracten beschikbaar en gecontroleerd zijn:
+- Alleen fabelpad/platform, integratiebranch main, volledige commit-SHA.
+- De nieuwste push-run van verify.yml op precies die SHA moet volledig geslaagd
+  zijn, inclusief de actuele poging, verify-job en verplichte stappen.
+- Alleen de twee handmatige Fabelpad-doelworkflows mogen op de eigen runner
+  draaien. Registratie blijft uit tot een geselecteerde-workflowbeperking op
+  refs/heads/main aantoonbaar geldt. Labels alleen zijn onvoldoende.
+- Kandidaatbouw en activering zijn afzonderlijke workflows; bouwen wisselt geen
+  current en start geen appservice.
+- Activatie vereist de vooraf ingerichte beschermde environment
+  fabelpad-nxttrack-staging met reviewers, prevent_self_review en main-branchpolicy.
+- De geverifieerde Milo-wrapper en alle bestaande omgevingen blijven ongemoeid.
+  De nieuwe root-owned adapter gebruikt eigen accounts, paden, lock en poort.
+- Publieke buildconfiguratie en runtimeconfiguratie zijn gescheiden,
+  onveranderlijk geïdentificeerd en bij dezelfde release gekoppeld. Geen secrets
+  in bron, artefacten, logs, procesargumenten of buildaccount.
+- Geen migraties in appworkflows. Databasewijzigingen vereisen een apart
+  compatibiliteits-, backup- en herstelcontract voor het bevestigde eigen project.
+- Loopbackhealth bewijst alleen procesliveness. Echte Auth/RLS/sync/mailacceptatie
+  en HTTPS-readiness zijn aanvullende voorwaarden.
 
-- GitHub-repository en environments `staging` en `production`, runnernaam, exacte labels, Linux-gebruiker, workspace en hostbeleid voor lock/retentie.
-- Site-ID, HTTPS-origin, deployhost, projectpaden, loopbackpoort en Caddy-configuratie per omgeving.
-- Geïnstalleerde `dg-site-deploy`-versie, ondersteunde configuratieallowlists, native Next.js-startcontract, activatie-, health- en rollbackinterface. Het wrappervoorbeeld uit een ander project is geen Fabelpad-contract.
-- Geslaagde vereiste CI op de volledige release-SHA; checkout-SHA, workflow-SHA en runtime-SHA afzonderlijk bewijzen.
-- `node scripts/config-check.mjs --target=staging` respectievelijk `--target=production` met de omgevingsconfiguratie; log uitsluitend namen/aanwezigheid. De configuratiecheck voert geen deployment uit.
-- Versleutelde databasebackup plus herstelbewijs, migratiehistorie en achterwaartse compatibiliteit vóór schema-/Edge-wijzigingen.
-- Gecontroleerde Supabase Auth/Google/mailgateway/outbox-inrichting en werkelijke flowacceptatie, inclusief twee verschillende ouderaccounts en beheerdersrechten.
-- Stagingacceptatie van dezelfde bron-SHA vóór een later geautoriseerde productiestap. Beide omgevingen bouwen afzonderlijk met hun eigen `NEXT_PUBLIC_`-waarden.
-
-De workflow mag de wrapper pas met diens geverifieerde interface aanroepen. Geen hosts, labels, argumenten, backupscripts of rollbackcommando's raden. Zie `docs/RUNBOOK.md` en `docs/INRICHTING.md`.
+De workflows en scripts in een reviewbranch zijn geen release op main. Een
+voorbereide unit of proxytemplate is geen actieve service of publiek domein.
