@@ -1,0 +1,38 @@
+[Unit]
+Description=Fabelpad staging on dg-nxttrack-01
+Wants=network-online.target
+After=network-online.target
+RequiresMountsFor=/srv/sites/fabelpad-nxttrack-staging
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+[Service]
+Type=simple
+User=app-fab-nxt-stg
+Group=app-fab-nxt-stg
+WorkingDirectory=/srv/sites/fabelpad-nxttrack-staging/current/artifact
+Environment=NODE_ENV=production
+Environment=HOSTNAME=127.0.0.1
+Environment=NEXT_TELEMETRY_DISABLED=1
+Environment=PATH=/opt/node-v24.18.0-linux-x64/bin:/usr/bin:/bin
+EnvironmentFile=/srv/sites/fabelpad-nxttrack-staging/current/runtime.env
+ExecStart=/opt/node-v24.18.0-linux-x64/bin/node /srv/sites/fabelpad-nxttrack-staging/current/artifact/node_modules/next/dist/bin/next start --hostname 127.0.0.1 --port 4176
+Restart=on-failure
+RestartSec=5s
+TimeoutStopSec=30s
+UMask=0027
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectHome=yes
+ProtectSystem=strict
+ProtectProc=invisible
+RestrictSUIDSGID=yes
+CapabilityBoundingSet=
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+ReadWritePaths=/srv/sites/fabelpad-nxttrack-staging/shared
+TasksMax=256
+MemoryMax=1G
+SyslogIdentifier=fabelpad-nxttrack-staging
+
+[Install]
+WantedBy=multi-user.target

@@ -1,6 +1,6 @@
 # Fabelpad — projectprofiel
 
-Bijgewerkt: 5 november 2026. Opdrachtscope: **lokaal bouwen**, de broncode naar `main` van `fabelpad/platform` pushen en de repository aan deze checkout koppelen. Overige infrastructuurgegevens volgen. De ruimere staging-/publicatieopdracht in het aangeleverde document is geen opdracht om nu externe accounts aan te maken of omgevingen uit te rollen.
+Bijgewerkt: 11 november 2026. De lokale demo en repositorykoppeling zijn eerder afgerond. De huidige opdracht bereidt een afzonderlijk stagingdoel op **dg-nxttrack-01** voor, zonder activatie of publieke ingebruikname. Het actuele doelcontract, de vastgestelde hostgegevens en resterende toegang/configuratie staan in [DEPLOY-DG-NXTTRACK-01.md](DEPLOY-DG-NXTTRACK-01.md). De oudere stagingplaceholders hieronder zijn historische inventarisatie; voor dit nieuwe doel geldt dat document.
 
 ## Vastgesteld uit bron en lokale omgeving
 
@@ -56,4 +56,4 @@ Er zijn geen projectwaarden van andere aanwezige repositories overgenomen. Een `
 
 NEXT_PUBLIC-waarden horen bij de **build**. Staging en productie bouwen dezelfde bron-SHA afzonderlijk met eigen waarden. De uitvoer is daarmee niet noodzakelijk byte-identiek. Backendmigraties, Edge Functions en mailcontracten moeten compatibel blijven met de actieve webrelease en de huidige/vorige ondersteunde mobiele app.
 
-De oude [overdracht](FABELPAD-CODEX-OVERDRACHT.md) beschrijft het prototype en bevat verouderde Docker-/SMTP-voorstellen. Voor het huidige werk gelden native Next.js via de bestaande DG-wrapper en Caddy, plus de bestaande gesigneerde Supabase-mailgateway/outbox. [INRICHTING.md](INRICHTING.md) beschrijft wat nog nodig is.
+De oude [overdracht](FABELPAD-CODEX-OVERDRACHT.md) beschrijft het prototype en bevat verouderde Docker-/SMTP-voorstellen. Voor het huidige werk gelden native Next.js en Caddy, plus het nog te bevestigen DG-mailgateway/outboxcontract. De geverifieerde hostwrapper blijkt Milo-specifiek; het nieuwe doel krijgt daarom de afzonderlijke Fabelpad-adapter uit het doelrunbook. [INRICHTING.md](INRICHTING.md) beschrijft de overige account- en providergegevens.

@@ -1,6 +1,6 @@
 # Lokaal bouwen en later releasen
 
-Dit runbook hoort bij de lokale opdracht van 4 november 2026. De repository `https://github.com/fabelpad/platform.git` is als `origin` gekoppeld; `main` volgt `origin/main`. Een Fabelpad-deployhost, Supabase-project en werkend DG-wrappercontract moeten nog worden geconfigureerd. Zie [PROJECTPROFIEL.md](PROJECTPROFIEL.md) en [INRICHTING.md](INRICHTING.md).
+Dit runbook beschrijft de lokale bouwroute. De repository `https://github.com/fabelpad/platform.git` is als `origin` gekoppeld; integratiebranch is `main`. Voor de voorbereidingsopdracht van 11 november 2026 geldt aanvullend [DEPLOY-DG-NXTTRACK-01.md](DEPLOY-DG-NXTTRACK-01.md): afzonderlijke kandidaatbouw en latere activatie op dg-nxttrack-01, zonder nu een omgeving te activeren. De lokale demo blijft zonder externe accounts uitvoerbaar.
 
 ## Voorcontrole en installatie
 
@@ -73,7 +73,7 @@ Een workflowbestand alleen bewijst geen geslaagde GitHub-run. De push naar de op
 
 ## Later: DG-release en acceptatie
 
-Volg eerst [.github/RELEASE-GATES.md](../.github/RELEASE-GATES.md). De DG-standaard is een native Next.js-serverrelease via de bestaande `dg-site-deploy`-wrapper en Caddy, met een eigen self-hosted runner op de doelomgeving. Docker, Workers en een alternatieve mailgateway zijn geen onderdeel van dit releasepad.
+Volg eerst [.github/RELEASE-GATES.md](../.github/RELEASE-GATES.md). Voor **fabelpad-nxttrack-staging** geldt de concrete procedure uit [DEPLOY-DG-NXTTRACK-01.md](DEPLOY-DG-NXTTRACK-01.md); de oude stappen hieronder blijven een algemene acceptatielijst. De aangetroffen `dg-site-deploy` is alleen voor Milo en wordt niet gebruikt of aangepast. De nieuwe Fabelpad-adapter bouwt kandidaten en activeert die afzonderlijk. Docker, Workers en een alternatieve mailgateway zijn geen onderdeel van dit releasepad.
 
 1. Leg één volledige bron-SHA vast en vereis groene CI op precies die commit. Controleer de runner, Linux-gebruiker, workspace, wrapperversie en configallowlists.
 2. Controleer bytes/inodes en het hostbrede build-lock. Maak vóór migraties de voorgeschreven versleutelde databasebackup en toon herstelbewijs aan.
@@ -90,6 +90,6 @@ Staging- en productiewaarden van `NEXT_PUBLIC_SUPABASE_*` worden tijdens hun eig
 - Ontbrekende Supabase-configuratie: de demo blijft bruikbaar; echte serverroutes moeten expliciet onbeschikbaar zijn. Gebruik geen demo-login als echte beheertoegang.
 - Releasefalen: noteer welke app-, database-, Edge- en providerstappen werkelijk zijn uitgevoerd. Stop vervolgstappen en volg het geverifieerde rollbackcontract van de wrapper.
 - Een approllback draait database, Edge Functions, mailcontracten of providerconfiguratie **niet automatisch terug**. Controleer de nog actieve app tegen de reeds gewijzigde backend.
-- Het concrete rollbackcommando, release-/backuppaden, encryptiesleutelbeheer, retentie en herstelbewijs ontbreken nog. Vul ze uit het werkelijke infrastructuurrunbook in vóór een eerste remote mutatie.
+- Voor het nieuwe doel staan het concrete approllbackcommando en de releasepaden in [DEPLOY-DG-NXTTRACK-01.md](DEPLOY-DG-NXTTRACK-01.md). Databasebackuppaden, encryptiesleutelbeheer, retentie en herstelbewijs ontbreken nog; approllback vervangt dat contract niet.
 
 Geef een controle alleen als geslaagd weer met het bijbehorende commando, de werkelijk geteste commit/werkboom, datum en resultaat. Markeer niet-uitgevoerde tests expliciet; een bundel is geen toesteltest of Play-release.

@@ -1,0 +1,4 @@
+self-hosted-runner:
+  labels:
+    - dg-nxttrack-01
+    - fabelpad-nxttrack-staging
