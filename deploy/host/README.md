@@ -5,11 +5,18 @@ Deze installatie geldt uitsluitend voor het nieuwe doel
 `dff5b148cd5045c2977bbe887f89551d`, met loopbackpoort `4176`.
 De oudere Fabelpad-inrichting `fabelpad-staging` blijft onaangeraakt.
 
-Er is nog **geen installatie op de doelhost uitgevoerd**. De gevonden tijdelijke
-Dartflow-beheersleutel is alleen voor inventaris gebruikt. Het daarna door de
-gebruiker gereedgezette algemene beheeraccount `codex-dg-admin` is alleen-lezen
-geverifieerd, inclusief hostidentiteit, bestaande hostkey en sudo-policy.
-De lokale verbindingsconfiguratie staat buiten Git:
+De afzonderlijke hostvoorbereiding is op **11 november 2026 uitgevoerd** uit
+broncommit `ef7c707b7eddbb780e3cb5274268770ff4eb8e71`, na een geslaagde schone lokale
+build en alle lokale controles. De nieuwe appservice is **inactief en disabled**;
+configuratie, doelkandidaat, `current`, runnerregistratie en publieke routing
+ontbreken nog. De onafhankelijke nameting bevestigde dezelfde bestaande
+omgevingen en overeenkomende hashes/rechten van alle twaalf adaptermodules.
+
+De tijdelijke Dartflow-beheersleutel is alleen voor inventaris gebruikt. Het
+daarna door de gebruiker gereedgezette algemene beheeraccount `codex-dg-admin`
+is geverifieerd, inclusief hostidentiteit, bestaande hostkey en sudo-policy,
+en gebruikt voor uitsluitend de nieuwe hostinrichting. De lokale
+verbindingsconfiguratie staat buiten Git:
 
 ```text
 ssh -F /home/codex/.ssh/dg-nxttrack-admin.conf dg-nxttrack-01-admin
@@ -27,9 +34,9 @@ inspecteren. Alleen de expliciete optie `--apply` maakt nieuwe resources.
 
 | Onderdeel | Nieuw doel |
 | --- | --- |
-| Runneraccount | `run-fab-nxt-stg`, uitsluitend eigen groep |
-| Buildaccount | `build-fab-nxt-stg`, uitsluitend eigen groep |
-| Appaccount | `app-fab-nxt-stg`, uitsluitend eigen groep |
+| Runneraccount | `run-fab-nxt-stg`, UID `979`, GID `973`, uitsluitend eigen groep |
+| Buildaccount | `build-fab-nxt-stg`, UID `978`, GID `972`, uitsluitend eigen groep |
+| Appaccount | `app-fab-nxt-stg`, UID `977`, GID `971`, uitsluitend eigen groep |
 | Appboom | `/srv/sites/fabelpad-nxttrack-staging/{candidates,releases,shared}` |
 | Buildboom | `/var/lib/dg-build/fabelpad-nxttrack-staging/{home,work}` |
 | Lege runnerdirectory | `/opt/actions-runner/fabelpad-nxttrack-staging` |
@@ -121,10 +128,14 @@ sha256:baebf204307bac6193480852732f0aba2ae97b6c5597c244f4d5558390147c40
 ```
 
 Bron: de [officiële release-API](https://api.github.com/repos/actions/runner/releases/424372770).
-Een download en digestcontrole zijn afzonderlijke uitvoeringsstappen. Alleen het
-plaatsen van een geverifieerd pakket in de eigen nieuwe directory registreert
-of start geen runner en kan vooraf worden voorbereid. Gebruik geen bestaande
-runnerdirectory en voer geen algemene dependency-installaties uit.
+Dit pakket is inmiddels uitsluitend als `run-fab-nxt-stg` in de eigen nieuwe
+runnerdirectory geplaatst en uitgepakt. De onafhankelijke nameting op
+11 november 2026, **10:41 CET**, heeft de werkelijke archiefdigest, omvang en
+eigendom van alle pakketbestanden bevestigd. De registratie- en credentialfiles
+ontbreken; er is geen runnerunit geïnstalleerd en er draait geen proces onder
+de nieuwe runneridentiteit. De GitHub-repository meldde bij de laatste
+alleen-lezen controle nul runners. Er zijn geen algemene
+dependency-installaties uitgevoerd.
 
 Na verificatie van de GitHub-beperking gebruikt een beheerder het gecontroleerde
 Linux x64-pakket via de officiële `actions/runner`-release/GitHub-setup.

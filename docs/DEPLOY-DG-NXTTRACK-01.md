@@ -59,6 +59,11 @@ Bij een botsing weigert hij bestaande middelen te wijzigen. Een gedeeltelijk
 mislukte installatie moet door een beheerder worden beoordeeld; opnieuw uitvoeren
 is geen impliciete toestemming om bestaande middelen te herstellen of over te nemen.
 
+De eigen installatie is inmiddels uitgevoerd: status prepared-inactive. Ook het
+gecontroleerde runnerpakket staat offline klaar. Zie het validatierapport voor
+account-ID's, bron-SHA en de geslaagde nameting. Voer de oorspronkelijke installer
+niet opnieuw uit over deze inrichting; hij weigert terecht bestaande doelresources.
+
 ## Nog benodigde toegang en configuratie
 
 De tijdelijke Dartflow-beheerroute is uitsluitend voor lezen gebruikt. Daarna
@@ -89,6 +94,17 @@ GitHub heeft nog geen Fabelpad-runners of environments. Registratie vereist:
    als run-fab-nxt-stg met de hierboven genoemde eigen labels. Een kortlevend
    registratietoken hoort niet in Git, logs of documentatie. Laat een beheerder de
    eigen runnerunit installeren; laat bestaande runners draaien zoals aangetroffen.
+
+De geselecteerde workflowreferenties zijn exact:
+
+~~~text
+fabelpad/platform/.github/workflows/fabelpad-dg-nxttrack-01-staging-candidate.yml@refs/heads/main
+fabelpad/platform/.github/workflows/fabelpad-dg-nxttrack-01-staging-activate.yml@refs/heads/main
+~~~
+
+Registreer bij de organisatie https://github.com/fabelpad in de geverifieerde eigen
+runnergroep die alleen deze repository en workflowreferenties toestaat. Een gewone
+repositoryrunner biedt die geselecteerde-workflowgarantie niet.
 
 | Namen / gegevens | Moment en bron | Opslag / gevolg |
 | --- | --- | --- |
@@ -292,8 +308,8 @@ ontbreken nog. Bestaande databases blijven onaangeraakt.
 
 | Stap | Staat klaar | Ontbreekt |
 | --- | --- | --- |
-| Eigen hosttoevoegingen | Installer, units, sudoers-allowlist, identiteitschecks; algemene beheerroute geverifieerd | Werkelijke installatiestatus in het validatierapport |
-| Runner | Eigen paden/account/unit/labels voorbereid | Organization-rechten, geselecteerde workflows, registratie |
+| Eigen hosttoevoegingen | Uitgevoerd en nagemeten; accounts, paden, adapter, beperkte sudoers en inactieve appunit | Geen voor de uitgevoerde voorbereiding; nieuwe waarden blijven ontbreken |
+| Runner | Eigen account/paden, geverifieerd offline pakket, unit en labels | Organization-rechten, geselecteerde workflows, registratie |
 | Stagingbuildconfiguratie | Parser, naamallowlist, config/SHA-binding | Bevestigde APP_URL en apart Supabase-stagingproject/publishable waarden |
 | GitHub releasepad | Twee handmatige workflows en SHA/CI-poort | Review/merge naar main, daarna geslaagde CI op vrijgegeven volledige SHA |
 | Activeringsgoedkeuring | Environmentcontrole weigert onbeschermde targets | Nieuwe beschermde environment en afzonderlijke reviewers |
