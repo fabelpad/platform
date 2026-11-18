@@ -1,0 +1,136 @@
+name: Fabelpad Google Play productie
+
+on:
+  push:
+    tags: ['fabelpad-v*']
+  workflow_dispatch:
+    inputs:
+      action:
+        description: Actie voor een bestaande gefaseerde uitrol
+        type: choice
+        options: [complete, halt]
+        required: true
+      version_code:
+        description: Exacte Google Play-versionCode van die uitrol
+        type: string
+        required: true
+
+permissions:
+  contents: read
+  actions: read
+  id-token: write
+
+concurrency:
+  group: fabelpad-play-release
+  queue: max
+
+jobs:
+  release:
+    if: vars.FABELPAD_PLAY_ENABLED == 'true' && (github.event_name == 'push' || github.ref == 'refs/heads/main')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    environment: fabelpad-play-production
+    env:
+      PLAY_PACKAGE: ${{ vars.PLAY_PACKAGE_NAME }}
+      INTERNAL_TRACKS: ${{ vars.PLAY_INTERNAL_TRACKS }}
+      PRODUCTION_TRACKS: ${{ vars.PLAY_PRODUCTION_TRACKS }}
+      ROLLOUT_FRACTION: ${{ vars.PLAY_ROLLOUT_FRACTION || '1' }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Controleer repository, beschermde tag en bronversie
+        id: identity
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DISPATCH_ACTION: ${{ inputs.action }}
+          DISPATCH_VERSION: ${{ inputs.version_code }}
+          RELEASE_REF_PROTECTED: ${{ github.ref_protected }}
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = fabelpad/platform
+          test "$PLAY_PACKAGE" = nl.fabelpad.app
+          : "${INTERNAL_TRACKS:?PLAY_INTERNAL_TRACKS ontbreekt}"
+          : "${PRODUCTION_TRACKS:?PLAY_PRODUCTION_TRACKS ontbreekt}"
+          if [[ "$GITHUB_EVENT_NAME" == workflow_dispatch ]]; then
+            [[ "$GITHUB_REF" == refs/heads/main ]]
+            [[ "$DISPATCH_ACTION" == complete || "$DISPATCH_ACTION" == halt ]]
+            [[ "$DISPATCH_VERSION" =~ ^[1-9][0-9]{0,9}$ ]]
+            ((DISPATCH_VERSION <= 2100000000))
+            printf 'action=%s\ncode=%s\n' "$DISPATCH_ACTION" "$DISPATCH_VERSION" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          [[ "$GITHUB_REF_NAME" =~ ^fabelpad-v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]
+          if [[ "$RELEASE_REF_PROTECTED" != true ]]; then
+            echo 'Bescherm eerst fabelpad-v* releasetags met een GitHub-ruleset; deze tag is niet beschermd.' >&2
+            exit 1
+          fi
+          commit="$(git rev-parse 'HEAD^{commit}')"
+          git -c credential.helper= -c 'credential.helper=!gh auth git-credential' \
+            fetch --no-tags origin '+refs/heads/main:refs/remotes/origin/main'
+          git merge-base --is-ancestor "$commit" refs/remotes/origin/main
+          version_name="${GITHUB_REF_NAME#fabelpad-v}"
+          actual_version="$(python3 -c 'import json; print(json.load(open("mobile/package.json"))["version"])')"
+          test "$version_name" = "$actual_version"
+          printf 'action=start\ncommit=%s\nname=%s\n' "$commit" "$version_name" >> "$GITHUB_OUTPUT"
+      - name: Vereis originele geslaagde web- en content-CI
+        if: steps.identity.outputs.action == 'start'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_SHA: ${{ steps.identity.outputs.commit }}
+        run: python3 -B scripts/play/verify_ci.py --workflow verify.yml --sha "$RELEASE_SHA"
+      - name: Vereis originele geslaagde native Android-CI
+        if: steps.identity.outputs.action == 'start'
+        id: native-ci
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_SHA: ${{ steps.identity.outputs.commit }}
+        run: python3 -B scripts/play/verify_ci.py --workflow fabelpad-android-ci.yml --sha "$RELEASE_SHA" --github-output "$GITHUB_OUTPUT"
+      - name: Controleer het intern geaccepteerde releasebewijs
+        if: steps.identity.outputs.action == 'start'
+        id: receipt
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NATIVE_RUN_ID: ${{ steps.native-ci.outputs.run_id }}
+          RELEASE_SHA: ${{ steps.identity.outputs.commit }}
+          VERSION_NAME: ${{ steps.identity.outputs.name }}
+        run: |
+          set -euo pipefail
+          artifacts="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$NATIVE_RUN_ID/artifacts?name=fabelpad-play-receipt")"
+          artifact_id="$(jq -er '[.artifacts[] | select(.name == "fabelpad-play-receipt" and .expired == false)] | if length == 1 then .[0].id else error("Exact één geldig intern releasebewijs vereist") end' <<< "$artifacts")"
+          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$artifact_id/zip" > "$RUNNER_TEMP/fabelpad-play-receipt.zip"
+          receipt="$(unzip -p "$RUNNER_TEMP/fabelpad-play-receipt.zip" fabelpad-play-receipt.json)"
+          code="$(jq -er --arg sha "$RELEASE_SHA" --arg name "$VERSION_NAME" --arg package "$PLAY_PACKAGE" \
+            --arg runId "$NATIVE_RUN_ID" --arg tracks "$INTERNAL_TRACKS" \
+            'select(.commit == $sha and .package == $package and .versionName == $name and .runId == $runId)
+            | select(.tracks == ($tracks | split(",")))
+            | .versionCode | select(type == "number" and floor == . and . >= 1 and . <= 2100000000)' <<< "$receipt")"
+          digest="$(jq -er '.bundleSha256 | select(test("^[a-f0-9]{64}$"))' <<< "$receipt")"
+          printf 'code=%s\nsha256=%s\n' "$code" "$digest" >> "$GITHUB_OUTPUT"
+      - name: Autoriseer tijdelijk bij Google Play
+        id: play-auth
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
+        with:
+          workload_identity_provider: ${{ vars.PLAY_WIF_PROVIDER }}
+          service_account: ${{ vars.PLAY_SERVICE_ACCOUNT }}
+          token_format: access_token
+          access_token_scopes: https://www.googleapis.com/auth/androidpublisher
+          create_credentials_file: false
+          export_environment_variables: false
+      - name: Promoveer dezelfde intern geteste AAB of beheer de bestaande uitrol
+        env:
+          PLAY_ACCESS_TOKEN: ${{ steps.play-auth.outputs.access_token }}
+          RELEASE_ACTION: ${{ steps.identity.outputs.action }}
+          DISPATCH_CODE: ${{ steps.identity.outputs.code }}
+          RECEIPT_CODE: ${{ steps.receipt.outputs.code }}
+          BUNDLE_SHA256: ${{ steps.receipt.outputs.sha256 }}
+        run: |
+          set -euo pipefail
+          version_code="${RECEIPT_CODE:-$DISPATCH_CODE}"
+          extra_args=()
+          if [[ -n "$BUNDLE_SHA256" ]]; then extra_args+=(--sha256 "$BUNDLE_SHA256"); fi
+          python3 -B scripts/play/release.py promote \
+            --package "$PLAY_PACKAGE" --version-code "$version_code" \
+            --source-tracks "$INTERNAL_TRACKS" --tracks "$PRODUCTION_TRACKS" \
+            --action "$RELEASE_ACTION" --fraction "$ROLLOUT_FRACTION" "${extra_args[@]}"

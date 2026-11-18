@@ -1,0 +1,254 @@
+name: Fabelpad Android CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      signed_bundle:
+        description: Bouw een gesigneerde productie-AAB zonder Play-upload
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+env:
+  CI: '1'
+  FABELPAD_ANDROID_PACKAGE: ${{ vars.PLAY_PACKAGE_NAME || 'nl.fabelpad.app' }}
+  FABELPAD_PRIVACY_URL: ${{ vars.FABELPAD_PRIVACY_URL || 'https://fabelpad.nl/privacy' }}
+  FABELPAD_SUPPORT_URL: ${{ vars.FABELPAD_SUPPORT_URL || 'mailto:support@fabelpad.nl' }}
+  FABELPAD_ANDROID_ICON: ${{ vars.FABELPAD_ANDROID_ICON }}
+
+jobs:
+  verify:
+    name: Native Android-controles
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version-file: .nvmrc
+      - name: Maak ruimte op de tijdelijke GitHub-runner
+        run: |
+          set -euo pipefail
+          test "$RUNNER_ENVIRONMENT" = github-hosted
+          sudo rm -rf -- /usr/share/dotnet /opt/ghc
+      - name: Installeer vastgelegde dependencies
+        run: |
+          npm install --global pnpm@11.25.0
+          pnpm install --frozen-lockfile
+          npm ci --prefix mobile --no-audit --no-fund
+      - name: Test Play-planning en exacte CI-vrijgave zonder credentials
+        run: python3 -B -m unittest discover -s scripts/play -p 'test_*.py'
+      - name: Controleer TypeScript en native gedrag
+        run: |
+          npm run check --prefix mobile
+          npm run check:native
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
+        id: java17
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Installeer Android-toolchain uit de gelockte React Native-versie
+        run: |
+          set -euo pipefail
+          versions=mobile/node_modules/react-native/gradle/libs.versions.toml
+          sdk_version() { sed -n "s/^$1 = \"\([^\"]*\)\"/\1/p" "$versions"; }
+          compile_sdk="$(sdk_version compileSdk)"
+          build_tools="$(sdk_version buildTools)"
+          ndk="$(sdk_version ndkVersion)"
+          test -n "$compile_sdk" && test -n "$build_tools" && test -n "$ndk"
+          sdkmanager "platforms;android-$compile_sdk" "build-tools;$build_tools" "ndk;$ndk" 'cmake;3.22.1'
+      - name: Bouw de native release zonder uploadsleutel
+        env:
+          FABELPAD_UNSIGNED_CHECK: 'true'
+          FABELPAD_ANDROID_VERSION_CODE: '1'
+          JAVA_TOOLCHAIN_17: ${{ steps.java17.outputs.path }}
+        run: |
+          set -euo pipefail
+          FABELPAD_ANDROID_VERSION_NAME="$(node -p "require('./mobile/package.json').version")"
+          export FABELPAD_ANDROID_VERSION_NAME
+          bash scripts/native-build-production.sh --unsigned-check
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: fabelpad-android-check-${{ github.sha }}
+          path: |
+            artifacts/native/fabelpad-production-unsigned.aab
+            artifacts/native/fabelpad-production-unsigned.json
+          retention-days: 14
+          if-no-files-found: error
+
+  signed:
+    name: Productie-AAB signeren en eventueel intern uploaden
+    if: github.ref == 'refs/heads/main' && ((github.event_name == 'push' && vars.FABELPAD_PLAY_ENABLED == 'true') || (github.event_name == 'workflow_dispatch' && inputs.signed_bundle && vars.FABELPAD_SIGNING_ENABLED == 'true'))
+    needs: verify
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    environment: fabelpad-play-internal
+    concurrency:
+      group: fabelpad-play-release
+      queue: max
+    permissions:
+      contents: read
+      actions: read
+      id-token: write
+    env:
+      VERSION_CODE_BASE: ${{ vars.FABELPAD_VERSION_CODE_BASE || '1000' }}
+      INTERNAL_TRACKS: ${{ vars.PLAY_INTERNAL_TRACKS }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Vereis originele geslaagde project-CI op deze SHA
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 -B scripts/play/verify_ci.py --workflow verify.yml --sha "$GITHUB_SHA" --wait-seconds 1500
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version-file: .nvmrc
+      - name: Bepaal de vaste release-identiteit
+        id: version
+        run: |
+          set -euo pipefail
+          test "$FABELPAD_ANDROID_PACKAGE" = nl.fabelpad.app
+          [[ "$VERSION_CODE_BASE" =~ ^[1-9][0-9]{0,9}$ ]]
+          version_name="$(node -p "require('./mobile/package.json').version")"
+          [[ "$version_name" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]
+          version_code=$((VERSION_CODE_BASE + GITHUB_RUN_NUMBER))
+          ((version_code >= 1 && version_code <= 2100000000))
+          printf 'code=%s\nname=%s\n' "$version_code" "$version_name" >> "$GITHUB_OUTPUT"
+      - name: Herstel exact dezelfde AAB bij een herstart van deze run
+        id: existing
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          artifacts="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/artifacts?name=fabelpad-signed-aab")"
+          artifact_id="$(jq -er '[.artifacts[] | select(.name == "fabelpad-signed-aab" and .expired == false)] | if length == 0 then "" elif length == 1 then .[0].id else error("Meerdere bundels voor dezelfde run") end' <<< "$artifacts")"
+          if [[ -z "$artifact_id" ]]; then
+            echo 'found=false' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$artifact_id/zip" > "$RUNNER_TEMP/fabelpad-signed-aab.zip"
+          mkdir -p artifacts/native
+          unzip -p "$RUNNER_TEMP/fabelpad-signed-aab.zip" fabelpad-production.aab > artifacts/native/fabelpad-production.aab
+          unzip -p "$RUNNER_TEMP/fabelpad-signed-aab.zip" fabelpad-production.json > artifacts/native/fabelpad-production.json
+          echo 'found=true' >> "$GITHUB_OUTPUT"
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
+        id: java17
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Installeer dependencies en Android-toolchain
+        if: steps.existing.outputs.found == 'false'
+        run: |
+          set -euo pipefail
+          test "$RUNNER_ENVIRONMENT" = github-hosted
+          sudo rm -rf -- /usr/share/dotnet /opt/ghc
+          npm install --global pnpm@11.25.0
+          pnpm install --frozen-lockfile
+          npm ci --prefix mobile --no-audit --no-fund
+          versions=mobile/node_modules/react-native/gradle/libs.versions.toml
+          sdk_version() { sed -n "s/^$1 = \"\([^\"]*\)\"/\1/p" "$versions"; }
+          compile_sdk="$(sdk_version compileSdk)"
+          build_tools="$(sdk_version buildTools)"
+          ndk="$(sdk_version ndkVersion)"
+          test -n "$compile_sdk" && test -n "$build_tools" && test -n "$ndk"
+          sdkmanager "platforms;android-$compile_sdk" "build-tools;$build_tools" "ndk;$ndk" 'cmake;3.22.1'
+      - name: Bouw en signeer de productie-AAB met de eigen uploadsleutel
+        if: steps.existing.outputs.found == 'false'
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_UPLOAD_KEYSTORE_BASE64 }}
+          ANDROID_UPLOAD_STORE_PASSWORD: ${{ secrets.ANDROID_UPLOAD_STORE_PASSWORD }}
+          ANDROID_UPLOAD_KEY_ALIAS: ${{ secrets.ANDROID_UPLOAD_KEY_ALIAS }}
+          ANDROID_UPLOAD_KEY_PASSWORD: ${{ secrets.ANDROID_UPLOAD_KEY_PASSWORD }}
+          FABELPAD_ANDROID_VERSION_CODE: ${{ steps.version.outputs.code }}
+          FABELPAD_ANDROID_VERSION_NAME: ${{ steps.version.outputs.name }}
+          JAVA_TOOLCHAIN_17: ${{ steps.java17.outputs.path }}
+        run: |
+          set -euo pipefail
+          umask 077
+          ANDROID_UPLOAD_KEYSTORE_PATH="$(mktemp "$RUNNER_TEMP/fabelpad-upload.XXXXXXXX.p12")"
+          export ANDROID_UPLOAD_KEYSTORE_PATH
+          trap 'rm -f -- "$ANDROID_UPLOAD_KEYSTORE_PATH"' EXIT
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$ANDROID_UPLOAD_KEYSTORE_PATH"
+          unset KEYSTORE_BASE64
+          bash scripts/native-build-production.sh
+      - name: Controleer exacte bron, versie, bytes en AAB-handtekening
+        env:
+          VERSION_CODE: ${{ steps.version.outputs.code }}
+          VERSION_NAME: ${{ steps.version.outputs.name }}
+        run: |
+          set -euo pipefail
+          python3 -B scripts/play/verify_artifact.py \
+            --bundle artifacts/native/fabelpad-production.aab --report artifacts/native/fabelpad-production.json \
+            --sha "$GITHUB_SHA" --package "$FABELPAD_ANDROID_PACKAGE" --name "$VERSION_NAME" --code "$VERSION_CODE"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        if: steps.existing.outputs.found == 'false'
+        with:
+          name: fabelpad-signed-aab
+          path: |
+            artifacts/native/fabelpad-production.aab
+            artifacts/native/fabelpad-production.json
+            artifacts/native/fabelpad-production-mapping.txt
+          retention-days: 90
+          if-no-files-found: error
+      - name: Autoriseer tijdelijk bij Google Play
+        if: github.event_name == 'push' && vars.FABELPAD_PLAY_ENABLED == 'true'
+        id: play-auth
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
+        with:
+          workload_identity_provider: ${{ vars.PLAY_WIF_PROVIDER }}
+          service_account: ${{ vars.PLAY_SERVICE_ACCOUNT }}
+          token_format: access_token
+          access_token_scopes: https://www.googleapis.com/auth/androidpublisher
+          create_credentials_file: false
+          export_environment_variables: false
+      - name: Upload dezelfde AAB naar de geverifieerde interne track
+        if: github.event_name == 'push' && vars.FABELPAD_PLAY_ENABLED == 'true'
+        env:
+          PLAY_ACCESS_TOKEN: ${{ steps.play-auth.outputs.access_token }}
+          VERSION_CODE: ${{ steps.version.outputs.code }}
+          VERSION_NAME: ${{ steps.version.outputs.name }}
+        run: |
+          python3 -B scripts/play/release.py upload-internal \
+            --package "$FABELPAD_ANDROID_PACKAGE" --bundle artifacts/native/fabelpad-production.aab \
+            --version-code "$VERSION_CODE" --tracks "$INTERNAL_TRACKS" \
+            --release-name "Fabelpad $VERSION_NAME ($VERSION_CODE)" \
+            --release-notes scripts/play/release-notes.json
+      - name: Bewaar bewijs van de intern geaccepteerde AAB
+        if: github.event_name == 'push' && vars.FABELPAD_PLAY_ENABLED == 'true'
+        env:
+          VERSION_CODE: ${{ steps.version.outputs.code }}
+          VERSION_NAME: ${{ steps.version.outputs.name }}
+        run: |
+          set -euo pipefail
+          bundle_sha="$(sha256sum artifacts/native/fabelpad-production.aab | cut -d ' ' -f 1)"
+          jq -n --arg commit "$GITHUB_SHA" --arg package "$FABELPAD_ANDROID_PACKAGE" \
+            --arg versionName "$VERSION_NAME" --argjson versionCode "$VERSION_CODE" \
+            --arg bundleSha256 "$bundle_sha" --arg tracks "$INTERNAL_TRACKS" --arg runId "$GITHUB_RUN_ID" \
+            '{commit:$commit,package:$package,versionName:$versionName,versionCode:$versionCode,bundleSha256:$bundleSha256,tracks:($tracks|split(",")),runId:$runId}' \
+            > "$RUNNER_TEMP/fabelpad-play-receipt.json"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        if: github.event_name == 'push' && vars.FABELPAD_PLAY_ENABLED == 'true'
+        with:
+          name: fabelpad-play-receipt
+          path: ${{ runner.temp }}/fabelpad-play-receipt.json
+          retention-days: 90
+          if-no-files-found: error
+          overwrite: true

@@ -1,20 +1,21 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { Store } from './types';
 import { createStorageQueue } from './storageQueue';
+import { normalizeStoryVersions } from './storyReleases';
 
 const KEY = 'fabelpad-native-prototype-v1';
 const queue = createStorageQueue(AsyncStorage, KEY);
 export function freshStore(contentVersion: string): Store {
-  return { schemaVersion: 1, contentVersion, activeId: 'demo-child', profiles: [{ id: 'demo-child', name: 'Avonturier', avatar: 0, picks: {}, favorites: [], calm: false, largeText: false }] };
+  return { schemaVersion: 1, contentVersion, activeId: 'local-child', profiles: [{ id: 'local-child', name: 'Avonturier', avatar: 0, picks: {}, storyVersions: {}, favorites: [], calm: false, largeText: false }] };
 }
-export async function loadStore(contentVersion: string, storyIds: string[]): Promise<{ store: Store; contentChanged: boolean }> {
+export async function loadStore(contentVersion: string, storyIds: string[], availableVersions = [contentVersion]): Promise<{ store: Store; contentChanged: boolean }> {
   const raw = await AsyncStorage.getItem(KEY);
   if (!raw) return { store: freshStore(contentVersion), contentChanged: false };
   const value = JSON.parse(raw) as Store;
-  if (!value || value.schemaVersion !== 1 || typeof value.contentVersion !== 'string' || !Array.isArray(value.profiles) || !value.profiles.length || value.profiles.length > 5) throw new Error('De opgeslagen demo heeft een onbekend formaat.');
+  if (!value || value.schemaVersion !== 1 || typeof value.contentVersion !== 'string' || !Array.isArray(value.profiles) || !value.profiles.length || value.profiles.length > 5) throw new Error('De opgeslagen gegevens hebben een onbekend formaat.');
   const ids = new Set<string>();
   for (const p of value.profiles) {
-    if (!p || typeof p.id !== 'string' || !p.id || ids.has(p.id) || typeof p.name !== 'string' || !p.name.trim() || !p.picks || typeof p.picks !== 'object' || Array.isArray(p.picks) || !Array.isArray(p.favorites)) throw new Error('Een demo-kindprofiel kan niet worden ingelezen.');
+    if (!p || typeof p.id !== 'string' || !p.id || ids.has(p.id) || typeof p.name !== 'string' || !p.name.trim() || !p.picks || typeof p.picks !== 'object' || Array.isArray(p.picks) || !Array.isArray(p.favorites)) throw new Error('Een lokaal kindprofiel kan niet worden ingelezen.');
     ids.add(p.id);
     p.name = p.name.slice(0, 20);
     p.avatar = Number.isInteger(p.avatar) && p.avatar >= 0 && p.avatar < 4 ? p.avatar : 0;
@@ -22,11 +23,13 @@ export async function loadStore(contentVersion: string, storyIds: string[]): Pro
     for (const [id, picks] of Object.entries(p.picks)) {
       if (!storyIds.includes(id) || !Array.isArray(picks) || picks.length > 5 || !picks.every(n => n === 0 || n === 1)) delete p.picks[id];
     }
+    p.storyVersions = normalizeStoryVersions(p, value.contentVersion);
     p.calm = !!p.calm; p.largeText = !!p.largeText;
   }
   if (!ids.has(value.activeId)) value.activeId = value.profiles[0].id;
-  // A content mismatch is surfaced. Never silently move saved choices onto edited text.
-  return { store: value, contentChanged: value.contentVersion !== contentVersion };
+  // A started story keeps its immutable bundled release across app updates.
+  const contentChanged = value.profiles.some(p => Object.values(p.storyVersions || {}).some(version => !availableVersions.includes(version)));
+  return { store: value, contentChanged };
 }
 export function persistStore(value: Store): Promise<void> {
   return queue.persist(value);

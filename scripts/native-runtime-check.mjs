@@ -9,6 +9,7 @@ try {
   const { createStationInteraction } = await import(await compileSource(new URL('../mobile/src/stationInteraction.ts', import.meta.url), directory));
   const { appendChoice } = await import(await compileSource(new URL('../mobile/src/readerProgress.ts', import.meta.url), directory));
   const { createStorageQueue } = await import(await compileSource(new URL('../mobile/src/storageQueue.ts', import.meta.url), directory));
+  const { storiesForProfile, normalizeStoryVersions } = await import(await compileSource(new URL('../mobile/src/storyReleases.ts', import.meta.url), directory));
   const catalog = JSON.parse(await readFile(new URL('../mobile/src/content.json', import.meta.url), 'utf8'));
   assert.equal(catalog.stories.length, 13);
   assert.equal(catalog.stories.reduce((sum, story) => sum + Object.keys(story.scenes).length, 0), 403);
@@ -63,6 +64,27 @@ try {
   assert.deepEqual(restored.profiles[0].picks.station, [0], 'Resume retains each profile route');
   assert.deepEqual(initial.profiles[0].picks.station, [], 'Actions never mutate an older snapshot');
 
+  // Updating bundled stories must preserve a child's existing route and keepsake.
+  const older = structuredClone(catalog);
+  const newer = structuredClone(catalog);
+  newer.contentVersion = 'new-test-release';
+  newer.stories[0].title = 'A changed station';
+  newer.stories[0].endings['00000'].keepsake = 'A different keepsake';
+  const releases = { [older.contentVersion]: older, [newer.contentVersion]: newer };
+  const returningChild = { ...profile('returning'), picks: { station: [0, 0, 0, 0, 0] } };
+  returningChild.storyVersions = normalizeStoryVersions(returningChild, older.contentVersion);
+  const restoredChild = JSON.parse(JSON.stringify(returningChild));
+  const oldStation = storiesForProfile(newer.stories, releases, restoredChild).find(story => story.id === 'station');
+  assert.equal(oldStation.title, older.stories[0].title, 'An app update does not replace a started story');
+  assert.equal(oldStation.endings['00000'].keepsake, older.stories[0].endings['00000'].keepsake, 'A completed adventure keeps its original ending');
+  const unstartedChild = { ...profile('new'), picks: {} };
+  assert.equal(storiesForProfile(newer.stories, releases, unstartedChild)[0].title, 'A changed station', 'New adventures use the current release');
+  const restartedChild = { ...restoredChild, picks: { station: [] }, storyVersions: { station: newer.contentVersion } };
+  assert.equal(storiesForProfile(newer.stories, releases, restartedChild)[0].title, 'A changed station', 'An explicit restart opts into the latest release');
+  assert(storiesForProfile(newer.stories.slice(1), releases, restoredChild).some(story => story.id === 'station'), 'A removed library entry remains available to a child who started it');
+  assert(!storiesForProfile(newer.stories, { [newer.contentVersion]: newer }, restoredChild).some(story => story.id === 'station'), 'A missing old release never falls back to edited story text');
+  assert.deepEqual(normalizeStoryVersions({ ...restoredChild, storyVersions: { station: older.contentVersion, stale: 'unused' } }, newer.contentVersion), { station: older.contentVersion }, 'Version migration preserves valid existing pins and drops unused pins');
+
   const operations = []; let durable = null, fail = true;
   const queue = createStorageQueue({
     async setItem(key, value) { operations.push(['set', key]); if (fail) { fail = false; throw new Error('disk unavailable'); } durable = value; },
@@ -76,5 +98,5 @@ try {
   await Promise.all([first, deletion, last]);
   assert.deepEqual(JSON.parse(durable), { route: [1, 1] }, 'Deletion is ordered with later writes');
   assert.deepEqual(operations.map(([operation]) => operation), ['set', 'set', 'remove', 'set']);
-  console.log('Native runtime geslaagd: 13 verhalen / 403 scènes / 416 eindes; stationsacties, dubbele tik, timercleanup, profielhervatten, opslagfout en schrijf-/wisvolgorde.');
+  console.log('Native runtime geslaagd: 13 verhalen / 403 scènes / 416 eindes; stationsacties, dubbele tik, timercleanup, profielhervatten, versievaste verhalen/eindes na updates, opslagfout en schrijf-/wisvolgorde.');
 } finally { await rm(directory, { recursive: true, force: true }); }
