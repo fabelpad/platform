@@ -1,5 +1,7 @@
 # Nog benodigde gegevens en inrichting
 
+Voor de op 18 november bevestigde eerste **native productieversie** geldt een gratis lokale leesapp zonder accounts, synchronisatie of betalingen. Supabase, mailgateway en Billing zijn daarvoor niet nodig. De eigen Play-/Cloud-inrichting, signing en resterende gegevens staan in [GOOGLE-PLAY-RELEASE-RUNBOOK.md](GOOGLE-PLAY-RELEASE-RUNBOOK.md). De onderstaande backendlijst blijft voor de webdienst en latere online functies gelden.
+
 Bijgewerkt: 5 november 2026. De lokale demo moet zonder externe accounts of secrets bouwen. Onderstaande lijst is de overdracht voor de volgende fase; ontbrekende waarden zijn niet als geconfigureerd beschouwd. Bestaande accounts kunnen worden gebruikt: een tweede organisatie of betaald Expo-buildaccount is niet vanzelf nodig.
 
 ## Projectgegevens vóór koppelen of uitrollen
