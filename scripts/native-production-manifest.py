@@ -152,6 +152,10 @@ def main():
     config = run(command + ['dump', 'config', f'--bundle={artifact}'])
     if 'PAGE_ALIGNMENT_16K' not in config:
         raise ValueError('De bundleconfiguratie vraagt geen 16 KB APK-uitlijning.')
+    import re
+    packages = json.loads((ROOT / 'mobile/package.json').read_text())
+    versions = (ROOT / 'mobile/node_modules/react-native/gradle/libs.versions.toml').read_text()
+    wrapper = (ROOT / 'mobile/android/gradle/wrapper/gradle-wrapper.properties').read_text()
     report = {
         'schemaVersion': 1, 'variant': 'production', 'packageId': package,
         'versionName': name, 'versionCode': code, 'artifact': artifact.name,
@@ -161,6 +165,12 @@ def main():
         'architectures': abis, 'permissions': permissions, 'nativeLibraries': len(libraries),
         'elf16KiBVerified': True, 'bundle16KiBAlignmentRequested': True, 'dexUncompressedBytes': dex_bytes,
         'bundletoolVersion': BUNDLETOOL_VERSION,
+        'toolchain': {'node': run(['node', '--version']), 'expo': packages['dependencies']['expo'],
+                      'reactNative': packages['dependencies']['react-native'],
+                      'gradle': re.search(r'gradle-([0-9.]+)-bin', wrapper)[1],
+                      'compileSdk': int(re.search(r'^compileSdk = "([0-9]+)"', versions, re.MULTILINE)[1]),
+                      'buildTools': re.search(r'^buildTools = "([^"]+)"', versions, re.MULTILINE)[1],
+                      'ndk': re.search(r'^ndkVersion = "([^"]+)"', versions, re.MULTILINE)[1]},
         'source': {'gitSha': source_sha or run(['git', 'rev-parse', 'HEAD']), 'workingTreeDirty': source_dirty,
                    'buildStartIdentityRecorded': source_sha is not None},
         'backendConnected': False, 'deviceInstallationTested': False, 'deviceRuntimeTested': False,
