@@ -59,6 +59,40 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
+      - name: Lokaliseer Android SDK en verifieer de command-line tools
+        run: |
+          set -euo pipefail
+          sdk_root=''
+          sdk_manager=''
+          for candidate in "${ANDROID_HOME:-}" "${ANDROID_SDK_ROOT:-}" /usr/local/lib/android/sdk; do
+            if [[ -n "$candidate" && -x "$candidate/cmdline-tools/latest/bin/sdkmanager" && -r "$candidate/cmdline-tools/latest/source.properties" ]]; then
+              sdk_root="$candidate"
+              sdk_manager="$candidate/cmdline-tools/latest/bin/sdkmanager"
+              break
+            fi
+          done
+          if [[ -z "$sdk_manager" ]]; then
+            sdk_root="$RUNNER_TEMP/fabelpad-android-sdk"
+            tools_version=15859902
+            tools_sha256=4e4c464f145a7512b57d088ac6c278c03c9eea610886b35a5e0804e74eedf583
+            tools_archive="$RUNNER_TEMP/fabelpad-commandline-tools-$tools_version.zip"
+            tools_unpack="$RUNNER_TEMP/fabelpad-commandline-tools-unpack"
+            curl --fail --silent --show-error --location --retry 3 \
+              "https://dl.google.com/android/repository/commandlinetools-linux-${tools_version}_latest.zip" \
+              --output "$tools_archive"
+            printf '%s  %s\n' "$tools_sha256" "$tools_archive" | sha256sum --check -
+            mkdir -p "$tools_unpack" "$sdk_root/cmdline-tools"
+            unzip -q "$tools_archive" -d "$tools_unpack"
+            mv "$tools_unpack/cmdline-tools" "$sdk_root/cmdline-tools/$tools_version"
+            sdk_manager="$sdk_root/cmdline-tools/$tools_version/bin/sdkmanager"
+          fi
+          export ANDROID_HOME="$sdk_root" ANDROID_SDK_ROOT="$sdk_root"
+          PATH="$(dirname "$sdk_manager"):$sdk_root/platform-tools:$PATH"
+          export PATH
+          "$sdk_manager" --version
+          printf 'ANDROID_HOME=%s\nANDROID_SDK_ROOT=%s\nFABELPAD_SDKMANAGER=%s\n' \
+            "$sdk_root" "$sdk_root" "$sdk_manager" >> "$GITHUB_ENV"
+          printf '%s\n' "$(dirname "$sdk_manager")" "$sdk_root/platform-tools" >> "$GITHUB_PATH"
       - name: Installeer Android-toolchain uit de gelockte React Native-versie
         run: |
           set -euo pipefail
@@ -68,7 +102,17 @@ jobs:
           build_tools="$(sdk_version buildTools)"
           ndk="$(sdk_version ndkVersion)"
           test -n "$compile_sdk" && test -n "$build_tools" && test -n "$ndk"
-          sdkmanager "platforms;android-$compile_sdk" "build-tools;$build_tools" "ndk;$ndk" 'cmake;3.22.1'
+          "$FABELPAD_SDKMANAGER" --sdk_root="$ANDROID_HOME" --licenses < <(printf 'y\n%.0s' {1..100}) > "$RUNNER_TEMP/fabelpad-android-licenses.log"
+          "$FABELPAD_SDKMANAGER" --sdk_root="$ANDROID_HOME" --list > "$RUNNER_TEMP/fabelpad-android-packages.txt"
+          platform="$(awk -F'|' -v exact="platforms;android-$compile_sdk" -v dotted="platforms;android-$compile_sdk.0" '
+            { package=$1; gsub(/^[[:space:]]+|[[:space:]]+$/, "", package) }
+            package == exact { found_exact=package }
+            package == dotted { found_dotted=package }
+            END { if (found_exact) print found_exact; else if (found_dotted) print found_dotted }
+          ' "$RUNNER_TEMP/fabelpad-android-packages.txt")"
+          : "${platform:?Gelockt Android-platform ontbreekt in de SDK-catalogus}"
+          "$FABELPAD_SDKMANAGER" --sdk_root="$ANDROID_HOME" \
+            "$platform" "platform-tools" "build-tools;$build_tools" "ndk;$ndk" 'cmake;3.22.1'
       - name: Bouw de native release zonder uploadsleutel
         env:
           FABELPAD_UNSIGNED_CHECK: 'true'
@@ -154,6 +198,41 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
+      - name: Lokaliseer Android SDK en verifieer de command-line tools
+        if: steps.existing.outputs.found == 'false'
+        run: |
+          set -euo pipefail
+          sdk_root=''
+          sdk_manager=''
+          for candidate in "${ANDROID_HOME:-}" "${ANDROID_SDK_ROOT:-}" /usr/local/lib/android/sdk; do
+            if [[ -n "$candidate" && -x "$candidate/cmdline-tools/latest/bin/sdkmanager" && -r "$candidate/cmdline-tools/latest/source.properties" ]]; then
+              sdk_root="$candidate"
+              sdk_manager="$candidate/cmdline-tools/latest/bin/sdkmanager"
+              break
+            fi
+          done
+          if [[ -z "$sdk_manager" ]]; then
+            sdk_root="$RUNNER_TEMP/fabelpad-android-sdk"
+            tools_version=15859902
+            tools_sha256=4e4c464f145a7512b57d088ac6c278c03c9eea610886b35a5e0804e74eedf583
+            tools_archive="$RUNNER_TEMP/fabelpad-commandline-tools-$tools_version.zip"
+            tools_unpack="$RUNNER_TEMP/fabelpad-commandline-tools-unpack"
+            curl --fail --silent --show-error --location --retry 3 \
+              "https://dl.google.com/android/repository/commandlinetools-linux-${tools_version}_latest.zip" \
+              --output "$tools_archive"
+            printf '%s  %s\n' "$tools_sha256" "$tools_archive" | sha256sum --check -
+            mkdir -p "$tools_unpack" "$sdk_root/cmdline-tools"
+            unzip -q "$tools_archive" -d "$tools_unpack"
+            mv "$tools_unpack/cmdline-tools" "$sdk_root/cmdline-tools/$tools_version"
+            sdk_manager="$sdk_root/cmdline-tools/$tools_version/bin/sdkmanager"
+          fi
+          export ANDROID_HOME="$sdk_root" ANDROID_SDK_ROOT="$sdk_root"
+          PATH="$(dirname "$sdk_manager"):$sdk_root/platform-tools:$PATH"
+          export PATH
+          "$sdk_manager" --version
+          printf 'ANDROID_HOME=%s\nANDROID_SDK_ROOT=%s\nFABELPAD_SDKMANAGER=%s\n' \
+            "$sdk_root" "$sdk_root" "$sdk_manager" >> "$GITHUB_ENV"
+          printf '%s\n' "$(dirname "$sdk_manager")" "$sdk_root/platform-tools" >> "$GITHUB_PATH"
       - name: Installeer dependencies en Android-toolchain
         if: steps.existing.outputs.found == 'false'
         run: |
@@ -169,7 +248,17 @@ jobs:
           build_tools="$(sdk_version buildTools)"
           ndk="$(sdk_version ndkVersion)"
           test -n "$compile_sdk" && test -n "$build_tools" && test -n "$ndk"
-          sdkmanager "platforms;android-$compile_sdk" "build-tools;$build_tools" "ndk;$ndk" 'cmake;3.22.1'
+          "$FABELPAD_SDKMANAGER" --sdk_root="$ANDROID_HOME" --licenses < <(printf 'y\n%.0s' {1..100}) > "$RUNNER_TEMP/fabelpad-android-licenses.log"
+          "$FABELPAD_SDKMANAGER" --sdk_root="$ANDROID_HOME" --list > "$RUNNER_TEMP/fabelpad-android-packages.txt"
+          platform="$(awk -F'|' -v exact="platforms;android-$compile_sdk" -v dotted="platforms;android-$compile_sdk.0" '
+            { package=$1; gsub(/^[[:space:]]+|[[:space:]]+$/, "", package) }
+            package == exact { found_exact=package }
+            package == dotted { found_dotted=package }
+            END { if (found_exact) print found_exact; else if (found_dotted) print found_dotted }
+          ' "$RUNNER_TEMP/fabelpad-android-packages.txt")"
+          : "${platform:?Gelockt Android-platform ontbreekt in de SDK-catalogus}"
+          "$FABELPAD_SDKMANAGER" --sdk_root="$ANDROID_HOME" \
+            "$platform" "platform-tools" "build-tools;$build_tools" "ndk;$ndk" 'cmake;3.22.1'
       - name: Bouw en signeer de productie-AAB met de eigen uploadsleutel
         if: steps.existing.outputs.found == 'false'
         env:

@@ -4,6 +4,8 @@ Gecontroleerd op **18 november 2026**. Deze procedure hoort uitsluitend bij **Fa
 
 **Status:** de productieroute en eigen uploadsigning zijn voorbereid. De feitelijke builduitslag en checksum staan bij de geleverde AAB in `artifacts/native/fabelpad-production.json`. Een lokale build is geen Play-upload of Google-goedkeuring. In deze opdracht zijn geen Play-formulieren ingediend, Cloud-identiteiten aangemaakt of automatische Play-publicaties geactiveerd.
 
+**Geleverd:** productie-AAB 1.0.0 (1), `nl.fabelpad.app`, 37.005.584 bytes, SHA-256 `ffc22ec85449074a667a243dc132dfa46e9a484c756dc57c859433ba68ba6e1c`. Gebouwd en statisch geverifieerd op schone commit `8dcb98c4287dc78421b092ee395ace05f492baaa`. Zie [het bouwverslag](ANDROID-PRODUCTIE-VALIDATIE.md). Latere documentatie- en CI-bootstrapcorrecties veranderen dit bestand niet.
+
 Vóór de eerste indiening moeten de openbare privacyverklaring, uitgeversgegevens, Store-beelden, doelgroep/landen en accountgebonden Play-taken zijn afgerond. `https://fabelpad.nl/privacy` gaf tijdens de voorbereiding **HTTP 401 / StackProtect**. De lokale privacypagina is voorbereid; de openbare hosting werkt nog niet voor bezoekers zonder inlog. De echte websitehostingtoegang ontbreekt. Plaats de voorbereide pagina daar pas na invulling van de ontbrekende juridische en hostinggegevens. Een VPS-naam bewijst geen domeinrouting.
 
 ## 1. Welk bestand upload je voor ondertekening?
@@ -69,6 +71,8 @@ Die opdracht maakt `fabelpad-production-unsigned.aab` en de bijbehorende JSON. D
 Controleer de echte AAB-JSON op `packageId`, `versionName`, `versionCode`, `signed`, `sha256`, `source.gitSha` en `source.workingTreeDirty`. Laat een definitieve release vanuit een schone, vastgelegde commit bouwen en registreer de SHA. De lokale validatie zegt expliciet of installatie en runtime op apparaten werkelijk zijn getest. Voer nog echte tests uit op telefoon, 8-inch- en 10-inchtablet: eerste start, alle verhaalroutes, profielen wisselen, favorieten, rustige stand, grote tekst, lokale verwijdering, offline voorlezen, ontbrekende Nederlandse stem en de links onder Ouders. Een succesvolle compilatie vervangt die tests niet.
 
 ## 3. Maak de Play-app en de eerste interne release
+
+Voor acceptatie en echte Store-captures staat ook `artifacts/native/fabelpad-production.apk` klaar. Dat is dezelfde productie-app, met de eigen uploadsleutel gesigneerd. Installeer met `adb install -r artifacts/native/fabelpad-production.apk` of open de APK op het toestel. Test met verzonnen profielen. De APK die Google Play later levert gebruikt Googles app-signingcertificaat; overstappen vanaf deze sideload kan verwijderen en opnieuw installeren vereisen, waarbij de lokale testvoortgang verdwijnt. Test reguliere updates daarom via een Play-testtrack. Upload de **AAB** in Play Console.
 
 Dit zijn handelingen voor de eigenaar in de Console; ze zijn hier nog niet uitgevoerd.
 

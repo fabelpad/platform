@@ -1,5 +1,7 @@
 # Fabelpad
 
+Android-productie 1.0.0 (1), `nl.fabelpad.app`: gratis lokale leesapp zonder accounts of abonnementen. Zie het [bouwbewijs](docs/ANDROID-PRODUCTIE-VALIDATIE.md), [Play Console-invulblad](docs/GOOGLE-PLAY-INVULBLAD-PRODUCTIE.md) en [signing-/release-runbook](docs/GOOGLE-PLAY-RELEASE-RUNBOOK.md) voor het uploadbestand en de eenmalige Cloud-inrichting.
+
 Repository: [fabelpad/platform](https://github.com/fabelpad/platform). De lokale branch `main` volgt `origin/main`.
 
 Nederlandstalige interactieve verhalenwereld voor kinderen van 4–8 jaar. Deze checkout bouwt lokaal met native Next.js en bevat een afzonderlijke Expo/React Native-app. Het aangeleverde prototype is behouden in importcommit `a7475c4573d3f125be337eb315c574945c64352c`; de pakketmetadata verwijst naar oorspronkelijke broncommit `97c3881d6bd94f41596ce77fb7a53d55936c6397`.

@@ -1,5 +1,7 @@
 # Native demo — uitgevoerde controles
 
+Historisch verslag. De nieuwe productievariant `nl.fabelpad.app` 1.0.0 (1), eigen uploadsigning en resultaten van 18 november staan in [ANDROID-PRODUCTIE-VALIDATIE.md](../docs/ANDROID-PRODUCTIE-VALIDATIE.md).
+
 4 november 2026. Dit verslag betreft de lokale demo, zonder stagingbackend of Play-publicatie.
 
 | Controle | Resultaat |
