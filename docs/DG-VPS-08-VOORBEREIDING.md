@@ -97,6 +97,19 @@ Later via GitHub, na veilige review van deze branch:
 4. Registreer later het officiële, op checksum gecontroleerde eigen runnerpakket via GitHub Settings → Actions → Runners, in de gecontroleerde runnergroep, onder Linux-account `run-fab-v08-stg`, in `/opt/actions-runner/fabelpad-vps08-staging`, met **runnernaam `fabelpad-vps08-staging`** en de vastgelegde labels. Kortlevende registratietokens blijven buiten logs, bestanden en argumentgeschiedenis. Start uitsluitend de eigen runnerunit, pas nadat groep-/workflowbeperking bewezen is. Een runner starten activeert geen app.
 5. Vul de vier publieke webvariabelen uit [INRICHTING.md](INRICHTING.md) in. `FABELPAD_DATA_MODE` is exact **`local`** of **`supabase`**. `local` vereist beide Supabase-waarden leeg; `supabase` vereist beide echte waarden van het bedoelde nieuwe project. Een staging-origin is altijd een bevestigde HTTPS-origin, ook als er nog geen publieke route is.
 
+Uitsluitend bij die latere runnerinrichting, **nadat** registratie én repository-/selected-workflowbeperking zijn geverifieerd, laat de beheerder alleen de eigen runner automatisch starten bij boot en direct starten:
+
+```bash
+set -euo pipefail
+sudo test -f /opt/actions-runner/fabelpad-vps08-staging/.runner
+sudo systemctl enable --now fabelpad-vps08-staging-runner.service
+sudo systemctl is-enabled fabelpad-vps08-staging-runner.service
+sudo systemctl is-active fabelpad-vps08-staging-runner.service
+sudo systemctl status fabelpad-vps08-staging-runner.service --no-pager
+```
+
+Controleer daarnaast in GitHub dat exact `fabelpad-vps08-staging` online is binnen de gecontroleerde eigen groep. Het aanwezig zijn van `.runner` alleen bewijst die toegangsbeperking niet. Deze opdrachten zijn **nu niet uitgevoerd**; de runner blijft tijdens deze voorbereiding disabled en gestopt.
+
 De alleen-lezen GitHub-inventarisatie bevestigt eigenaarstype **Organization**, organisatie **`fabelpad`**, huidig abonnement **GitHub Free** en een lege environmentlijst. De runnergroepen-API gaf **HTTP 403**; de bestaande toegang mist `admin:org`. Er zijn geen rechten uitgebreid, tokens vernieuwd, environments aangemaakt of betalingen gedaan.
 
 Voor deze **private organisatierepository** zijn environments met branchbeleid volgens de actuele [GitHub-documentatie](https://docs.github.com/en/actions/how-tos/deploy/configure-and-manage-deployments/manage-environments) minimaal een **GitHub Team**-mogelijkheid (of Enterprise). De eigenaar moet zelf het geschikte abonnement/toegang regelen; GitHub Pro is een persoonlijk abonnement en lost dit voor deze organisatie niet op. Reviewer-/wachttimerregels zijn aanvullende bescherming en worden niet als extra vereiste ingevoerd. Gecontroleerd op 20 november 2026.
@@ -246,6 +259,17 @@ curl --fail --silent --show-error --output /dev/null "$FABELPAD_APP_ORIGIN/suppo
 
 8. **Readiness:** bij `local` controleer eerste start, lezen/verhaalkeuze, profielscheiding, bewaren/hervatten, ouderlinks en verwijderen met synthetische profielen. Bij `supabase` daarnaast echte login/sessieherstel, twee gescheiden ouders/gezinnen, gemanipuleerde kind-ID's/RLS, synchronisatie/conflicten, studio-autorisatie en de werkelijke mailgateway/outbox. `configured-unverified` en een health-200 bewijzen dit niet. Controleer na de proxywijziging ook opnieuw de bekende bestaande omgevingen.
 
+9. Alleen **na** geslaagde loopbackhealth met de exacte SHA en de bijbehorende readinessacceptatie laat de beheerder de eigen appservice voortaan bij boot starten. Doe dit in de latere eerste-releaseopdracht, na de toepasselijke publieke acceptatie hierboven. `enable` herstart de reeds gezonde app niet:
+
+```bash
+set -euo pipefail
+sudo systemctl is-active fabelpad-vps08-staging.service
+sudo systemctl enable fabelpad-vps08-staging.service
+sudo systemctl is-enabled fabelpad-vps08-staging.service
+```
+
+Deze stap is **nu niet uitgevoerd**: de appunit blijft disabled/inactive. De activatieworkflow herstart alleen de eigen unit; zij maakt bootpersistentie niet automatisch aan.
+
 ## Later: rollback en mislukte eerste installatie
 
 Bewaar de vorige gezonde app én runtimeconfiguratie samen. De app hoeft niet als buildaccount te kunnen schrijven. Activering en rollback gebruiken dezelfde concurrencygroep en hetzelfde root-owned activatielock. De vorige release moet een passend `healthy.json` hebben. Rollback controleert SHA/CI/environment opnieuw en weigert een andere terugzet-SHA dan de werkelijk vastgelegde vorige gezonde release.
@@ -268,9 +292,9 @@ gh run list --repo fabelpad/platform --workflow fabelpad-dg-vps-08-staging-rollb
 gh run watch ROLLBACK_RUN_ID --repo fabelpad/platform --exit-status
 ```
 
-Voer daarna dezelfde loopback-/publieke health- en readinesscontroles uit. Rollback wijzigt geen database, provider, DNS of proxy.
+Voer daarna dezelfde loopback-/publieke health- en readinesscontroles uit. Rollback wijzigt geen database, provider, DNS, proxy of systemd-enable-status; een eerder geaccepteerde en enabled app blijft enabled.
 
-Bij een opgevangen activatiefout herstelt de adapter de vorige gezonde eigen app/configuratie. Bij een mislukte **eerste** installatie zonder vorige release stopt hij alleen de eigen appservice en verwijdert uitsluitend de eigen `current`; de mislukte release blijft voor onderzoek. Bij beëindigde workflow, hostuitval of procesafbreking is deze foutafhandeling niet vanzelf bewezen: inspecteer eerst eigen `current`, `previous`, manifesten, locks en service. Stop zo nodig uitsluitend `fabelpad-vps08-staging.service`; hervat of verwijder verwijzingen pas na beoordeling. Neem geen andere appomgeving over om de eerste installatie te redden.
+Bij een opgevangen activatiefout herstelt de adapter de vorige gezonde eigen app/configuratie. Bij een mislukte **eerste** installatie zonder vorige release stopt hij alleen de eigen appservice en verwijdert uitsluitend de eigen `current`; de mislukte release blijft voor onderzoek. Omdat bootpersistentie pas na acceptatie wordt aangezet, blijft een vóór die stap mislukte eerste installatie disabled en gestopt. Bij beëindigde workflow, hostuitval of procesafbreking is deze foutafhandeling niet vanzelf bewezen: inspecteer eerst eigen `current`, `previous`, manifesten, locks en service. Stop zo nodig uitsluitend `fabelpad-vps08-staging.service`; hervat of verwijder verwijzingen pas na beoordeling. Neem geen andere appomgeving over om de eerste installatie te redden.
 
 ## Migraties apart
 
