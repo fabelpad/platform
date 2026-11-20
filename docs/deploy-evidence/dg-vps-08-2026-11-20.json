@@ -297,7 +297,17 @@
       "nodePassed": 82,
       "installerPassed": 13
     },
-    "cleanCommitRecheck": "Recorded after final review commit in local validation artifact and PR"
+    "cleanCommitRecheck": {
+      "sha": "7d6a69a52db29cd4b75d4f3b78c662e66b4364ac",
+      "cleanDetachedWorktree": true,
+      "emptyProcessEnvironment": true,
+      "configuration": "explicit local; no Supabase values or env files",
+      "installation": "pnpm install --frozen-lockfile --package-import-method=copy",
+      "command": "bash scripts/local-build.sh",
+      "result": "passed",
+      "nodeTests": 82,
+      "installerTests": 13
+    }
   },
   "targetCandidate": {
     "present": false,

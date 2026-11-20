@@ -9,7 +9,7 @@ on:
         type: string
         required: true
       config_id:
-        description: Bestaande onveranderlijke publieke buildconfiguratie-ID op de doelhost
+        description: Nieuwe configuratie-ID voor het onveranderlijke snapshot van de vier publieke waarden
         type: string
         required: true
 
