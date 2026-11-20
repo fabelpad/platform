@@ -1,0 +1,91 @@
+name: Fabelpad dg-vps-08 staging vorige release herstellen
+run-name: Fabelpad staging rollback ${{ inputs.release_sha }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_sha:
+        description: Volledige SHA van de vorige gezonde release (40 kleine hextekens)
+        type: string
+        required: true
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: fabelpad-vps08-staging-activation
+  cancel-in-progress: false
+
+jobs:
+  preflight:
+    if: >-
+      github.repository == 'fabelpad/platform' &&
+      github.event_name == 'workflow_dispatch' &&
+      github.ref == 'refs/heads/main' &&
+      github.workflow_ref == 'fabelpad/platform/.github/workflows/fabelpad-dg-vps-08-staging-rollback.yml@refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ github.workflow_sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version-file: .nvmrc
+      - name: Controleer vorige SHA en vereiste CI
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_SHA: ${{ inputs.release_sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/deploy/verify-release-sha.mjs --sha "$RELEASE_SHA"
+      - name: Vereis de reeds ingerichte eigen main-only activatie-environment
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          node --input-type=module -e
+          'import { githubApi, verifyActivationEnvironment } from "./scripts/deploy/verify-release-sha.mjs";
+          console.log(JSON.stringify(await verifyActivationEnvironment(githubApi(process.env.GH_TOKEN))));'
+
+  rollback:
+    needs: preflight
+    if: github.repository == 'fabelpad/platform' && github.ref == 'refs/heads/main'
+    runs-on: [self-hosted, Linux, X64, dg-vps-08, fabelpad-vps08-staging]
+    # The hosted preflight refuses a missing or insufficiently protected
+    # environment before this job can reference it. Never auto-create it here.
+    environment: fabelpad-vps08-staging
+    timeout-minutes: 50
+    steps:
+      - name: Controleer host en afzonderlijk runneraccount
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$(hostname)" == dg-vps-08 ]]
+          [[ "$(id -un)" == run-fab-v08-stg ]]
+          [[ "$(uname -m)" == x86_64 ]]
+          [[ "$(cat /etc/machine-id)" == 05db94b99eca4c3d815f6585ef8ed517 ]]
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ github.workflow_sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Hercontroleer CI en herstel uitsluitend de vorige gezonde app/configuratie
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_SHA: ${{ inputs.release_sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          /opt/dg-toolchains/fabelpad-vps08-staging/node-v24.18.0-linux-x64/bin/node scripts/deploy/verify-release-sha.mjs --sha "$RELEASE_SHA"
+          /opt/dg-toolchains/fabelpad-vps08-staging/node-v24.18.0-linux-x64/bin/node --input-type=module -e \
+            'import {githubApi, verifyActivationEnvironment} from "./scripts/deploy/verify-release-sha.mjs"; await verifyActivationEnvironment(githubApi(process.env.GH_TOKEN));'
+          /opt/dg-toolchains/fabelpad-vps08-staging/node-v24.18.0-linux-x64/bin/node -e 'process.stdout.write(JSON.stringify({githubToken:process.env.GH_TOKEN}))' |
+            sudo -n /usr/local/libexec/fabelpad-vps08-staging/rollback.mjs --sha "$RELEASE_SHA" --run-id "$GITHUB_RUN_ID" --run-attempt "$GITHUB_RUN_ATTEMPT"
+
+# This workflow is prepared for a separate activation order. It has not been
+# dispatched. Public routing/DNS/TLS and database migrations remain separate,
+# explicitly ordered operator steps described in the project runbook.

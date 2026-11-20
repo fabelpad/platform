@@ -1,97 +1,59 @@
-# Nog benodigde gegevens en inrichting
+# Fabelpad — benodigde inrichting en gegevens
 
-Voor de op 18 november bevestigde eerste **native productieversie** geldt een gratis lokale leesapp zonder accounts, synchronisatie of betalingen. Supabase, mailgateway en Billing zijn daarvoor niet nodig. De eigen Play-/Cloud-inrichting, signing en resterende gegevens staan in [GOOGLE-PLAY-RELEASE-RUNBOOK.md](GOOGLE-PLAY-RELEASE-RUNBOOK.md). De onderstaande backendlijst blijft voor de webdienst en latere online functies gelden.
+Bijgewerkt: **20 november 2026**. De huidige opdracht bereidt een nieuw stagingdoel op `dg-vps-08` voor. De eigenaar koppelt deze workspace en Supabase later en vult de resterende gegevens in. Een eerste activatie, een verhuizing en publieke ingebruikname vereisen een aparte opdracht.
 
-Bijgewerkt: 5 november 2026. De lokale demo moet zonder externe accounts of secrets bouwen. Onderstaande lijst is de overdracht voor de volgende fase; ontbrekende waarden zijn niet als geconfigureerd beschouwd. Bestaande accounts kunnen worden gebruikt: een tweede organisatie of betaald Expo-buildaccount is niet vanzelf nodig.
+## Alleen deze vier GitHub-variabelen
 
-## Projectgegevens vóór koppelen of uitrollen
+Ga later naar **fabelpad/platform → Settings → Secrets and variables → Actions → Variables**. Gebruik uitsluitend onderstaande namen voor de webdeploy. Er worden nu geen bestaande GitHub-variabelen, environments of secrets gewijzigd.
 
-- Repository vastgesteld: [`fabelpad/platform`](https://github.com/fabelpad/platform), gekoppeld als `origin`, met integratiebranch `main`. Geef nog de juiste beheerders-/runnerrechten en bevestig de verantwoordelijke organisatie.
-- Geef per omgeving de HTTPS-URL, site-ID, deployhost, Linux-gebruiker, checkout-/release-/shared-paden, interne loopbackpoort en Caddy-inrichting.
-- Geef de self-hosted runnernamen en exacte labels, GitHub environments `staging` en `production`, bestaand build-lock, bewaarbeleid en configuratieversie.
-- Lever het actuele `dg-site-deploy`-runbook: geïnstalleerde versie, configuratieallowlists, Next.js-startwijze, activatie-, health- en rollbackcontract. Het ontbrekende wrappercontract wordt niet in deze repository nagebootst.
-- Geef backupdoel, versleutelings-/sleutelbeheer, bewaartermijn en herstelprocedure voor de database vóór een eerste migratie.
-- Bevestig supportadres, bedrijfs-/verantwoordelijke organisatie, privacycontact, bewaartermijnen, accountverwijderingsbeleid en de definitieve website-/storeteksten.
-- Beslis later over prijzen, pakketten, foundersvoorwaarden, profielgrenzen en Play-product-ID's. Het voorgestelde gratis model is nog geen definitief commercieel besluit.
-
-## Accounts en externe voorzieningen
-
-| Voorziening | Nodig voor | Wanneer |
+| Naam | Waarde komt uit | Gebruik en wijzigingsgevolg |
 | --- | --- | --- |
-| GitHub-repository `fabelpad/platform` | Gekoppeld; environments en self-hosted doelrunners nog in te richten | Bronpush beschikbaar; vóór staging runner-/environmentinrichting afronden |
-| Supabase-account/organisatie met **apart staging- en productieproject** | PostgreSQL, Auth, RLS en gecontroleerde opslag; projectref en regio vastleggen | Vóór echte accounts/gezinsdata |
-| Google Cloud-project met OAuth-configuratie | Web- en Android-Google-login, consentconfiguratie, exacte callbacks en signingcertificaten | Vóór Google-login aanzetten |
-| Resend-account, geverifieerd afzenderdomein en DNS-toegang | Verzending via de bestaande DG-mailgateway; providerwebhooks en aflevergebeurtenissen | Vóór OTP/applicatiemail aanzetten |
-| Bestaande DG-mailgateway/outbox en beheerder | Ondertekende Supabase Auth-mail, applicatiemail, worker, retries en reconciliatie | Contract eerst vaststellen |
-| DNS-/VPS-beheer en backupopslag | Domeinen, TLS/Caddy, native releases en herstel | Vóór staginguitrol |
-| Gewoon Android-testtoestel en eventueel emulator | APK-installatie, offline herstart, terugknop, audio, toegankelijkheid en prestaties | Vóór native acceptatie |
-| Google Play Console-organisatie/account | Interne/gesloten test, Play App Signing, appverificatie en latere publicatie | Na definitieve productie-package-ID |
-| Play Developer API-serviceaccount met gerichte apprechten | Automatische testdistributie, aankoopvalidatie en billingmeldingen | Alleen wanneer die koppelingen worden ingericht |
-| Expo-account | Eventueel team-/distributiebeheer | Geen vereiste voor de afgesproken lokale Expo/Gradle-build |
+| `FABELPAD_APP_ORIGIN` | Door eigenaar bevestigde canonieke origin van het nieuwe doel | Publiek; build en runtime moeten dezelfde origin hebben. Geen domein afleiden uit de VPS-naam. |
+| `FABELPAD_DATA_MODE` | Expliciete keuze: `local` of `supabase` | Publiek; `local` vereist beide Supabase-waarden leeg en gebruikt geen externe accounts/data. `supabase` vereist de volgende twee waarden en afzonderlijke backendacceptatie. |
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase **Connect** van het bedoelde Fabelpad-project | Publiek, buildtijd; HTTPS-projectorigin zonder credentials. Verandering vereist nieuwe build. |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | De publishable key van precies datzelfde project | Publiek, buildtijd; `sb_publishable_…`. Geen secret-, service-role- of databasekey. RLS begrenst gegevensrechten. |
 
-## Variabelen die de huidige webcode daadwerkelijk gebruikt
+De validator accepteert uitsluitend deze spellingen. De oude naam `APP_URL` is vervallen; neem een bestaande eigen lokale waarde bewust over naar `FABELPAD_APP_ORIGIN` en verwijder alleen die vervallen naam uit het eigen lokale bestand. Behoud overige gebruikerswijzigingen. Gebruik voor een latere echte Supabase-build geen testproject of credentials van een bestaande omgeving als tijdelijke invulling.
 
-Plaats lokale waarden in `.env.local` op basis van `.env.example`. Plaats staging-/productiewaarden later in hun eigen GitHub environment en via de geverifieerde wrapperallowlists op de juiste build-/runtimeplek. `.env.example` bevat uitsluitend lege voorbeelden.
+Deze variabelen zijn geen secrets. Zet alleen publieke waarden in deze velden. Andere configuratie staat hieronder beschreven; daarvoor zijn geen aanvullende GitHub-variabelen nodig. Deze webopdracht configureert of activeert de bestaande Android/Play-route niet.
 
-| Naam | Klasse en plek | Verplicht / betekenis |
+## Hostmetadata, build en runtime
+
+| Gegeven | Bron / opslag | Wie mag erbij |
 | --- | --- | --- |
-| `NEXT_PUBLIC_SUPABASE_URL` | Publiek, **buildtijd**, browser | Met de publishable key beide invullen voor echte backend; per omgeving de juiste projectorigin |
-| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Publiek, **buildtijd**, browser | Een `sb_publishable_`-key; nooit secret/service-role of oude JWT-key. Toegang wordt afgedwongen met RLS |
-| `APP_URL` | Serverconfiguratie, geen secret | Canonieke origin voor veilige callbacks en mutaties; lokaal `http://localhost:3000`, extern HTTPS |
-| `FABELPAD_DEPLOY_ENV` | Build/runtime-metadata, geen secret | `local` (standaard), `staging` of `production` |
-| `FABELPAD_RELEASE_SHA` | Build/runtime-metadata, geen secret | Buiten lokaal verplicht; volledige uitgecheckte SHA van 40 hextekens |
-| `FABELPAD_AUTH_EMAIL_ENABLED` | Serverconfiguratie, geen secret | Standaard `false`; pas `true` na werkende Supabase OTP en DG-mailgateway |
-| `FABELPAD_AUTH_GOOGLE_ENABLED` | Serverconfiguratie, geen secret | Standaard `false`; pas `true` na provider-/callbackverificatie |
-| `PORT` | Next.js-serverconfiguratie, geen secret | Lokale alternatieve poort; definitieve deploypoort volgt uit projectprofiel |
-| `FABELPAD_BUILD_LOCK` | Lokale bouwconfiguratie, geen secret | Optioneel bestaand hostbreed lockpad; standaard uitsluitend checkoutlock in tijdelijke map |
+| Repository, integratiebranch, doel-ID, hostfingerprint, users, paden, loopbackpoort, runtimepaden, vereiste CI | Beoordeeld projectspecifiek hostprofiel en root-owned hostconfiguratie | Lezen waar nodig; runner/build/app kunnen privileged configuratie niet aanpassen |
+| Volledige release-SHA, workflowrun, poging, kandidaat-ID | Door workflow en adapter gegenereerd | Niet-geheime releasegegevens; geen extra GitHub-variabelen |
+| Onveranderlijke publieke buildconfiguratie | Eigen configuratie-ID; gecontroleerd snapshot van de vier toegestane waarden | Buildaccount mag uitsluitend deze publieke invoer lezen |
+| Runtimeconfiguratie bij dezelfde release | Afgeschermde bron, root-beheerd en alleen eigen app leesbaar | Buildaccount en runner krijgen geen runtimegeheimen |
+| `FABELPAD_DEPLOY_ENV`, `FABELPAD_RELEASE_SHA`, `PORT` en interne compatibiliteitsmetadata | Adapter/geverifieerd hostprofiel; geen handmatige GitHub-invoer | Alleen toegestane metadata; gelijktijdig met dezelfde release vastleggen |
+| `GITHUB_TOKEN` | Automatisch kortlevend token binnen Actions, alleen bron/CI lezen | Workflow/adapter; nooit in app, artefact of log |
 
-Gebruik `pnpm check:config` lokaal en `node scripts/config-check.mjs --target=staging` voor een strikte naam-/vormcontrole. Ongemelde `NEXT_PUBLIC_`-namen worden afgewezen. Waarden worden niet gelogd.
+NEXT_PUBLIC-waarden worden tijdens `next build` ingebakken. Een later aangepast runtimebestand wijzigt de browserbundel niet. Build, publieke configuratie en runtimeconfiguratie krijgen één gecontroleerde release-identiteit. De vorige gezonde combinatie blijft beschikbaar voor rollback. Releasegegevens bevatten uitsluitend identificaties en niet-geheime hashes/metadata.
 
-De huidige Next.js-runtime heeft **geen** Supabase service-role key, Resend API-key of databasewachtwoord nodig. Gebruikerssessies en RLS/RPC bepalen de rechten. Beheermachtiging wordt door een vertrouwde databasebeheerder aan een bestaand Auth-user-ID toegekend; de eerste gebruiker of user-editable metadata krijgt die rol niet automatisch.
+De web-runtime gebruikt gebruikerssessies en RLS/RPC. Er is geen Supabase service-role key, databasewachtwoord, Resend-key, uploadkeystore of algemeen SSH/PAT-secret nodig voor `next build` of de normale web-runtime. OAuth-/mailprovidersecrets horen uitsluitend bij de bedoelde Supabase-provider of bestaande gateway/worker, nadat hun contract is bevestigd.
 
-## Serversecrets voor Supabase, gateway en workers
+## Wat de eigenaar later nog levert
 
-Deze secrets horen straks bij Supabase/providerconfiguratie of een gecontroleerde worker, buiten de browser- en native bundels. De exacte namen zijn nog **niet vastgesteld** zolang het actuele DG-mailcontract ontbreekt; plaats daarvoor nog geen zelfverzonnen envnamen in de app.
-
-| Gegeven | Bestemming / ontbrekend contract |
-| --- | --- |
-| Google OAuth client-ID en clientsecret | Supabase Google-provider; webcallback, Android-client-ID's en certificaatvingerafdrukken per omgeving |
-| Supabase Auth-mailhook/gateway signingsecret | Exact gateway-URL, headers, ondertekening, payloadschema en contractversie uit het DG-runbook |
-| Apart applicatiemail-/outbox-signingsecret | Duurzame outbox, workeridentiteit, idempotency en reconciliatiebeleid; gescheiden van Auth-mail |
-| Resend API-key | Alleen de bestaande gateway-/worker-runtime; geverifieerde afzender, gescheiden ontvangerbeleid |
-| Providerwebhook signingsecret | Beveiligde webhookontvanger, eventcontract, late events en historische providercontracten |
-| Eventuele privileged Supabase-workerkey | Alleen wanneer de vastgestelde Edge-/workerimplementatie deze nodig heeft; nooit webclient/native |
-
-Nog nodig: toegestane afzender, gecontroleerde testontvangers, welke processen Auth-mail versus applicatiemail versturen, outboxtabellen, workerplanning, retrylimieten, onzekere uitkomsten en afleverstatussen. Provideracceptatie, mailserveraflevering en ontvangst in de mailbox worden afzonderlijk getest. Er wordt geen alternatieve SMTP-/mailgateway ingevoerd.
-
-## Deploysecrets en GitHub environments
-
-Leg `staging` en `production` afzonderlijk vast. Publieke buildconfiguratie, serverconfiguratie en deploymentbevoegdheid krijgen gescheiden allowlists. Runnerlabels, host, site-ID, paden, poorten, SHA en configuratieversie zijn **variabelen**, geen geheimen.
-
-Voor de deploy-/databasebeheerlaag kunnen Supabase CLI-toegang, een databaseverbinding, backupencryptie-/hersteltoegang en beperkte runnerbevoegdheden nodig zijn. Hun exacte secretnamen en scopes volgen uit het echte DG-releasecontract. Een self-hosted runner is geen reden om nu een breed SSH/PAT-secret te verzinnen. Deploycredentials worden niet aan `next build` of de app-runtime doorgegeven. Maak vóór schemawijzigingen de voorgeschreven versleutelde backup met herstelbewijs.
-
-## Android-configuratie en signing
-
-| Naam / gegeven | Plek | Timing |
+| Stap | Wat staat klaar | Concreet nog nodig |
 | --- | --- | --- |
-| `FABELPAD_VARIANT` | Expo-buildomgeving; standaard demo, `production` expliciet | Bij iedere build vastleggen |
-| `FABELPAD_ANDROID_PACKAGE` | Niet-geheime definitieve productie-ID | Vóór eerste Play-registratie; productiebuild weigert ontbrekende ID |
-| `FABELPAD_ANDROID_VERSION_CODE` | Niet-geheim positief geheel getal | Voor iedere Play-update verhogen |
-| Demo-ID/deeplink | `nl.dgwebservices.fabelpad.demo` / `fabelpaddemo` | Lokaal; definitieve staging-ID en callbacks nog bevestigen |
-| Productie-deeplink / callbacks | Expo/Supabase/Google-configuratie | Vóór echte native login |
-| Publieke native backendconfiguratie | Exacte namen pas bij aansluiting vastleggen | Geen serverkeys; huidige demo is niet met Supabase verbonden |
-| Upload-keystore, alias en wachtwoorden | Beveiligd bestand/secretstore op bevoegde buildhost | Vóór ondertekende productie-AAB; ontbreekt |
-| Play App Signing-certificaat versus upload-/debugcertificaat | Play Console en Google OAuth Android-clients | Alle werkelijk gebruikte SHA-vingerafdrukken registreren |
-| Play API-serviceaccount | Secretstore voor beperkte backend-/distributietaak | Alleen bij geconfigureerde automatische testdistributie/billing |
-| Product-ID's, abonnementen en testaccounts | Play Console + serverrechtenlaag | Vóór echte Billing-integratie en sandboxacceptatie |
+| Nieuw doel / hostvoorbereiding | Gescheiden releasecontract en hostvalidatie; feitelijke toevoegingen staan in het [doelverslag](DG-VPS-08-VOORBEREIDING.md) | Alleen de daar genoemde ontbrekende toegang; geen rechten van andere projectaccounts overnemen |
+| Nieuwe staging-origin | Validator, release-/configuratiebinding, voorbereide proxyroute | Bevestigde HTTPS-origin en later de juiste DNS-/hostingbevoegdheid |
+| Gegevensmodus | Fail-closed selectie tussen lokale werking en echte backend | Eigenaar bevestigt de bedoelde modus; geen impliciete fallback van Supabase naar lokale accounts |
+| Supabase | Bestaande migratiebestanden en lokale PostgreSQL/RLS/RPC-tests | Workspacekoppeling, nieuw project/ref/regio, beide publieke waarden en bestaande migratiehistorie |
+| Runner | Eigen account/pad/labels, pakket/unit en niet-activerende route voor zover uitgevoerd | Organisatiebeheer voor runnergroepen; huidige API-toegang geeft 403/mist `admin:org`. Eigen groep met alleen deze repo én geselecteerde main-workflows eerst bewijzen, dan pas registreren/starten. |
+| GitHub-omgeving | Afzonderlijke handmatige workflow en environmentcontrole | Organisatie `fabelpad` gebruikt Free; private environments/branchbeleid vereisen minimaal Team of Enterprise. Daarna nieuwe doel-environment met uitsluitend main; reviewers zijn optioneel. Geen betaling of bestaande wijziging uitgevoerd. |
+| Backendmigratie | Procedure en compatibiliteitsgate | Afzonderlijke autorisatie, versleutelde backup, sleutelbeheer, retentie en aantoonbare hersteltest op geïsoleerde data |
+| Auth en mail, indien gebruikt | Servergrens en lokale contracttests | Veilige testaccounts, exacte callbacks, bevestigde providerinstellingen en DG-mailgateway-/outboxcontract |
+| Publieke activatie | Systemd-/proxyvoorbereiding en health-/herstelvolgorde | Aparte eerste-releaseopdracht, bevestigd publiek adres/DNS/TLS en readinessacceptatie |
 
-Een lokale debug-APK is geen ondertekende productiekandidaat; Metro is geen APK. Een staging-AAB met stagingbackend mag niet naar productie. Dezelfde geteste productie-AAB kan later intern getest en vervolgens vrijgegeven worden. Een gehoste Expo-builddienst is niet vereist. Controleer de actuele officiële Android-/Play-toolchaineisen opnieuw vóór native productiebuild en indiening; oude documentwaarden zijn geen nieuw verificatiebewijs.
+Controleer na de aangekondigde Supabase-GitHubkoppeling eerst welke repository/branch is gekoppeld en of push/merge automatisch schema, Edge Functions of configuratie uitrolt. Een koppeling is geen toestemming om een bestaande database te wijzigen. De officiële [Supabase-branchingdocumentatie](https://supabase.com/docs/guides/deployment/branching) beschrijft automatische deployments; gecontroleerd op 20 november 2026. De [publieke-keydocumentatie](https://supabase.com/docs/guides/getting-started/api-keys) bevestigt dat publishable keys voor clients zijn en gegevensbeveiliging RLS vereist.
 
-## Volgorde na de lokale oplevering
+## Migraties en providergeheimen
 
-1. Vul projectprofiel en repository-/runner-/wrappergegevens in; richt GitHub environments in.
-2. Maak/koppel Supabase staging en productie, pas migraties met backup/herstelbewijs toe en test RLS met twee ouders plus gemanipuleerde kind-ID's.
-3. Configureer callbacks, Google en de bestaande DG-mailgateway/outbox; zet providers pas na werkende tests aan.
-4. Deploy exact de groen geteste SHA via het geverifieerde DG-pad naar staging; controleer runtime-SHA en echte gezin-/beheerflows.
-5. Installeer de lokaal gebouwde native demo-APK en voer toestelacceptatie uit. Sluit daarna de nog ontbrekende native cloudlaag aan en bouw een aparte staging-APK met geverifieerde backendconfiguratie.
-6. Leg productie-ID/signing/commerciële en privacygegevens vast; maak pas daarna een productie-AAB en eventuele Play-testdistributie. Productie-uitrol en openbare publicatie vallen buiten deze lokale opdracht.
+Migraties zijn geen onderdeel van kandidaatbouw of appactivatie. Leg vóór een aparte migratie het juiste Supabase-project, de actuele migratiehistorie en alle betrokken versies vast. Maak een versleutelde backup en verifieer herstel op een geïsoleerd doel. Beoordeel compatibiliteit met actieve/vorige webreleases en de lokale native app. Gebruik eerst uitbreidende wijzigingen; een approllback herstelt geen database, Auth-provider, Edge Function of outbox.
+
+Bewaar databasebeheer, OAuth-clientsecret, Auth-mailhooksecret, Resend-/gateway-/worker-/webhooksecrets uitsluitend in hun projectspecifieke afgeschermde bron. De precieze namen worden pas toegevoegd wanneer de bestaande dienst en het contract geverifieerd zijn. Geen fictieve envnamen of werkende secrets in voorbeelden, commits, buildlogs of procesargumenten.
+
+## Android blijft de bevestigde lokale productie-app
+
+`nl.fabelpad.app` 1.0.0 (1) is gebouwd en gesigneerd. Supabase, betaalproducten en accounts zijn geen voorwaarde voor deze eerste native release. Ondertekening en Play-onboarding staan in het [Play-runbook](GOOGLE-PLAY-RELEASE-RUNBOOK.md); het bestaande uploadbestand en certificaat zijn gedocumenteerd in [ANDROID-PRODUCTIE-VALIDATIE.md](ANDROID-PRODUCTIE-VALIDATIE.md). Publieke privacyhosting, echte Store-beelden, apparaatacceptatie en Play-account-/beleidstaken blijven afzonderlijke acceptatiepunten. De nieuwe webhostvoorbereiding publiceert geen Android-versie en verplaatst geen signingmateriaal.

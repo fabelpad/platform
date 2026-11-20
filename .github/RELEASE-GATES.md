@@ -1,16 +1,18 @@
-# Releasepad nog te configureren
+# Fabelpad — releasegates voor dg-vps-08 staging
 
-De huidige opdracht autoriseert een lokale build. `workflows/verify.yml` bewijst alleen installatie, controles en bundels op de uitgecheckte commit. Er is bewust nog geen muterende staging-/productieworkflow.
+Bijgewerkt: **20 november 2026**. Alleen voorbereiding is geautoriseerd. Een kandidaat bouwen en een app activeren zijn afzonderlijke routes. Deze opdracht activeert geen appservice, wijzigt geen `current`, start geen activerende workflow en publiceert geen domein.
 
-Voeg het echte releasepad pas toe als de onderstaande gegevens en contracten beschikbaar en gecontroleerd zijn:
+1. **Bron en bestaande triggers:** repository is `fabelpad/platform`, toegestane integratiebranch `main`. Werk via een eigen `codex/`-reviewbranch. Controleer bestaande workflows én eventuele later gekoppelde Supabase-GitHubintegratie vóór push/merge. Geen merge/push naar een ref die bestaande omgevingen activeert.
+2. **Exacte commit:** een releaseargument is een volledige SHA van 40 kleine hextekens. Controleer repository-identiteit en main-afstamming, bouw exact deze SHA en leg bron-SHA, workflowrun/poging, configuratie-ID en artefacthash vast. Geen bewegende `HEAD`/`main` als buildidentiteit.
+3. **Vereiste CI:** accepteer uitsluitend de vastgelegde succesvolle main-pushcontroles op precies de vrijgegeven SHA, inclusief de verplichte job en relevante stappen. Ontbrekend, skipped, pending, in progress, cancelled, neutral of failed weigeren. Een groene PR-mergecontrole vervangt geen main-pushbewijs.
+4. **Doelidentiteit:** verifieer SSH-hostsleutel én hostidentiteit tegen het vastgelegde profiel. Alleen de eigen nieuwe stagingaccounts, paden, runnerlabels, service en vrije loopbackpoort mogen worden gebruikt. Oude Fabelpad- en andere projectomgevingen blijven referentie.
+5. **Gescheiden rechten:** runner, build en app hebben eigen accounts. Root-owned adapters, sudoers, systemd en proxyconfiguratie liggen buiten hun schrijfrecht. Runner krijgt alleen vaste projectspecifieke entrypoints, geen algemene sudo en geen onbeoordeelde PR-code. Runnerlabels alleen zijn onvoldoende: beperk de eigen runnergroep tot deze repo en geselecteerde main-workflows.
+6. **Configuratie:** uitsluitend `FABELPAD_APP_ORIGIN`, `FABELPAD_DATA_MODE`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` en `NEXT_PUBLIC_SUPABASE_URL` als GitHub-variabelen voor webdeploy. Doelmetadata staat in hostconfig; SHA/runmetadata wordt gegenereerd. Maak een onveranderlijke publieke buildconfiguratie. Runtimegeheimen blijven afgescheiden en onleesbaar voor build/runner. Nieuwe publieke waarden vereisen een nieuwe build/configuratie-ID.
+7. **Capaciteit en lock:** controleer bytes/inodes, bestaande processen en het geverifieerde gedeelde buildlock. Eén eigen projectbuild tegelijk. Bij aantoonbaar lockconflict hoogstens één begrensde nieuwe poging na vrijgave; geen lock verwijderen of bestaande releases/cache opruimen.
+8. **Kandidaat zonder activatie:** gebruik lockfile/pins en een schone eigen werkmap. De buildroute start geen app, wisselt geen symlink en wijzigt geen database/provider/proxy. Verzegel kandidaat en manifest. Een lokale build en een echte doelbuild zijn afzonderlijke resultaten.
+9. **Afzonderlijke migratiegate:** geen migraties in appworkflows. Voor schema-/Edge-/providerwijzigingen zijn het bedoelde project, compatibiliteit, versleutelde backup, sleutelbeheer en geïsoleerd herstelbewijs vereist. Bestaande databases blijven tijdens voorbereiding onaangeraakt.
+10. **Latere activatie:** uitsluitend na aparte opdracht en beschermde eigen GitHub environment. Eén lock serialiseert activatie en rollback. App, artefact en runtimeconfiguratie horen bij dezelfde versie. Bewaar de vorige gezonde combinatie; vereis loopbackhealth met exacte SHA voordat publieke routing wordt toegevoegd.
+11. **Latere HTTPS/readiness:** valideer eigen systemd-unit en volledige bestaande proxyconfiguratie vóór de nieuwe toevoeging. Verifieer domein/DNS, certificaat, loopbackhealth, publieke health en echte gebruikersflow; een liveness-200 bewijst geen Supabase-, Auth-, RLS-, mail- of syncwerking.
+12. **Herstel:** herstel bij appfalen alleen de vorige gezonde eigen app/configuratie onder hetzelfde lock. Bij mislukte eerste installatie stop alleen de eigen appservice; gebruik geen andere omgeving. Onderbreking/hostuitval vereist inspectie vóór hervatten. Approllback voert geen database- of proxyrollback uit.
 
-- GitHub-repository en environments `staging` en `production`, runnernaam, exacte labels, Linux-gebruiker, workspace en hostbeleid voor lock/retentie.
-- Site-ID, HTTPS-origin, deployhost, projectpaden, loopbackpoort en Caddy-configuratie per omgeving.
-- Geïnstalleerde `dg-site-deploy`-versie, ondersteunde configuratieallowlists, native Next.js-startcontract, activatie-, health- en rollbackinterface. Het wrappervoorbeeld uit een ander project is geen Fabelpad-contract.
-- Geslaagde vereiste CI op de volledige release-SHA; checkout-SHA, workflow-SHA en runtime-SHA afzonderlijk bewijzen.
-- `node scripts/config-check.mjs --target=staging` respectievelijk `--target=production` met de omgevingsconfiguratie; log uitsluitend namen/aanwezigheid. De configuratiecheck voert geen deployment uit.
-- Versleutelde databasebackup plus herstelbewijs, migratiehistorie en achterwaartse compatibiliteit vóór schema-/Edge-wijzigingen.
-- Gecontroleerde Supabase Auth/Google/mailgateway/outbox-inrichting en werkelijke flowacceptatie, inclusief twee verschillende ouderaccounts en beheerdersrechten.
-- Stagingacceptatie van dezelfde bron-SHA vóór een later geautoriseerde productiestap. Beide omgevingen bouwen afzonderlijk met hun eigen `NEXT_PUBLIC_`-waarden.
-
-De workflow mag de wrapper pas met diens geverifieerde interface aanroepen. Geen hosts, labels, argumenten, backupscripts of rollbackcommando's raden. Zie `docs/RUNBOOK.md` en `docs/INRICHTING.md`.
+Het concrete doelprofiel, de werkelijk uitgevoerde controles en latere opdrachten staan in [docs/DG-VPS-08-VOORBEREIDING.md](../docs/DG-VPS-08-VOORBEREIDING.md). Open stappen zijn blokkades voor die stap, geen stilzwijgende goedkeuring of voltooide release.

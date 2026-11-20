@@ -16,7 +16,8 @@
     "content:export": "node scripts/export-native-content.mjs",
     "test:browser": "playwright test",
     "check:backend": "node scripts/supabase-db-check.mjs && node scripts/supabase-contract-check.mjs",
-    "check:native": "node scripts/native-runtime-check.mjs"
+    "check:native": "node scripts/native-runtime-check.mjs",
+    "check:deploy": "node --test scripts/deploy/*.test.mjs && python3 -B scripts/deploy/install-host.test.py"
   },
   "dependencies": {
     "@fontsource-variable/fredoka": "5.2.8",

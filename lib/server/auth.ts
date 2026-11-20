@@ -3,9 +3,9 @@ import { BackendConfigurationError, getBackendStatus, getSupabaseConfig } from '
 import { checkMutationOrigin, handleApiError, object, privateJson, readJson, RequestError, safeNext } from './http';
 
 export async function authSession() {
-  const status = getBackendStatus();
-  if (!status.configured) return privateJson({ ...status, parent: null, admin: false });
   try {
+    const status = getBackendStatus();
+    if (!status.configured) return privateJson({ ...status, parent: null, admin: false });
     const client = await createSupabaseServerClient();
     const parent = await getVerifiedParent(client);
     return privateJson({ ...status, parent, admin: parent ? await isContentAdmin(client, parent.id) : false });

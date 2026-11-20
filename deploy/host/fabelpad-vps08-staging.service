@@ -1,0 +1,38 @@
+[Unit]
+Description=Fabelpad staging on dg-vps-08
+Wants=network-online.target
+After=network-online.target
+RequiresMountsFor=/srv/sites/fabelpad-vps08-staging
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+[Service]
+Type=simple
+User=app-fab-v08-stg
+Group=app-fab-v08-stg
+WorkingDirectory=/srv/sites/fabelpad-vps08-staging/current/artifact
+Environment=NODE_ENV=production
+Environment=HOSTNAME=127.0.0.1
+Environment=NEXT_TELEMETRY_DISABLED=1
+Environment=PATH=/opt/dg-toolchains/fabelpad-vps08-staging/node-v24.18.0-linux-x64/bin:/usr/bin:/bin
+EnvironmentFile=/srv/sites/fabelpad-vps08-staging/current/runtime.env
+ExecStart=/opt/dg-toolchains/fabelpad-vps08-staging/node-v24.18.0-linux-x64/bin/node /srv/sites/fabelpad-vps08-staging/current/artifact/node_modules/next/dist/bin/next start --hostname 127.0.0.1 --port 4188
+Restart=on-failure
+RestartSec=5s
+TimeoutStopSec=30s
+UMask=0027
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectHome=yes
+ProtectSystem=strict
+ProtectProc=invisible
+RestrictSUIDSGID=yes
+CapabilityBoundingSet=
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+ReadWritePaths=/srv/sites/fabelpad-vps08-staging/shared
+TasksMax=256
+MemoryMax=1G
+SyslogIdentifier=fabelpad-vps08-staging
+
+[Install]
+WantedBy=multi-user.target

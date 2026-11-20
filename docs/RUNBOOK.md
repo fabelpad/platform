@@ -1,10 +1,10 @@
-# Lokaal bouwen en later releasen
+# Fabelpad — lokaal controleren en releases voorbereiden
 
-Dit runbook hoort bij de lokale opdracht van 4 november 2026. De repository `https://github.com/fabelpad/platform.git` is als `origin` gekoppeld; `main` volgt `origin/main`. Een Fabelpad-deployhost, Supabase-project en werkend DG-wrappercontract moeten nog worden geconfigureerd. Zie [PROJECTPROFIEL.md](PROJECTPROFIEL.md) en [INRICHTING.md](INRICHTING.md).
+Bijgewerkt: **20 november 2026**. Repository: `https://github.com/fabelpad/platform.git`; integratiebranch: `main`. De actuele opdracht bereidt een nieuw stagingdoel op **dg-vps-08** voor. Het concrete hostcontract, latere build-/activatie-/herstelopdrachten en de werkelijk uitgevoerde controles staan in [DG-VPS-08-VOORBEREIDING.md](DG-VPS-08-VOORBEREIDING.md). Eerste activatie en publieke ingebruikname zijn niet inbegrepen.
 
-## Voorcontrole en installatie
+## Lokale installatie en veilige configuratie
 
-Gebruik Node `24.18.0` uit `.nvmrc` en pnpm `11.25.0` uit `package.json`. Web gebruikt `pnpm-lock.yaml`; `mobile/` gebruikt een eigen npm-lockfile en valt niet onder een pnpm-monorepo-installatie.
+Gebruik Node **24.18.0** uit `.nvmrc` en pnpm **11.25.0** uit `package.json`. Web gebruikt `pnpm-lock.yaml`; `mobile/` heeft een afzonderlijk npm-lockfile.
 
 ```bash
 node scripts/local-preflight.mjs
@@ -13,83 +13,69 @@ cp --no-clobber .env.example .env.local
 pnpm check:config
 ```
 
-Kopieer het voorbeeld alleen als `.env.local` nog niet bestaat. Laat beide publieke Supabase-waarden leeg om zonder accounts te bouwen. Email- en Google-login blijven uit tot hun echte providers werken. De demo heeft geen productierechten.
+Kopieer het voorbeeld alleen als `.env.local` nog niet bestaat. Gebruik een eigen lokale datamodus en synthetische profielen zonder Supabase-/providercredentials van bestaande omgevingen. Voor de nieuwe webdeploy zijn slechts vier GitHub-variabelen toegestaan; zie [INRICHTING.md](INRICHTING.md). De exacte geldige datamoduswaarden staan in `.env.example` en de validator.
 
-De preflight controleert exacte Node/pnpm-pins, vrije bytes en inodes. De lokale webdrempel is 4 GiB/50.000 inodes; `--android` gebruikt 12 GiB/100.000. Dit zijn lokale ondergrenzen, geen capaciteitsschatting voor backups en meerdere releases. Controleer opnieuw vóór grote installaties, Android SDK, builds en backups. Verwijder geen actieve releases, herstelpunten of onbekende bestanden om ruimte te maken.
+De preflight controleert pins, bytes en inodes. Lokale ondergrenzen zijn 4 GiB/50.000 inodes voor web en 12 GiB/100.000 voor Android. Dit vervangt geen doelhostbudget voor releases en backups. Verwijder geen actieve release, herstelpunt of onbekende map om plaats te maken.
 
-## Web controleren en starten
+## Webcontroles en echte Next-runtime
 
 ```bash
 bash scripts/local-build.sh
-pnpm dev
+pnpm start --port 3017
 ```
 
-Het bouwscript gebruikt Linux `flock`, voert preflight/configuratie/TypeScript/domeincontroles uit en maakt een echte Next.js-productiebuild. Het standaardlock serialiseert deze checkout; wijs `FABELPAD_BUILD_LOCK` pas naar het bestaande hostbrede lock zodra dat contract bekend is. Installeer dependencies niet gelijktijdig met een build in dezelfde checkout.
+De lokale build gebruikt `flock` en voert configuratie-, TypeScript-, content-, PostgreSQL-/backend- en native runtimecontractcontroles uit, gevolgd door `pnpm build`. Het lokale standaardlock serialiseert de eigen checkout. Een doelbuild gebruikt het geverifieerde hostlock en een aparte werkmap; installeer niet gelijktijdig dependencies in dezelfde checkout.
 
-Gebruik na een geslaagde build voor de productie-runtime lokaal:
+`pnpm start` bindt de bestaande Next.js-server aan loopback. Controleer op een vrije eigen lokale poort:
 
 ```bash
-pnpm start
+curl --fail --silent --show-error http://127.0.0.1:3017/api/health
+curl --fail --silent --show-error --output /dev/null http://127.0.0.1:3017/privacy
 ```
 
-Next.js bindt aan loopback; standaardpoort 3000. Een bezette poort kan expliciet met `PORT` worden gewijzigd. Noteer de werkelijk geteste URL in het validatierapport.
-
-| Route | Bedoeling |
+| Route | Acceptatiegrens |
 | --- | --- |
-| `/` | Publieke website en directe demoroute |
-| `/lezen` | Kinderleesapp met lokale demo-opslag |
-| `/demo` | Reviewroute met de prototype-schermschakelaar |
-| `/ouders` | Lokale ouderdemo; geen Supabase-autorisatie |
-| `/inloggen` | Echte Supabase-login, afgeschermd zolang configuratie ontbreekt |
-| `/gezin` | Echte gezin-/cloudgrens met geverifieerde sessie |
-| `/studio` | Servergecontroleerde contentbeheergrens |
-| `/privacy`, `/support`, `/account-verwijderen` | Dienstpagina's; definitieve organisatie-/beleidsgegevens nog nodig |
+| `/`, `/lezen`, `/ouders`, `/demo` | Website/lokale lees- en reviewfuncties; lokale data zijn geen echte cloudaccounts |
+| `/inloggen`, `/gezin`, `/studio` | Echte sessie-/autorisatiegrens; alleen beschikbaar met expliciet geconfigureerde backend |
+| `/privacy`, `/support`, `/account-verwijderen` | Publieke dienstpagina's; hosting en definitieve juridische gegevens afzonderlijk controleren |
+| `/api/health` | Process-liveness met release-/omgevingmetadata; geen bewijs van backendreadiness |
 
-`pnpm check:content` voert de bestaande profiel-, cloud-sync-, verhaalgeheugen-, catalogus-, tekstgroei-, speelactie-, modal-, cache- en platformcontroles uit. De native content wordt opnieuw uit dezelfde verhaalbron gegenereerd en bytegewijs met de vastgelegde content/assetsmapping vergeleken. Bij bewuste broncontentwijzigingen: `pnpm content:export`, de wijziging beoordelen en alle gewijzigde content/assets vastleggen.
+`pnpm check:content` controleert profielen, synchronisatiecontracten, verhaalkeuzes/geheugen, catalogus, tekstgroei, speelacties, modals, cache en gedeelde content. Native content wordt met de vastgelegde content/assets gecontroleerd. Bij een bedoelde broncontentwijziging: voer `pnpm content:export` uit en beoordeel alle gegenereerde wijzigingen; bestaande verhaalreleasebestanden blijven onveranderlijk.
 
-`pnpm check:backend` vervangt de oude D1/SQLite-backendcontrole door PostgreSQL-/RLS-/RPC-contracttests op PGlite en afzonderlijke servercontractcontroles. Het lokale Auth-schema is een teststub; deze controles bewijzen geen gehoste Supabase Auth, Edge Functions of externe synchronisatie. Nieuwe migraties onder `supabase/migrations/` moeten op de bedoelde echte database worden toegepast en met meerdere accounts worden getest.
+`pnpm check:backend` gebruikt synthetische PostgreSQL/RLS/RPC-tests in PGlite en servercontractcontroles. Het lokale Auth-schema is een stub. Een geslaagde test bewijst geen gehoste Supabase Auth, externe data, mail of echte synchronisatie. De oude D1/SQLite-code onder `legacy/` is historische referentie, geen actief migratiepad.
 
-De oude SQLite-adapter en `family-backend-check.mjs` zijn niet actief in de Next.js-runtime of huidige controles. De oorspronkelijke D1-adapter en migratie staan als historische referentie onder `legacy/d1/`. De oude regressiecontrole blijft uitvoerbaar met `node scripts/family-backend-check.mjs`; dit is geen Supabase-migratiepad.
+## Schone verificatie vóór oplevering
 
-## Native lokaal
+Voer een releasecontrole uit in een aparte schone werkmap uit één vastgelegde commit. Gebruik `git archive` of een geïsoleerde worktree zonder `.env.local`, `.next`, `node_modules` of ongecommitteerde bestanden uit de ontwikkelcheckout over te nemen. Leg volledige SHA en resultaat vast. Installeer uit het gecommitte lockbestand en draai dezelfde normale projectcommando's. Een aangepaste werkboom kan aanvullend getest worden, maar telt niet als schone commitbuild.
+
+```bash
+git status --short
+node scripts/local-preflight.mjs
+pnpm install --frozen-lockfile
+bash scripts/local-build.sh
+```
+
+Een lokale productiebundel is geen kandidaat op de doel-VPS. Pas wanneer de doelrunner, exacte main-SHA met geslaagde vereiste CI, veilige doelconfiguratie en capaciteit beschikbaar zijn, kan de afzonderlijke kandidaatworkflow bouwen. De buildroute activeert geen app.
+
+## Native Android
+
+De eerste native productieversie is **Fabelpad 1.0.0 (1), `nl.fabelpad.app`**, gratis en lokaal zonder accounts of abonnementen. Deze webdeployopdracht verandert die scope niet. Volg voor Android het [Play-runbook](GOOGLE-PLAY-RELEASE-RUNBOOK.md), het [productie-invulblad](GOOGLE-PLAY-INVULBLAD-PRODUCTIE.md) en het [buildbewijs](ANDROID-PRODUCTIE-VALIDATIE.md). Historische demoresultaten in `mobile/VALIDATIE.md` zijn geen actuele productiestatus.
+
+Reguliere broncontroles:
 
 ```bash
 node scripts/local-preflight.mjs --android
-pnpm content:export
 npm ci --prefix mobile --no-audit --no-fund
 npm run check --prefix mobile
 CI=1 npm run export:android --prefix mobile
 ```
 
-Bij een hostbrede npm-cachefout kan `npm_config_cache` naar een eigen tijdelijke cache worden gezet; wijzig of verwijder de gedeelde cache niet. Metro levert een JavaScript-/assetexport. Een APK vraagt de passende JDK, Android SDK/NDK, gegenereerde Gradle wrapper en het native buildpad uit [mobile/README.md](../mobile/README.md). Toestelresultaten en APK/AAB-bewijs worden afzonderlijk in [mobile/VALIDATIE.md](../mobile/VALIDATIE.md) genoteerd.
+Metro-export is een JavaScript-/assetbundel. Het gesigneerde AAB-/APK-pad vereist de gecontroleerde JDK/Android-toolchain en beschermde uploadsleutel uit het native runbook. Sleutels en wachtwoorden blijven buiten Git, bundels, uitvoer en procesargumenten. Bestaande Android-/Play-workflows blijven aanwezig en ongeconfigureerde automatische publicatie blijft uit.
 
-Productievariant vereist de expliciete definitieve package-ID. Uploadkeys, wachtwoorden en Play API-credentials blijven buiten Git, de appbundel en logs. Een lokaal gegenereerde debugkey is geen productie-uploadkey.
+## CI en latere vrijgave
 
-## CI
+`.github/workflows/verify.yml` controleert de gepinde web-/nativetoolchain op een GitHub-runner. De bestaande Android-CI voert de afzonderlijke native controles uit. Een workflowbestand is geen geslaagde run; controleer de werkelijke uitslag op de volledige commit. Op pull requests kan `github.sha` een testmerge zijn: een release vereist de vastgelegde main-push-SHA en de daarvoor verplichte CI.
 
-`.github/workflows/verify.yml` installeert de gepinde toolchain, controleert capaciteit, gebruikt beide lockfiles en draait webcontroles, productiebuild, native TypeScript en Metro-export. De workflow heeft alleen leestoegang op broncode en bevat geen deploy-/Supabase-/Play-credentials. Voor pull requests is `github.sha` de werkelijk uitgecheckte testcommit; leg bij een release de volledige uiteindelijke bron-SHA apart vast.
+Volg de [releasegates](../.github/RELEASE-GATES.md) en het [doelrunbook](DG-VPS-08-VOORBEREIDING.md). Alle nieuwe deployroutes zijn handmatig, project-/doelspecifiek en gescheiden in kandidaatbouw en activering. Bestaande workflows, environments en diensten worden tijdens voorbereiding niet aangepast. Controleer vóór toekomstige merges bovendien een eventuele Supabase-GitHubkoppeling op automatische migraties of Edge-deployment.
 
-Een workflowbestand alleen bewijst geen geslaagde GitHub-run. De push naar de opgegeven repository start de verificatieworkflow; controleer de uitslag op de volledige gepushte SHA via GitHub Actions.
-
-## Later: DG-release en acceptatie
-
-Volg eerst [.github/RELEASE-GATES.md](../.github/RELEASE-GATES.md). De DG-standaard is een native Next.js-serverrelease via de bestaande `dg-site-deploy`-wrapper en Caddy, met een eigen self-hosted runner op de doelomgeving. Docker, Workers en een alternatieve mailgateway zijn geen onderdeel van dit releasepad.
-
-1. Leg één volledige bron-SHA vast en vereis groene CI op precies die commit. Controleer de runner, Linux-gebruiker, workspace, wrapperversie en configallowlists.
-2. Controleer bytes/inodes en het hostbrede build-lock. Maak vóór migraties de voorgeschreven versleutelde databasebackup en toon herstelbewijs aan.
-3. Controleer migratiehistorie en compatibiliteit. Pas schema-/Edge-/workerwijzigingen via het vastgestelde contract toe; reset geen database om afwijkingen te verbergen.
-4. Laat de stagingrunner dezelfde SHA met **stagingconfiguratie** bouwen en via de werkelijke wrapperinterface activeren. Leg release-ID, run-ID/poging, toolchain, configuratieversie en backendversies vast.
-5. Controleer volledige runtime-SHA, healthcontract, Auth/sessieherstel, twee gescheiden ouders/kinderen, manipulatie van kind-ID's, echte syncconflicten, concept-/publicatiebeheer en mailworkerstatus. Een health-200 bewijst alleen dat endpoint.
-6. Bouw productie later binnen de dan geautoriseerde scope opnieuw uit dezelfde SHA met **productieconfiguratie**. Een nieuwe mergecommit is niet dezelfde bron-SHA; forcepush is geen herstelprocedure.
-
-Staging- en productiewaarden van `NEXT_PUBLIC_SUPABASE_*` worden tijdens hun eigen `next build` ingebakken. Omgevingsconfiguratie achteraf veranderen vervangt de reeds gebouwde browserwaarden niet.
-
-## Fouten, backup en rollback
-
-- Lokaal: stop het betreffende eigen proces en lees de foutuitvoer. Verwijder geen demo-/profielopslag om een opslagfout te verbergen. Gebruik herkenbare testprofielen en behoud een export wanneer gegevens nodig blijven.
-- Ontbrekende Supabase-configuratie: de demo blijft bruikbaar; echte serverroutes moeten expliciet onbeschikbaar zijn. Gebruik geen demo-login als echte beheertoegang.
-- Releasefalen: noteer welke app-, database-, Edge- en providerstappen werkelijk zijn uitgevoerd. Stop vervolgstappen en volg het geverifieerde rollbackcontract van de wrapper.
-- Een approllback draait database, Edge Functions, mailcontracten of providerconfiguratie **niet automatisch terug**. Controleer de nog actieve app tegen de reeds gewijzigde backend.
-- Het concrete rollbackcommando, release-/backuppaden, encryptiesleutelbeheer, retentie en herstelbewijs ontbreken nog. Vul ze uit het werkelijke infrastructuurrunbook in vóór een eerste remote mutatie.
-
-Geef een controle alleen als geslaagd weer met het bijbehorende commando, de werkelijk geteste commit/werkboom, datum en resultaat. Markeer niet-uitgevoerde tests expliciet; een bundel is geen toesteltest of Play-release.
+Migraties, Auth-provider- en mailgatewaywijzigingen hebben een aparte backup-/herstel- en compatibiliteitsgate. Een approllback herstelt alleen de eigen vorige gezonde app/configuratiecombinatie; geen database, provider of proxy. Bij een onderbroken eerste installatie inspecteert een beheerder eerst de eigen service, verwijzingen en manifesten. Geef uitsluitend uitgevoerde controles als geslaagd weer, met datum, bronidentiteit en resultaat.
