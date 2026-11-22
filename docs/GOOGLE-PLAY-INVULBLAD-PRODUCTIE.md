@@ -6,7 +6,7 @@
 
 **Identiteit:** repository https://github.com/fabelpad/platform.git; reviewbranch codex/android-production-play-20261118; gebouwde commit **8dcb98c4287dc78421b092ee395ace05f492baaa**, bij buildstart schoon vastgelegd. Het productieartefact is [fabelpad-production.aab](/home/codex/repos/fabelpad/artifacts/native/fabelpad-production.aab), **37.005.584 bytes**, SHA-256 **ffc22ec85449074a667a243dc132dfa46e9a484c756dc57c859433ba68ba6e1c**. Beoordeel dit pakket; latere documentatie-/workflowwijzigingen veranderen deze vastgelegde artefactherkomst niet.
 
-**Console-taal:** Nederlands. **Store-taal:** voorstel Nederlands, nl-NL. **Gewenste distributie:** productie voor Android-telefoons en geteste tablets, voorafgegaan door echte acceptatietests en eventuele verplichte gesloten test. Play-accountdisplaynaam **DG Webservices** is bevestigd; landen, accounttype, leeftijdsgroepen en publicatiedatum zijn open. Website **fabelpad.nl** en publiek supportadres **support@fabelpad.nl** zijn bevestigd; bereikbaarheid en aflevering nog te verifiëren. **Controledatum:** 18 november 2026, Europe/Amsterdam.
+**Console-taal:** Nederlands. **Store-taal:** voorstel Nederlands, nl-NL. **Gewenste distributie:** productie voor Android-telefoons en geteste tablets, voorafgegaan door echte acceptatietests en eventuele verplichte gesloten test. Play-accountdisplaynaam **DG Webservices** is bevestigd; landen, accounttype en publicatiedatum zijn open. Website **fabelpad.nl** en publiek supportadres **support@fabelpad.nl** zijn bevestigd; bereikbaarheid en aflevering nog te verifiëren. **Controledatum:** 18 november 2026, Europe/Amsterdam. **Doelgroepaanvulling:** 22 november 2026; de verplichte Console-leeftijdskeuzes staan in D1. Store-teksten en externe Store-beelden krijgen volgens de eigenaar geen leeftijdsaanduiding. Deze aanvulling herbeoordeelt het vastgelegde AAB of de overige beleidsdeadlines niet.
 
 De ondertekende productie-AAB en het buildmanifest zijn beschikbaar; er is geen ingelogde Play Console of huidig formulierexport. Officiële Help bevestigt de vermelde schermroutes; een niet-zichtbare afslag heet **Formuliertekst te bevestigen**. Onbekende compliance-antwoorden blijven **Open — nog niet invullen**. Alleen de ontbrekende specifieke Console-schermen zijn nodig, geen accountdump. Een ingevuld blad bewijst geen goedkeuring door Google.
 
@@ -117,7 +117,7 @@ Route: Aantal gebruikers vergroten → Aanwezigheid in Google Play Store → Sto
 
 ### B1. Kopieerklare Store-tekst — voorstel Nederlands
 
-De tekst beschrijft de bevestigde lokale productomvang. Bij een latere andere productomvang eerst herschrijven. Telling gebruikt Unicode-tekens inclusief interne regeleinden, exclusief blokmarkeringen en afsluitend regeleinde.
+De tekst beschrijft de bevestigde lokale productomvang, zonder leeftijdsaanduiding. Bij een latere andere productomvang eerst herschrijven. Telling gebruikt Unicode-tekens inclusief interne regeleinden, exclusief blokmarkeringen en afsluitend regeleinde; opnieuw gecontroleerd op 22 november 2026.
 
 **Naam: 8/30**
 
@@ -155,7 +155,7 @@ De voorleesalinea beschrijft de geïmplementeerde bronroute; overnemen nadat dez
 
 ### B2. Briefing voor de externe maker
 
-Lever per formaat dezelfde scenario’s in onderstaande volgorde. Bestandsnamen zijn voorstellen; geen bestand is hiermee al gemaakt. Gebruik uitsluitend captures van de finale release met synthetische profielen zoals Avonturier en Testlezer, zonder notificaties, persoonsgegevens of debugoverlays. Lever telefoon 1080×1920; tabletbroncaptures 1600×2560 en desgewenst aparte werkelijk gecapturede 9:16-promotiebeelden. Bewaar onbewerkte captures naast de vormgeving.
+Lever per formaat dezelfde scenario’s in onderstaande volgorde. Bestandsnamen zijn voorstellen; geen bestand is hiermee al gemaakt. Gebruik uitsluitend captures van de finale release met synthetische profielen zoals Avonturier en Testlezer, zonder notificaties, persoonsgegevens of debugoverlays. Gebruik geen leeftijdsaanduidingen in de Store-beelden of bijbehorende promotieteksten. Lever telefoon 1080×1920; tabletbroncaptures 1600×2560 en desgewenst aparte werkelijk gecapturede 9:16-promotiebeelden. Bewaar onbewerkte captures naast de vormgeving.
 
 | Volgorde / naam | Scène | Alt-tekstvoorstel |
 | --- | --- | --- |
@@ -233,12 +233,14 @@ Do not use credentials for the separate Fabelpad website. If account-based featu
 
 Leeftijdsdoelgroep, eventuele technische toegangsbeperking en IARC-rating zijn afzonderlijke beslissingen. De kindprofielen, dierfiguren en verhaalvorm maken kinderen relevant; begeleid gebruik door ouders verandert dit niet in een uitsluitend volwassen doelgroep.
 
+De eigenaar heeft op 22 november 2026 de beoogde gebruiksleeftijden vastgesteld op ongeveer 3 tot 10 jaar. Dit is de interne onderbouwing voor de verplichte Console-keuzes; het is geen tekst voor de Store-vermelding. De leeftijdsaanduiding staat in de publieke productuitleg uitsluitend bij de website-FAQ. Google gebruikt bredere leeftijdsvakken en verlangt geschiktheid voor iedere geselecteerde groep; de gebruikstest en IARC-beoordeling blijven afzonderlijke open controles. De officiële [doelgroepinstructies](https://support.google.com/googleplay/android-developer/answer/9867159?hl=nl) en de drie kindergroepen zijn hiervoor opnieuw gecontroleerd op 22 november 2026.
+
 ### D1. Doelgroep en content
 
 | Scherm / veld of vraag | Exact invullen of aanklikken | Status | App-bewijs / officiële bron | Vervolgactie |
 | --- | --- | --- | --- | --- |
-| Getargete leeftijdsgroepen | Open — nog niet invullen. Voorstel 6–8 jaar; 9–12 alleen indien bewust bedoeld en passend. | Te verifiëren | Kindgerichte teksten/beelden; [doelgroep](https://support.google.com/googleplay/android-developer/answer/9867159?hl=nl) | Eigenaar bevestigt precieze groepen. |
-| Beschikbare leeftijdsvakken | Selecteer uitsluitend passende: 5 jaar en jonger; 6–8; 9–12; 13–15; 16–17; 18 jaar en ouder. | Voorstel | Zelfde officiële bron. | Niet alle groepen selecteren; voor 5-en-jonger passende lees-/luisterervaring aantonen. |
+| Getargete leeftijdsgroepen | Vink **5 jaar en jonger**, **6-8 jaar** en **9-12 jaar** aan voor de vastgestelde doelgroep. Laat **13-15 jaar**, **16-17 jaar** en **18 jaar en ouder** uit. | Te verifiëren | Doelgroepkeuze eigenaar 22-11-2026; [doelgroep, gecontroleerd 22-11-2026](https://support.google.com/googleplay/android-developer/answer/9867159?hl=nl). | De keuze is vastgesteld; vóór indienen geschiktheid van de echte release voor alle drie groepen aantonen, waaronder samen lezen/luisteren voor kinderen die nog niet lezen. |
+| Beschikbare leeftijdsvakken | Gebruik de drie geselecteerde kindergroepen uit de vorige rij. Deze Console-vakken zijn breder dan de gebruiksleeftijden; maak daarvan geen leeftijdsbelofte in Store-teksten of beelden. | Bevestigd | De officiële bron noemt **5 jaar en jonger**, **6-8 jaar** en **9-12 jaar** afzonderlijk. | Geen overige groepen selecteren om alleen de beschikbaarheid te vergroten; actuele Console-samenvatting controleren. |
 | Ontwerp aantrekkelijk voor kinderen | Ja als de getoonde vraag dit onderwerp bedoelt; exacte vertakte vraag: Formuliertekst te bevestigen. | Te verifiëren | Verhalen, fantasiedieren en kindprofielen. | Alleen het ontbrekende vertakte scherm nodig. |
 | Toegang voor minderjarigen | Open — nog niet invullen bij een onbekende afslag. Lezen heeft geen leeftijdsblokkade; externe links vragen een lokale oudercontrole. | Te verifiëren | Native bron; zelfde beleidsbron. | Geen niet-bestaande leeftijdsgate of ouder-PIN claimen. |
 | Families-vereisten | Van toepassing bij gekozen kindergroep; de app moet er daadwerkelijk aan voldoen. | Bevestigd | [Gezinsbeleid](https://support.google.com/googleplay/android-developer/answer/9893335?hl=nl) | Voorlezen en alle SDK’s in de release toetsen. |
@@ -525,7 +527,7 @@ Uitgevoerd: productie-AAB-build en genoemde statische artefactcontroles. Niet ui
 | Werving / wervingsgemak | Open — nog niet invullen. | Te verifiëren | Geen echte wervingsresultaten. | Werkelijke opties en methode/aantallen gebruiken. |
 | Betrokkenheid / scenario- en apparaatdekking | Open — nog niet invullen. | Te verifiëren | Nog geen gesloten-testverslag. | Werkelijke testperiode/gebruik en dekking vastleggen. |
 | Feedback / methode / doorgevoerde wijzigingen | Open — nog niet invullen. | Te verifiëren | Geen echte feedback. | Zakelijk samenvatten zonder testeridentiteiten. |
-| Doelgroep / waarde | Concept: Fabelpad biedt geïllustreerde keuzeverhalen met afzonderlijke lokale profielen en leesvoortgang, zonder online account. | Voorstel | Native functies; definitieve leeftijdsgroep nog open. | Aan exacte aanvraagvraag en echte doelgroep aanpassen. |
+| Doelgroep / waarde | Concept: Fabelpad biedt kinderen en hun ouders geïllustreerde keuzeverhalen met afzonderlijke lokale profielen en leesvoortgang, zonder online account. | Voorstel | Native functies; verplichte leeftijdskeuzes in D1. | Aan exacte aanvraagvraag en echte testresultaten aanpassen. |
 | Verwachte installaties eerste jaar | Open — nog niet invullen. | Te verifiëren | Eigenaarprognose, geen bedrijfsgegevens. | Getoonde bereikopties en onderbouwde schatting nodig. |
 | Productierijp / bewijs | Open — nog niet als volledige productierijpheid invullen. Technische productie-AAB geslaagd; apparaat-, privacy-/content- en eventuele gesloten-testacceptatie staan open. | Blokkeert indienen | [buildmanifest](/home/codex/repos/fabelpad/artifacts/native/fabelpad-production.json:1) | Geen verzonnen gebruikerstests of tevredenheid claimen. |
 
@@ -595,7 +597,7 @@ Het [release-runbook](/home/codex/repos/fabelpad/docs/GOOGLE-PLAY-RELEASE-RUNBOO
 ## Alleen nog open vragen voor de eigenaar
 
 1. Welk accounttype heeft het Play-account met displaynaam DG Webservices: Persoonlijk of Organisatie, wat is de aanmaakdatum en is productietoegang/verificatie actief? Zijn er voor nl.fabelpad.app al andere versionCodes geüpload?
-2. Welke landen en leeftijdsgroepen zijn voor de eerste productierelease bedoeld en wat is het beoogde publicatiemoment? Voorstel: Nederland, Nederlands, 6–8 jaar.
+2. Welke landen zijn voor de eerste productierelease bedoeld en wat is het beoogde publicatiemoment? Voorstel: Nederland, Nederlands. De doelgroepkeuze is vastgelegd in D1 en hoeft niet opnieuw te worden bevestigd.
 3. Wat is de officiële juridische uitgever/verantwoordelijke, welke handelaarsstatus is bevestigd, bestaat enige overheidsrelatie en zijn content-/merkrechten geregeld? Welke openbare privacy-/voorwaardeninformatie en werkelijke hosting-/mailverwerkers met bewaartermijnen moeten het beleid aanvullen?
 4. Hoe wordt https://fabelpad.nl/privacy publiek zonder StackProtect/login beschikbaar gemaakt? De pagina en lokale build zijn gereed; publieke controle geeft nu HTTP 401. Dit is een concrete indieningsblokkade.
 5. Alleen wanneer Console extra takken toont: het specifieke Tags beheren-, IARC-angst/ernst-, nieuwe App-content- of AAB-waarschuwingsscherm. Verberg persoonsgegevens; geen volledige accountdump.

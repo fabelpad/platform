@@ -13,7 +13,7 @@ type Props = {
 
 const questions = [
   { question: 'Wat maakt een verhaal op Fabelpad interactief?', answer: 'Je leest of luistert samen en kiest op belangrijke momenten wat er gebeurt. Je keuze verandert het vervolg. In Het Verdwaalde Station kun je ook spelen in de illustratie. Een ander pad proberen? Dat kan bij een volgend avontuur.' },
-  { question: 'Voor welke leeftijd zijn de verhalen bedoeld?', answer: 'De huidige verhalen zijn gemaakt voor kinderen van ongeveer 4 tot 8 jaar. Jongere kinderen kunnen samen met een volwassene ontdekken; kinderen die al lezen kunnen ook zelf hun pad kiezen.' },
+  { question: 'Voor welke leeftijd zijn de verhalen bedoeld?', answer: 'Fabelpad is bedoeld voor kinderen van ongeveer 3 tot 10 jaar. Jongere kinderen kunnen samen met een volwassene ontdekken; kinderen die al lezen kunnen ook zelf hun pad kiezen.' },
   { question: 'Kunnen meerdere kinderen hun eigen avontuur bewaren?', answer: 'Ja. Je kunt maximaal vijf kindprofielen maken. Elk profiel heeft een eigen bijnaam, avatar, favorieten, keuzes en verzameling. Zonder account blijven die gegevens op dit apparaat. Met een ouderaccount kun je na toestemming per profiel ook op een ander apparaat verder lezen.' },
   { question: 'Heb ik een account nodig om te lezen?', answer: 'Nee. Open de verhalen en lees meteen verder op dit apparaat. Wil je online gezinsprofielen bewaren en op een ander apparaat verder lezen? Maak dan als ouder een account met een e-mailcode of Google. Kinderen hebben geen eigen e-mailadres nodig.' },
   { question: 'Op welke apparaten kan ik Fabelpad gebruiken?', answer: 'Gebruik Fabelpad in de browser op je telefoon, tablet of computer. Je kunt de website ook aan je beginscherm toevoegen. De afzonderlijke Android-app bewaart profielen en voortgang lokaal op het apparaat; die gegevens worden niet met je webaccount gesynchroniseerd.' },
@@ -39,7 +39,7 @@ export default function MarketingSite({ onOpenApp, onOpenParents, onOpenStory }:
           <h1>Er was eens…<br />een verhaal dat<br /><span>naar jou luisterde.</span></h1>
           <p>Een trein naar nergens. Een pakketje vol dromen. Een deur die alleen voor jou opengaat. Bij Fabelpad kies jij hoe het verhaal verdergaat.</p>
           <div className="mk-hero-actions"><button className="mk-button mk-button-yellow" onClick={onOpenApp}><Play size={18} fill="currentColor" />Ontdek jouw avontuur<ArrowRight size={19} /></button><a className="mk-text-link" href="#mk-how">Hoe werkt de magie? <ArrowDown size={16} /></a></div>
-          <div className="mk-hero-notes"><span><Check size={14} />Direct proberen</span><span><Heart size={14} />Samen of zelf</span><span><BookOpen size={14} />4–8 jaar</span></div>
+          <div className="mk-hero-notes"><span><Check size={14} />Direct proberen</span><span><Heart size={14} />Samen of zelf</span></div>
         </motion.div>
         <motion.div className="mk-hero-world" initial={{ opacity: 0, scale: reducedMotion ? 1 : .96 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: .7, delay: .1 }}>
           <div className="mk-world-frame"><img className="mk-station-art" src="/art/station.webp" alt="Een vos wacht bij een magische trein tussen de groene bergen" fetchPriority="high" /><div className="mk-world-shade" /><span className="mk-world-category"><Sparkles size={14} /> VANDAAG KAN ALLES</span><div className="mk-world-title"><span>Jouw eerste bestemming</span><h2>Het Verdwaalde<br />Station</h2><button onClick={() => onOpenStory('station')}>Stap maar in <ArrowUpRight size={18} /></button></div></div>

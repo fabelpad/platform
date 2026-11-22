@@ -6,7 +6,7 @@ Repository: [fabelpad/platform](https://github.com/fabelpad/platform), integrati
 
 Webstatus 22 november 2026: **[staging.fabelpad.nl](https://staging.fabelpad.nl) is actief voor eigenaaracceptatie**. Beide VPS-apps en databases zijn bijgewerkt; productie draait intern en haar publieke route blijft uit. De afzonderlijke Resend API-key wordt na echte eerste beheerderlogin via **Beheer → E-mail** gekoppeld. Auth blijft Supabase Custom SMTP via Resend gebruiken.
 
-Nederlandstalige interactieve verhalenwereld voor kinderen van 4–8 jaar. De webdienst gebruikt Next.js en bevat daarnaast een afzonderlijke Expo/React Native-app.
+Nederlandstalige interactieve verhalenwereld voor kinderen en hun ouders. De webdienst gebruikt Next.js en bevat daarnaast een afzonderlijke Expo/React Native-app.
 
 ## Lokaal starten
 
