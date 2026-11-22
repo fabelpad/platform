@@ -52,6 +52,8 @@ Voor echte verbindingen: kopieer `.env.example` naar een nog niet bestaand `.env
 
 Op 22 november zijn schema, beheerderbootstrap en 13 bronverhalen in beide lege Supabase-projecten ingericht. De ondertekende `auth-email` Edge Function staat in beide projecten, met één gedeelde Fabelpad-renderer en Resend API-transport. Er zijn [26 plakklare Auth-templates](docs/EMAIL-TEMPLATES.md). Secrets/Auth-instellingen en echte OTP-bezorging zijn nog niet geverifieerd; er zijn nog geen Auth-gebruikers of verzonden mails. **info@dgwebservices.nl** krijgt de eerste beheerrol na daadwerkelijke adresbevestiging. [Mailconfiguratie en resterende stappen](docs/EMAIL-CONFIGURATIE.md).
 
+De beheeromgeving heeft **E-mail** (`/studio/email`) voor de Resend-koppeling, afzender, antwoordadressen, voettekst en testmail, en **E-mailtemplates** (`/studio/email/templates`) voor alle 17 templates met teksteditor en voorbeeld. De key staat na opslag versleuteld in het eigen Supabase Vault; opslaan vereist een geaccepteerde test naar de bevestigde beheerder. Zie [de beheerhandleiding](docs/EMAIL-BEHEER.md) voor eerste inrichting en gebruik. De pagina's worden zichtbaar bij een afzonderlijk vrijgegeven apprelease.
+
 Native cloudlogin/synchronisatie, Play Billing, geautomatiseerde accountverwijdering en Supabase Storage vallen buiten de bestaande lokale native release. Webaccountverwijdering verloopt via het publieke supportverzoek. De catalogus is publiek; betaalde toegang wordt niet afgedwongen. Voorstelprijzen en pakketgrenzen zijn geen commerciële besluiten.
 
 ## Controles

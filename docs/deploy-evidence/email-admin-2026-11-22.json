@@ -299,6 +299,67 @@
       }
     }
   ],
+  "vaultGrants": [
+    {
+      "environment": "staging",
+      "grants": [
+        {
+          "role": "anon",
+          "can_read_vault_ciphertext": false,
+          "can_read_vault_plaintext": false,
+          "can_read_settings_direct": false,
+          "can_write_settings_direct": false,
+          "can_read_tests_direct": false
+        },
+        {
+          "role": "authenticated",
+          "can_read_vault_ciphertext": false,
+          "can_read_vault_plaintext": false,
+          "can_read_settings_direct": false,
+          "can_write_settings_direct": false,
+          "can_read_tests_direct": false
+        },
+        {
+          "role": "service_role",
+          "can_read_vault_ciphertext": true,
+          "can_read_vault_plaintext": true,
+          "can_read_settings_direct": false,
+          "can_write_settings_direct": false,
+          "can_read_tests_direct": false
+        }
+      ]
+    },
+    {
+      "environment": "production",
+      "grants": [
+        {
+          "role": "anon",
+          "can_read_vault_ciphertext": false,
+          "can_read_vault_plaintext": false,
+          "can_read_settings_direct": false,
+          "can_write_settings_direct": false,
+          "can_read_tests_direct": false
+        },
+        {
+          "role": "authenticated",
+          "can_read_vault_ciphertext": false,
+          "can_read_vault_plaintext": false,
+          "can_read_settings_direct": false,
+          "can_write_settings_direct": false,
+          "can_read_tests_direct": false
+        },
+        {
+          "role": "service_role",
+          "can_read_vault_ciphertext": true,
+          "can_read_vault_plaintext": true,
+          "can_read_settings_direct": false,
+          "can_write_settings_direct": false,
+          "can_read_tests_direct": false
+        }
+      ]
+    }
+  ],
+  "httpChecks": { "catalogStatus": 200, "catalogStories": 13, "anonymousDeliveryConfigStatus": 401, "unconfiguredManagerStatus": 503, "unconfiguredHookStatus": 503 },
   "remaining": [
     "Resend verified sending domain and protected API key",
     "Supabase Auth/Hook/secrets Management access or owner bootstrap tool",

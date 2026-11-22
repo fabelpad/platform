@@ -49,6 +49,8 @@ Na de eerste login staan alle verdere Resend-instellingen en templatewijzigingen
 
 ## Instructies en bewijs
 
+De toevoeging voor Resend-beheer en alle 17 templates is afzonderlijk geverifieerd: [drie schone lokale builds en 18 geslaagde browsertests](VALIDATIE-EMAIL-BEHEER-2026-11-22.md), broncommit `511e39464544ca2c567181d8f19bbc6d66ed1fd6`. Staging en production zijn lokaal apart met hun eigen vier publieke configuratiewaarden gebouwd en op geïsoleerde loopbackpoorten gestart. Dit zijn geen doelkandidaten of operationele mailacceptaties.
+
 - [Schone lokale builds en 9 geslaagde browsertests](VALIDATIE-OTP-TWEE-OMGEVINGEN-2026-11-22.md): volledige normale buildroute en afzonderlijke staging-/productionconfiguratiebuilds uit commit `070a039e1de4c39fac12d79d293104a0e89c8f00` geslaagd. Dit zijn lokale builds, geen doelkandidaten of mailacceptatie.
 - [Gegevensbronnen en vier GitHub-variabelen](INRICHTING.md)
 - [Mailconfiguratie per account, verborgen terminalinvoer](EMAIL-CONFIGURATIE.md)
