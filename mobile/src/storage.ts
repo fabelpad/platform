@@ -2,11 +2,12 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { Store } from './types';
 import { createStorageQueue } from './storageQueue';
 import { normalizeStoryVersions } from './storyReleases';
+import { normalizeReadingHistory } from './readingLevels';
 
 const KEY = 'fabelpad-native-prototype-v1';
 const queue = createStorageQueue(AsyncStorage, KEY);
 export function freshStore(contentVersion: string): Store {
-  return { schemaVersion: 1, contentVersion, activeId: 'local-child', profiles: [{ id: 'local-child', name: 'Avonturier', avatar: 0, picks: {}, storyVersions: {}, favorites: [], calm: false, largeText: false }] };
+  return { schemaVersion: 1, contentVersion, activeId: 'local-child', profiles: [{ id: 'local-child', name: 'Avonturier', avatar: 0, picks: {}, storyVersions: {}, lastCompletedPicks: {}, lastCompletedStoryVersions: {}, readingLevel: '6to8', favorites: [], calm: false, largeText: false }] };
 }
 export async function loadStore(contentVersion: string, storyIds: string[], availableVersions = [contentVersion]): Promise<{ store: Store; contentChanged: boolean }> {
   const raw = await AsyncStorage.getItem(KEY);
@@ -24,11 +25,12 @@ export async function loadStore(contentVersion: string, storyIds: string[], avai
       if (!storyIds.includes(id) || !Array.isArray(picks) || picks.length > 5 || !picks.every(n => n === 0 || n === 1)) delete p.picks[id];
     }
     p.storyVersions = normalizeStoryVersions(p, value.contentVersion);
+    normalizeReadingHistory(p);
     p.calm = !!p.calm; p.largeText = !!p.largeText;
   }
   if (!ids.has(value.activeId)) value.activeId = value.profiles[0].id;
   // A started story keeps its immutable bundled release across app updates.
-  const contentChanged = value.profiles.some(p => Object.values(p.storyVersions || {}).some(version => !availableVersions.includes(version)));
+  const contentChanged = value.profiles.some(p => [...Object.values(p.storyVersions || {}), ...Object.values(p.lastCompletedStoryVersions || {})].some(version => !availableVersions.includes(version)));
   return { store: value, contentChanged };
 }
 export function persistStore(value: Store): Promise<void> {

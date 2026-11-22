@@ -8,3 +8,5 @@
 .reader-large-text .reader-story-text p{font-size:clamp(19px,2.2vw,23px);line-height:1.9}
 .reader-access-gate{padding:35px 0;color:#31573d}.reader-access-gate>svg{color:#b99a42;margin-bottom:22px}.reader-access-gate>p{font-size:16px;line-height:1.9;margin:22px 0;color:#68795e}.reader-access-gate>button{margin:12px 0}.reader-access-gate>small{display:block;margin-top:25px;font-size:10px;color:#7c856e}
 @media(max-width:640px){.reader-choice-section{margin-top:26px}.reader-choice-heading{gap:10px;margin-bottom:14px}.reader-choice-heading h3{font-size:21px}.reader-play-panel{border-radius:22px}}
+
+.reader-level-row{margin-top:18px}.reader-level{display:flex;align-items:center;flex-wrap:wrap;gap:10px;font-size:12px;font-weight:800;color:#4b6745}.reader-level select{min-height:44px;max-width:100%;padding:9px 12px;border:1px solid #dce2ce;border-radius:12px;background:#fffdf5;color:#31573d;font:800 13px/1.4 'Nunito Variable',sans-serif}.reader-level select:focus-visible{outline:3px solid #d3a74d;outline-offset:3px}.reader-level-note,.reader-replay>p{font-size:12px;line-height:1.6;color:#66775c;margin:10px 0}.reader-level select:disabled{opacity:.7}

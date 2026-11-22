@@ -7,11 +7,14 @@ import type { StoryScene, StoryEnding } from '../../src/storyTypes';
 import { validateEditorialDraft } from '../../src/editorialStore';
 import { canonicalContentJson } from '../contentHash';
 import { object, RequestError } from './http';
+import { bundledReadingLevels } from '../../src/contentReadingLevels';
+import type { ReadingVariants } from '../../src/contentReadingLevels';
 
 export type ContentRelease = {
   storyId: string; contentVersion: string; publishedAt: string | null; bundled: boolean;
   metadata: { title: string; description: string; image: string };
   parts: 5; nameToken: '__FABELPAD_CHILD__'; scenes: Record<string, StoryScene>; endings: Record<string, StoryEnding>;
+  readingLevels?: ReadingVariants;
 };
 export function initialDraft(storyId: string): EditorialDraft {
   const world = worlds.find(item => item.id === storyId)!;
@@ -30,7 +33,7 @@ export function validateServerDraft(storyId: string, value: unknown): { draft?: 
   return { draft, errors };
 }
 /** Materialize all prefixes and endings; releases remain readable after source edits. */
-export function buildStoryRelease(storyId: string, draft = initialDraft(storyId)): ContentRelease {
+export function buildStoryRelease(storyId: string, draft = initialDraft(storyId), includeReadingLevels = true): ContentRelease {
   if (!isStoryId(storyId)) throw new RequestError(404, 'story_not_found');
   const checked = validateServerDraft(storyId, draft);
   if (checked.errors.length) throw new RequestError(422, 'invalid_content', checked.errors.join(' '));
@@ -46,7 +49,10 @@ export function buildStoryRelease(storyId: string, draft = initialDraft(storyId)
     const picks = Array.from({ length: 5 }, (_, bit) => (route >> (4 - bit)) & 1);
     endings[picks.join('')] = getEnding(storyId, picks, '__FABELPAD_CHILD__');
   }
-  const payload = { metadata: draft.metadata, parts: 5 as const, nameToken: '__FABELPAD_CHILD__' as const, scenes, endings };
+  // An edited chapter has no supplied age rewrite. Never silently replace an
+  // editor's prose with the unrelated bundled variant.
+  const readingLevels = includeReadingLevels && Object.keys(draft.chapters).length === 0 ? bundledReadingLevels(storyId) : undefined;
+  const payload = { metadata: draft.metadata, parts: 5 as const, nameToken: '__FABELPAD_CHILD__' as const, scenes, endings, ...(readingLevels ? { readingLevels } : {}) };
   const contentVersion = createHash('sha256').update(canonicalContentJson(payload)).digest('hex').slice(0, 16);
   return { storyId, contentVersion, publishedAt: null, bundled: true, ...payload };
 }

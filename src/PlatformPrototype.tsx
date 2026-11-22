@@ -41,7 +41,7 @@ export default function PlatformPrototype() {
   }
   const openApp = () => navigate('app');
   const openStory = (id: string) => navigate('app', id);
-  const app = <App key={story || 'library'} initialStory={story} initialPage={scenario === 'empty' && !scenarioDismissed ? 'adventures' : undefined} forceEmpty={scenario === 'empty' && !scenarioDismissed} onRequestParents={() => navigate('parents')} />;
+  const app = <App key={story ? `story-${story}` : 'library'} initialStory={story} initialPage={scenario === 'empty' && !scenarioDismissed ? 'adventures' : undefined} forceEmpty={scenario === 'empty' && !scenarioDismissed} onRequestParents={() => navigate('parents')} />;
   if (embedded) {
     if (!scenarioDismissed && (scenario === 'loading' || scenario === 'error')) return <div className="native-state-screen"><img src="/brand/mascot.webp" alt="" /><span className="prototype-eyebrow">SCHERMVOORBEELD</span><h1>{scenario === 'loading' ? 'Een momentje magie…' : 'Een klein omweggetje.'}</h1><p>{scenario === 'loading' ? 'We leggen jouw avontuur klaar.' : 'Dit verhaal kon niet geladen worden. Je bewaarde plek blijft staan.'}</p><button onClick={() => setScenarioDismissed(true)}>{scenario === 'loading' ? 'Toon het geladen verhaal' : 'Opnieuw proberen'}<ArrowRight size={18} /></button></div>;
     return <div className="embedded-app">{scenario === 'offline' && <div className="native-offline-note"><WifiOff size={14} />Offline voorbeeld · je plek staat op dit apparaat</div>}{app}</div>;

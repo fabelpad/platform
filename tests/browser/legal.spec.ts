@@ -92,6 +92,6 @@ test('web reading fails closed when only an online Dutch voice is available', as
   await expect(page.getByRole('dialog', { name: /Droompost/i })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Lees gezellig samen', exact: true })).toBeDisabled();
   await expect(page.getByText('Voorlezen kan met een geïnstalleerde offline Nederlandse stem. Lees ondertussen gezellig samen.')).toBeVisible();
-  await page.locator('.reader-choice').first().click();
+  await page.locator('.illustrated-choice-option').first().click();
   await expect(page.getByText('Deel 2 van 5', { exact: true })).toBeVisible();
 });

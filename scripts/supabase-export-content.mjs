@@ -10,8 +10,8 @@ try {
   const ids = ['station','dream','toy','weather','moonbakery','ocean','garden','clock','library','balloon','forest','snow','stars'];
   const literal = value => `'${value.replaceAll("'", "''")}'`;
   const rows = ids.map(id => {
-    const { storyId, contentVersion, metadata, parts, nameToken, scenes, endings } = buildStoryRelease(id);
-    return `insert into public.content_releases(story_id,content_version,payload) values (${literal(storyId)},${literal(contentVersion)},${literal(JSON.stringify({ metadata, parts, nameToken, scenes, endings }))}::jsonb) on conflict(story_id,content_version) do nothing;`;
+    const { storyId, contentVersion, metadata, parts, nameToken, scenes, endings, readingLevels } = buildStoryRelease(id);
+    return `insert into public.content_releases(story_id,content_version,payload) values (${literal(storyId)},${literal(contentVersion)},${literal(JSON.stringify({ metadata, parts, nameToken, scenes, endings, ...(readingLevels ? { readingLevels } : {}) }))}::jsonb) on conflict(story_id,content_version) do nothing;`;
   });
   const output = resolve(args[1]);
   await writeFile(output, '-- Immutable source releases. Review and apply only after backup and migration approval.\n-- Import before a source update changes bundled release hashes. Replaying preserves existing rows.\nbegin;\nset standard_conforming_strings = on;\n' + rows.join('\n') + '\ncommit;\n', { flag: 'wx' });

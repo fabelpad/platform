@@ -51,11 +51,28 @@ try {
   const bundle = await (await cache.match('/art/download-station.json')).json();
   assert.equal(Object.keys(bundle.scenes).length, 31);
   assert.equal(Object.keys(bundle.endings).length, 32);
+  assert.deepEqual(Object.keys(bundle.readingLevels).sort(), ['6to8', '9plus', 'under6']);
+  assert.ok(await cache.match('/art/play/station-scene.webp'));
   failing = true;
   await assert.rejects(downloads.downloadStory('dream'));
   assert.deepEqual(downloads.getDownloads(), ['station'], 'Failed downloads never become ready.');
   await downloads.removeDownload('station');
   assert.deepEqual(downloads.getDownloads(), []);
   assert.equal(await cache.match('/art/play/train.webp'), undefined);
+  failing = false;
+  const { worlds } = await import(await compileSource(new URL('../src/worlds.ts', import.meta.url), temporary));
+  const { storyPlayArt } = await import(await compileSource(new URL('../src/storyPlayArt.ts', import.meta.url), temporary));
+  for (const world of worlds) {
+    await downloads.downloadStory(world.id);
+    const saved = await (await cache.match(`/art/download-${world.id}.json`)).json();
+    assert.ok(await cache.match(world.image));
+    if (storyPlayArt[world.id]) assert.ok(await cache.match(storyPlayArt[world.id].image));
+    for (const band of ['under6', '6to8', '9plus']) {
+      assert.equal(Object.keys(saved.readingLevels[band].scenes).length, 31);
+      assert.equal(Object.keys(saved.readingLevels[band].endings).length, 32);
+      assert.equal(saved.readingLevels[band].endings['01010'].keepsake, saved.endings['01010'].keepsake);
+    }
+    await downloads.removeDownload(world.id);
+  }
   console.log('Platform checks passed: explicit access testing, draft/publication isolation, unchanged branching, real cached assets, all download routes and failure cleanup.');
 } finally { await rm(temporary, { recursive: true, force: true }); }

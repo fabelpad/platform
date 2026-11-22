@@ -1,5 +1,7 @@
 import { worlds } from './worlds';
 import { getScene, getEnding } from './storyData';
+import { bundledReadingLevels } from './contentReadingLevels';
+import { storyPlayArt } from './storyPlayArt';
 
 const CACHE = 'fabelpad-downloads-v1';
 const KEY = 'fabelpad-prototype-downloads-v1';
@@ -19,7 +21,7 @@ function contentPath(id: string) { return `/art/download-${id}.json`; }
 function assetsFor(id: string) {
   const world = worlds.find(w => w.id === id);
   if (!world) throw new Error('Dit verhaal bestaat niet.');
-  return [world.image, ...(id === 'station' ? ['/art/play/station-platform.webp', '/art/play/dibbel.webp', '/art/play/train.webp'] : [])];
+  return [...new Set([world.image, ...(storyPlayArt[id] ? [storyPlayArt[id]!.image] : []), ...(id === 'station' ? ['/art/play/station-platform.webp', '/art/play/dibbel.webp', '/art/play/train.webp'] : [])])];
 }
 /** Stores real public illustration bytes and every story route; never account HTML. */
 export function downloadStory(id: string): Promise<void> {
@@ -45,7 +47,8 @@ export function downloadStory(id: string): Promise<void> {
         const picks = Array.from({ length: 5 }, (_, index) => (route >> (4 - index)) & 1);
         endings[picks.join('')] = getEnding(id, picks, '{{naam}}');
       }
-      await cache.put(contentPath(id), new Response(JSON.stringify({ version: 1, id, scenes, endings }), { headers: { 'Content-Type': 'application/json' } }));
+      const readingLevels = JSON.parse(JSON.stringify(bundledReadingLevels(id)).replaceAll('__FABELPAD_CHILD__', '{{naam}}'));
+      await cache.put(contentPath(id), new Response(JSON.stringify({ version: 1, id, scenes, endings, readingLevels }), { headers: { 'Content-Type': 'application/json' } }));
       for (const path of [...paths, contentPath(id)]) if (!(await cache.match(path))) throw new Error('De browser kon niet alle bestanden bewaren.');
       localStorage.setItem(KEY, JSON.stringify([...new Set([...getDownloads(), id])]));
       announce();

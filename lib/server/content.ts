@@ -23,6 +23,10 @@ export async function getContent(request: Request, storyId?: string) {
     if (version !== null && !/^[a-f0-9]{16,64}$/u.test(version)) throw new RequestError(422, 'invalid_version');
     const status = getBackendStatus();
     if (storyId && version === bundled(storyId).contentVersion) return privateJson({ configured: status.configured, release: bundled(storyId) });
+    if (storyId && version) {
+      const legacy = buildStoryRelease(storyId, undefined, false);
+      if (version === legacy.contentVersion) return privateJson({ configured: status.configured, release: legacy });
+    }
     if (!status.configured) {
       if (storyId && version && version !== bundled(storyId).contentVersion) throw new RequestError(404, 'content_version_not_found', 'Deze verhaalversie is niet op dit apparaat beschikbaar.');
       return privateJson(storyId ? { configured: false, release: bundled(storyId) } : { configured: false, stories: worlds.map(world => summary(bundled(world.id))) });
@@ -82,8 +86,8 @@ export async function publishContent(request: Request, storyId: string) {
     if (loadError) throw loadError;
     if (!stored || stored.revision !== body.baseRevision) return privateJson({ error: 'revision_conflict', revision: stored?.revision ?? 0 }, 409);
     const materialized = buildStoryRelease(storyId, stored.draft);
-    const { metadata, parts, nameToken, scenes, endings } = materialized;
-    const { data, error } = await client.rpc('publish_content_release', { p_story_id: storyId, p_base_revision: body.baseRevision, p_payload: { metadata, parts, nameToken, scenes, endings } });
+    const { metadata, parts, nameToken, scenes, endings, readingLevels } = materialized;
+    const { data, error } = await client.rpc('publish_content_release', { p_story_id: storyId, p_base_revision: body.baseRevision, p_payload: { metadata, parts, nameToken, scenes, endings, ...(readingLevels ? { readingLevels } : {}) } });
     if (error || !data) throw error ?? new Error('Missing publication outcome');
     if (!data.saved) return privateJson({ error: 'revision_conflict', revision: data.revision }, 409);
     return privateJson({ release: releaseFromRow(data.release as ReleaseRow) });

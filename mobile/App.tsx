@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { AccessibilityInfo, ActivityIndicator, Alert, Animated, AppState, BackHandler, FlatList, Image, Linking, Pressable, ScrollView, StatusBar, StyleSheet, Switch, Text, TextInput, View, useWindowDimensions } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import StationPlayScene from './src/StationPlayScene';
 import { appendChoice } from './src/readerProgress';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { runtimeConfig, speakOffline, stopSpeech } from './src/offlineSpeech';
@@ -10,15 +9,33 @@ import { releaseCatalog } from './src/releaseCatalog';
 import { storiesForProfile } from './src/storyReleases';
 import { assets } from './src/assets';
 import { freshStore, loadStore, persistStore, removeStore } from './src/storage';
-import type { Profile, Store, Story } from './src/types';
+import { completedCount, completedRoute, completedVersion, normalizeReadingLevel, readingContent, readingLevels, withCompatibleReading } from './src/readingLevels';
+import type { Choice, Profile, ReadingLevel, Store, Story } from './src/types';
 
 const stories = content.stories as Story[];
 const avatars = ['🌿', '⭐', '🌙', '🚀'];
 type Screen = 'library' | 'reader' | 'profiles' | 'parent' | 'treasures';
+type Replay = { storyId: string; version: string; route: number[]; step: number };
 const personalize = (text: string, name: string) => text.split(content.nameToken).join(name);
 
 function Button({ label, onPress, secondary = false, disabled = false }: { label: string; onPress: () => void; secondary?: boolean; disabled?: boolean }) {
   return <Pressable accessibilityRole="button" disabled={disabled} onPress={onPress} style={({ pressed }) => [s.button, secondary && s.secondary, disabled && { opacity: .45 }, pressed && { opacity: .8 }]}><Text style={[s.buttonText, secondary && s.secondaryText]}>{label}</Text></Pressable>;
+}
+
+function ReadingLevelPicker({ value, onChange }: { value: ReadingLevel; onChange: (value: ReadingLevel) => void }) {
+  return <View style={s.levelPicker}><Text style={s.settingLabel}>Schrijfwijze van de verhalen</Text><View style={s.chips} accessibilityRole="radiogroup">{readingLevels.map(level => <Pressable key={level.id} accessibilityRole="radio" accessibilityState={{ checked: value === level.id }} onPress={() => onChange(level.id)} style={[s.chip, s.levelOption, value === level.id && s.chipActive]}><Text style={[s.chipText, value === level.id && s.chipTextActive]}>{level.label}</Text></Pressable>)}</View></View>;
+}
+
+function IllustratedChoices({ choices, image, imageAlt, childName, onChoose }: { choices: Choice[]; image: string; imageAlt: string; childName: string; onChoose: (choice: number) => void }) {
+  const symbols: Record<string, string> = { heart: '♥', sparkles: '✦', music: '♫', moon: '☾', leaf: '❧', compass: '✧' };
+  return <View style={s.playPrent}>
+    <Image source={assets[image]} style={s.playArt} resizeMode="cover" accessibilityLabel={imageAlt} />
+    <View pointerEvents="none" style={s.playShade} />
+    <View style={s.playChoices}>{choices.map((choice, index) => <Pressable key={index} accessibilityRole="button" accessibilityLabel={personalize(choice.label, childName)} accessibilityHint={personalize(choice.hint, childName)} onPress={() => onChoose(index)} style={({ pressed }) => [s.choice, s.illustratedChoice, pressed && { backgroundColor: '#dbe9cf' }]}>
+      <View style={[s.choiceSymbol, index === 1 && s.choiceSymbolGold]} accessibilityElementsHidden importantForAccessibility="no-hide-descendants"><Text style={s.choiceGlyph}>{symbols[choice.icon] || '✦'}</Text></View>
+      <View style={s.choiceCopy}><Text style={s.choiceTitle}>{personalize(choice.label, childName)}</Text>{!!choice.hint && <Text style={s.body}>{personalize(choice.hint, childName)}</Text>}</View>
+    </Pressable>)}</View>
+  </View>;
 }
 
 export default function App() { return <GestureHandlerRootView style={{ flex: 1 }}><SafeAreaProvider><Fabelpad /></SafeAreaProvider></GestureHandlerRootView>; }
@@ -30,6 +47,7 @@ function Fabelpad() {
   const [filter, setFilter] = useState('Alles');
   const [draftName, setDraftName] = useState('');
   const [draftAvatar, setDraftAvatar] = useState(0);
+  const [draftReadingLevel, setDraftReadingLevel] = useState<ReadingLevel>('6to8');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [message, setMessage] = useState('');
   const [pendingExternal, setPendingExternal] = useState<string | null>(null);
@@ -40,6 +58,8 @@ function Fabelpad() {
   const [reducedMotion, setReducedMotion] = useState(false);
   const [speaking, setSpeaking] = useState(false);
   const [playMode, setPlayMode] = useState(true);
+  const [replay, setReplay] = useState<Replay | null>(null);
+  const replayRef = useRef<Replay | null>(null); replayRef.current = replay;
   const [readerVisit, setReaderVisit] = useState(0);
   const [readerMinHeight, setReaderMinHeight] = useState(0);
   const storeRef = useRef(store); storeRef.current = store;
@@ -59,16 +79,20 @@ function Fabelpad() {
   const { width, fontScale } = useWindowDimensions();
   const profile = store?.profiles.find(p => p.id === store.activeId) || store?.profiles[0];
   const profileStories = profile ? storiesForProfile(stories, releaseCatalog, profile) : stories;
-  const storyVersion = profile?.storyVersions?.[storyId] || content.contentVersion;
-  const story = releaseCatalog[storyVersion]?.stories.find(item => item.id === storyId) || stories.find(item => item.id === storyId) || stories[0];
-  const picks = profile?.picks[story.id] || [];
+  const storyVersion = replay?.version || profile?.storyVersions?.[storyId] || content.contentVersion;
+  const pinnedStory = releaseCatalog[storyVersion]?.stories.find(item => item.id === storyId) || stories.find(item => item.id === storyId) || stories[0];
+  const story = withCompatibleReading(pinnedStory, stories.find(item => item.id === pinnedStory.id));
+  const picks = replay ? replay.route.slice(0, replay.step) : profile?.picks[story.id] || [];
   const complete = picks.length === content.parts;
-  const passage = complete ? story.endings[picks.join('')] : story.scenes[picks.join('')];
+  const readingLevel = normalizeReadingLevel(profile?.readingLevel);
+  const activeContent = readingContent(story, readingLevel);
+  const passage = complete ? activeContent.endings[picks.join('')] : activeContent.scenes[picks.join('')];
+  const choices = activeContent.scenes[picks.join('')]?.choices;
   const calm = !!profile?.calm || reducedMotion;
-  const playable = !complete && story.id === 'station' && picks.length < 2;
+  const playable = !complete && !replay;
+  const playImage = story.id === 'station' && picks.length < 2 ? '/art/play/station-platform.webp' : story.playImage || story.image;
   const readerContentKey = `${readerVisit}:${profile?.id}:${storyVersion}:${story.id}:${picks.join('')}`;
   const readerContentRef = useRef(readerContentKey); readerContentRef.current = readerContentKey;
-  const playActionGeneration = readerActionGeneration.current;
 
   useEffect(() => {
     let active = true;
@@ -83,7 +107,7 @@ function Fabelpad() {
     opacity.stopAnimation(); opacity.setValue(calm ? 1 : .4);
     if (!calm) Animated.timing(opacity, { toValue: 1, duration: 180, useNativeDriver: true }).start();
     return () => opacity.stopAnimation();
-  }, [screen, storyId, profile?.id, picks.length, calm, opacity]);
+  }, [screen, storyId, profile?.id, picks.length, readingLevel, calm, opacity]);
   useEffect(() => () => { if (readerFrame.current !== null) cancelAnimationFrame(readerFrame.current); }, []);
   useEffect(() => {
     const subscription = AppState.addEventListener('change', state => { if (state !== 'active') { speechToken.current += 1; void stopSpeech().catch(() => {}); setSpeaking(false); } });
@@ -104,6 +128,7 @@ function Fabelpad() {
   function openStory(id: string) {
     if (contentChanged) { Alert.alert('Nieuwe verhaalversie', 'De gebundelde verhalen zijn gewijzigd. Kies in het ouderhoekje bewust of je met deze versie opnieuw wilt beginnen. Je oude keuzes worden niet automatisch gebruikt.'); setScreen('parent'); return; }
     readerActionGeneration.current += 1;
+    replayRef.current = null; setReplay(null);
     readerScrollOffset.current = 0; setReaderMinHeight(0);
     setReaderVisit(value => value + 1); setStoryId(id); setScreen('reader');
     if (profile && !Object.hasOwn(profile.picks, id)) updateProfile(p => ({ ...p, picks: { ...p.picks, [id]: [] }, storyVersions: { ...p.storyVersions, [id]: content.contentVersion } }));
@@ -111,12 +136,20 @@ function Fabelpad() {
   function choose(index: number) {
     const current = storeRef.current;
     if (contentChanged || !profile || !current || screenRef.current !== 'reader') return;
+    if (replay) {
+      if (replayRef.current !== replay || index !== replay.route[replay.step]) return;
+      const next = { ...replay, step: replay.step + 1 };
+      replayRef.current = next; setReplay(next);
+      readerActionGeneration.current += 1; readerScrollOffset.current = 0; setReaderMinHeight(0);
+      return;
+    }
     const next = appendChoice(current, profile.id, story.id, picks, index, content.parts);
     if (next !== current) { readerActionGeneration.current += 1; readerScrollOffset.current = 0; setReaderMinHeight(0); commit(next); }
   }
   function leaveReader(next: Screen) {
     // Invalidate scene callbacks immediately, before React unmounts the old play scene.
     readerActionGeneration.current += 1; screenRef.current = next; setScreen(next);
+    replayRef.current = null; setReplay(null);
     readerScrollOffset.current = 0; setReaderMinHeight(0);
     if (readerFrame.current !== null) { cancelAnimationFrame(readerFrame.current); readerFrame.current = null; }
   }
@@ -142,7 +175,22 @@ function Fabelpad() {
     if (modeButton.current) AccessibilityInfo.sendAccessibilityEvent(modeButton.current, 'focus');
   }
   function restart() {
-    Alert.alert('Een ander pad ontdekken?', 'Je begint dit verhaal opnieuw met de nieuwste verhaalversie. Je andere verhalen blijven bewaard.', [{ text: 'Terug', style: 'cancel' }, { text: 'Opnieuw beginnen', onPress: () => { readerActionGeneration.current += 1; readerScrollOffset.current = 0; setReaderMinHeight(0); setReaderVisit(value => value + 1); updateProfile(p => ({ ...p, picks: { ...p.picks, [story.id]: [] }, storyVersions: { ...p.storyVersions, [story.id]: content.contentVersion } })); } }]);
+    Alert.alert('Een ander pad ontdekken?', 'Je begint dit verhaal bij hoofdstuk 1 met de nieuwste verhaalversie. Je laatst voltooide route en aandenken blijven bewaard.', [{ text: 'Terug', style: 'cancel' }, { text: 'Opnieuw beginnen', onPress: () => {
+      readerActionGeneration.current += 1; readerScrollOffset.current = 0; setReaderMinHeight(0); setReaderVisit(value => value + 1);
+      replayRef.current = null; setReplay(null);
+      updateProfile(p => {
+        const previous = completedRoute(p, story.id), previousVersion = completedVersion(p, story.id);
+        return { ...p, ...(previous ? { lastCompletedPicks: { ...p.lastCompletedPicks, [story.id]: [...previous] }, lastCompletedStoryVersions: { ...p.lastCompletedStoryVersions, [story.id]: previousVersion || storyVersion } } : {}), picks: { ...p.picks, [story.id]: [] }, storyVersions: { ...p.storyVersions, [story.id]: content.contentVersion } };
+      });
+    } }]);
+  }
+  function reread(id: string) {
+    if (!profile) return;
+    const route = completedRoute(profile, id), version = completedVersion(profile, id) || content.contentVersion;
+    if (!route || !releaseCatalog[version]?.stories.some(item => item.id === id)) return;
+    const next = { storyId: id, version, route: [...route], step: 0 };
+    readerActionGeneration.current += 1; readerScrollOffset.current = 0; setReaderMinHeight(0);
+    replayRef.current = next; setReplay(next); setReaderVisit(value => value + 1); setStoryId(id); setScreen('reader');
   }
   function speak() {
     if (!passage || !profile) return;
@@ -172,8 +220,8 @@ function Fabelpad() {
     if (!current || !name) return;
     if (!editingId && current.profiles.length >= 5) return;
     const id = editingId || `child-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-    const profiles = editingId ? current.profiles.map(p => p.id === id ? { ...p, name, avatar: draftAvatar } : p) : [...current.profiles, { id, name, avatar: draftAvatar, picks: {}, favorites: [], calm: false, largeText: false }];
-    commit({ ...current, profiles, activeId: id }); setEditingId(null); setDraftName(''); setScreen('library');
+    const profiles = editingId ? current.profiles.map(p => p.id === id ? { ...p, name, avatar: draftAvatar, readingLevel: draftReadingLevel } : p) : [...current.profiles, { id, name, avatar: draftAvatar, readingLevel: draftReadingLevel, picks: {}, lastCompletedPicks: {}, lastCompletedStoryVersions: {}, favorites: [], calm: false, largeText: false }];
+    commit({ ...current, profiles, activeId: id }); setEditingId(null); setDraftName(''); setDraftReadingLevel('6to8'); setScreen('library');
   }
 
   if (!store || !profile) return <SafeAreaView style={s.root}><View style={s.center}><ActivityIndicator color="#24543e" size="large" /><Text style={s.body}>Jouw verhalen komen eraan…</Text></View></SafeAreaView>;
@@ -194,6 +242,8 @@ function Fabelpad() {
       <View style={s.readerInfo}>
         <Text style={s.progress}>{complete ? 'Jouw avontuur is compleet' : `Deel ${picks.length + 1} van 5`}</Text>
         <View style={s.dots}>{[0, 1, 2, 3, 4].map(n => <View key={n} style={[s.dot, n <= picks.length && s.dotFilled]} />)}</View>
+        {story.readingLevels ? <ReadingLevelPicker value={readingLevel} onChange={level => updateProfile(p => ({ ...p, readingLevel: level }))} /> : <Text style={s.small}>Dit bewaarde avontuur gebruikt de oorspronkelijke verhaaltekst.</Text>}
+        {!!replay && <Text style={s.small}>Je leest je laatst voltooide route. Je actieve avontuur blijft bewaard.</Text>}
       </View>
       <Animated.View key={readerContentKey} onLayout={() => readerContentReady(readerContentKey)} style={{ opacity: calm ? 1 : opacity }}>
         <Text ref={passageTitle} accessibilityRole="header" accessible style={s.readerTitle}>{personalize(passage.title, profile.name)}</Text>
@@ -201,32 +251,48 @@ function Fabelpad() {
         {complete ? <View style={s.keepsake}>
           <Text style={s.avatar}>✨</Text><Text style={s.eyebrow}>EEN HERINNERING VOOR JOU</Text><Text style={s.cardTitle}>{story.endings[picks.join('')].keepsake}</Text>
           <Button label="Naar mijn schatkist" onPress={() => leaveReader('treasures')} />
+          <Button secondary label="Lees deze route terug vanaf hoofdstuk 1" onPress={() => reread(story.id)} />
           <Button secondary label="Een ander pad ontdekken" onPress={restart} />
         </View> : <View style={s.readerChoices}>
           <View style={s.readerChoiceHeading}>
             <Text accessibilityRole="header" style={[s.cardTitle, s.readerChoiceTitle]}>Wat kies jij?</Text>
             {playable && <Pressable ref={modeButton} accessibilityRole="button" accessibilityLabel={playMode ? 'Naar leesmodus' : 'Naar speelmodus'} onPress={toggleReaderMode} style={[s.readerMode, (width < 390 || fontScale > 1.3) && s.readerModeFull]}><Text style={s.readerModeText}>{playMode ? 'Naar leesmodus' : 'Naar speelmodus'}</Text></Pressable>}
           </View>
-          {playable && playMode ? <StationPlayScene key={`${profile.id}-${story.id}-${picks.join('')}`} step={picks.length as 0 | 1} calm={calm} onChoose={index => {
-            if (playModeRef.current && readerActionGeneration.current === playActionGeneration && readerContentRef.current === readerContentKey) choose(index);
-          }} /> : story.scenes[picks.join('')].choices.map((choice, index) => <Pressable key={`${picks.length}-${index}`} accessibilityRole="button" onPress={() => choose(index)} style={({ pressed }) => [s.choice, pressed && { backgroundColor: '#dbe9cf' }]}><Text style={s.choiceTitle}>{personalize(choice.label, profile.name)} →</Text><Text style={s.body}>{personalize(choice.hint, profile.name)}</Text></Pressable>)}
+          {replay && choices ? <Button label={`${personalize(choices[replay.route[replay.step]].label, profile.name)} →`} onPress={() => choose(replay.route[replay.step])} /> : choices && playMode ? <IllustratedChoices choices={choices} image={playImage} imageAlt={story.playImageAlt || story.imageAlt} childName={profile.name} onChoose={choose} /> : choices?.map((choice, index) => <Pressable key={`${picks.length}-${index}`} accessibilityRole="button" onPress={() => choose(index)} style={({ pressed }) => [s.choice, pressed && { backgroundColor: '#dbe9cf' }]}><Text style={s.choiceTitle}>{personalize(choice.label, profile.name)} →</Text>{!!choice.hint && <Text style={s.body}>{personalize(choice.hint, profile.name)}</Text>}</Pressable>)}
         </View>}
       </Animated.View>
       <View style={s.readerControls}>
         <Button secondary label={speaking ? '■ Stop voorlezen' : '▶ Lees voor met offline apparaatstem'} onPress={speak} />
         {!!message && <Text accessibilityLiveRegion="polite" style={s.demoNote}>{message}</Text>}
-        <Text style={s.demoNote}>{storageError ? 'Alleen in deze sessie' : saving ? 'Even bewaren…' : 'Je plek blijft op dit apparaat bewaard.'}</Text>
+        <Text style={s.demoNote}>{storageError ? 'Alleen in deze sessie' : saving ? 'Even bewaren…' : replay ? 'Je leest je bewaarde route.' : 'Je plek blijft op dit apparaat bewaard.'}</Text>
       </View>
       <SafeAreaView edges={['bottom']} />
     </ScrollView>}
-    {screen === 'profiles' && <ScrollView contentContainerStyle={s.panel}><Text style={s.eyebrow}>IEDER EEN EIGEN WERELD</Text><Text style={s.heading}>Wie gaat er mee?</Text>{store.profiles.map(p => <View style={s.profileRow} key={p.id}><Pressable style={s.profileSelect} accessibilityRole="button" onPress={() => { commit({ ...store, activeId: p.id }); setScreen('library'); }}><Text style={s.avatar}>{avatars[p.avatar]}</Text><View><Text style={s.cardTitle}>{p.name}</Text><Text style={s.small}>{Object.values(p.picks).filter(route => route.length === 5).length} stempels</Text></View></Pressable><Button secondary label="Bewerk" onPress={() => { setEditingId(p.id); setDraftName(p.name); setDraftAvatar(p.avatar); }} /></View>)}<View style={s.settingCard}><Text style={s.cardTitle}>{editingId ? 'Profiel aanpassen' : 'Nieuw kindprofiel'}</Text><TextInput accessibilityLabel="Voornaam of bijnaam" style={s.search} value={draftName} maxLength={20} placeholder="Voornaam of bijnaam" onChangeText={setDraftName} /><View style={s.chips}>{avatars.map((avatar, index) => <Pressable key={index} onPress={() => setDraftAvatar(index)} accessibilityLabel={`Avatar ${index + 1}`} accessibilityRole="button" accessibilityState={{ selected: index === draftAvatar }} style={[s.chip, draftAvatar === index && s.chipActive]}><Text style={s.avatar}>{avatar}</Text></Pressable>)}</View><Button label={editingId ? 'Bewaar dit profiel' : 'Maak mijn wereld'} disabled={!draftName.trim() || (!editingId && store.profiles.length >= 5)} onPress={saveProfile} />{editingId && <Button secondary label="Annuleren" onPress={() => { setEditingId(null); setDraftName(''); }} />}</View></ScrollView>}
-    {screen === 'treasures' && <ScrollView contentContainerStyle={s.panel}><Text style={s.eyebrow}>HERINNERINGEN OM TE BEWAREN</Text><Text style={s.heading}>Jouw schatkist.</Text>{profileStories.filter(item => profile.picks[item.id]?.length === 5).map(item => <View key={item.id} style={s.settingCard}><Text style={s.avatar}>⭐</Text><Text style={s.cardTitle}>{item.stamp}</Text><Text style={s.body}>{item.endings[profile.picks[item.id].join('')].keepsake}</Text><Button secondary label="Nog een keer beleven" onPress={() => openStory(item.id)} /></View>)}{!Object.values(profile.picks).some(route => route.length === 5) && <View style={s.empty}><Image source={assets['/brand/mascot.webp']} style={s.mascot} resizeMode="contain" /><Text style={s.cardTitle}>Je eerste schat wacht op je.</Text><Text style={s.body}>Beleef een verhaal helemaal en ontdek jouw herinnering.</Text><Button label="Kies een avontuur" onPress={() => setScreen('library')} /></View>}</ScrollView>}
-    {screen === 'parent' && <ScrollView contentContainerStyle={s.panel}><Text style={s.eyebrow}>VOOR DE GROTE MENSEN</Text><Text style={s.heading}>Hun wereld.{ '\n' }Jouw overzicht.</Text><Text style={s.body}>{runtimeConfig.production ? 'Fabelpad bewaart kindprofielen, favorieten, verhaalroutes en voorkeuren op dit apparaat. Je leest zonder account. Alle dertien verhalen zijn inbegrepen.' : 'Demo op dit apparaat. Er is geen ouderaccount, betaling of cloudsynchronisatie aangesloten. Kinderen hebben hier geen e-mailadres nodig.'}</Text><View style={s.settingCard}><Text style={s.cardTitle}>{profile.name}</Text><Text style={s.body}>{Object.keys(profile.picks).length} ontdekte verhalen · {Object.values(profile.picks).filter(route => route.length === 5).length} stempels</Text><Button secondary label="Kindprofielen beheren" onPress={() => setScreen('profiles')} /></View><View style={s.settingCard}><View style={s.setting}><Text style={s.settingLabel}>Rustige bewegingen</Text><Switch accessibilityLabel="Rustige bewegingen" value={profile.calm} onValueChange={value => updateProfile(p => ({ ...p, calm: value }))} /></View><View style={s.setting}><Text style={s.settingLabel}>Grotere verhaaltekst</Text><Switch accessibilityLabel="Grotere verhaaltekst" value={profile.largeText} onValueChange={value => updateProfile(p => ({ ...p, largeText: value }))} /></View><Text style={s.small}>De voorkeur voor minder beweging van het besturingssysteem wordt ook gevolgd.</Text></View><View style={s.settingCard}><Text style={s.cardTitle}>Verhalen voor onderweg</Text><Text style={s.body}>Alle verhaalteksten en illustraties zitten in de app. Je kunt zonder internet lezen. Voorlezen gebruikt uitsluitend een geïnstalleerde Nederlandse offline apparaatstem; de naam uit het kindprofiel wordt niet aan die stem doorgegeven.</Text></View>{contentChanged && <View style={s.settingCard}><Text style={s.cardTitle}>Nieuwe verhaalversie</Text><Text style={s.body}>Een eerder opgeslagen verhaalversie ontbreekt. Je oude routes zijn bewaard en worden niet op andere teksten toegepast. Je kunt bewust opnieuw beginnen met de meegeleverde verhalen.</Text><Button label="Met nieuwe verhalen opnieuw beginnen" onPress={() => Alert.alert('Alle verhaalroutes opnieuw beginnen?', 'Profielen en favorieten blijven bewaard. De oude routes worden gewist.', [{ text: 'Terug', style: 'cancel' }, { text: 'Opnieuw beginnen', style: 'destructive', onPress: () => { const next = { ...store, contentVersion: content.contentVersion, profiles: store.profiles.map(p => ({ ...p, picks: {}, storyVersions: {} })) }; setContentChanged(false); commit(next); } }])} /></View>}{storageError && <View style={s.settingCard}><Text style={s.cardTitle}>Opslag vraagt aandacht</Text><Text style={s.body}>{message}</Text><Button label="Deze sessie alsnog bewaren" onPress={() => { setSaving(true); void persistStore(store).then(() => { setStorageError(false); setSaving(false); setMessage('Deze sessie is nu bewaard.'); }).catch(() => { setSaving(false); setMessage('Bewaren lukt nog niet. Houd de app open.'); }); }} /></View>}<View style={s.settingCard}><Text style={s.cardTitle}>{runtimeConfig.production ? 'Alle verhalen inbegrepen' : 'Demo-abonnement'}</Text><Text style={s.body}>{runtimeConfig.production ? 'Alle dertien verhalen zijn beschikbaar. De app bevat geen advertenties, betaalde aankopen of abonnementen.' : 'Alle verhalen zijn voor deze native prototype-test toegankelijk. Aankopen en abonnementen zijn niet aangesloten.'}</Text></View>{runtimeConfig.production && <View style={s.settingCard}><Text style={s.cardTitle}>Privacy en hulp</Text><Text style={s.body}>Kindprofielen en leesgegevens blijven op dit apparaat. Je kunt alle lokale gegevens hieronder wissen. Een externe website of e-mailapp openen is voor ouders.</Text>{!!runtimeConfig.privacyUrl && <Button secondary label="Privacybeleid" onPress={() => openParentLink(runtimeConfig.privacyUrl)} />}{!!runtimeConfig.supportUrl && <Button secondary label="Contact en hulp" onPress={() => openParentLink(runtimeConfig.supportUrl)} />}{pendingExternal && <View><Text style={s.body}>Voor ouders: vul je geboortejaar in om de externe website of e-mailapp te openen. Dit antwoord wordt niet bewaard of verzonden.</Text><TextInput accessibilityLabel="Geboortejaar van de ouder" value={parentYear} onChangeText={setParentYear} keyboardType="number-pad" maxLength={4} style={s.search} /><Button label="Open externe app" disabled={!/^\d{4}$/.test(parentYear) || new Date().getFullYear() - Number(parentYear) < 19 || new Date().getFullYear() - Number(parentYear) > 120} onPress={confirmParentLink} /><Button secondary label="Annuleren" onPress={() => { setPendingExternal(null); setParentYear(''); }} /></View>}</View>}<Button secondary label={runtimeConfig.production ? 'Alle gegevens op dit apparaat wissen' : 'Demo op dit apparaat wissen'} onPress={() => Alert.alert(runtimeConfig.production ? 'Alle lokale gegevens wissen?' : 'Alle demogegevens wissen?', 'Alle kindprofielen, favorieten, routes en voorkeuren worden van dit apparaat verwijderd. Daarna begin je met een nieuw leeg profiel.', [{ text: 'Bewaren', style: 'cancel' }, { text: 'Wissen', style: 'destructive', onPress: () => { void removeStore().then(() => { const fresh = freshStore(content.contentVersion); storeRef.current = fresh; setStore(fresh); setStorageError(false); setContentChanged(false); setScreen('library'); }).catch(() => setMessage('Wissen is niet gelukt.')); } }])} /></ScrollView>}
+    {screen === 'profiles' && <ScrollView contentContainerStyle={s.panel}><Text style={s.eyebrow}>IEDER EEN EIGEN WERELD</Text><Text style={s.heading}>Wie gaat er mee?</Text>{store.profiles.map(p => <View style={s.profileRow} key={p.id}><Pressable style={s.profileSelect} accessibilityRole="button" onPress={() => { commit({ ...store, activeId: p.id }); setScreen('library'); }}><Text style={s.avatar}>{avatars[p.avatar]}</Text><View><Text style={s.cardTitle}>{p.name}</Text><Text style={s.small}>{readingLevels.find(level => level.id === normalizeReadingLevel(p.readingLevel))?.label} · {completedCount(p)} stempels</Text></View></Pressable><Button secondary label="Bewerk" onPress={() => { setEditingId(p.id); setDraftName(p.name); setDraftAvatar(p.avatar); setDraftReadingLevel(normalizeReadingLevel(p.readingLevel)); }} /></View>)}<View style={s.settingCard}><Text style={s.cardTitle}>{editingId ? 'Profiel aanpassen' : 'Nieuw kindprofiel'}</Text><TextInput accessibilityLabel="Voornaam of bijnaam" style={s.search} value={draftName} maxLength={20} placeholder="Voornaam of bijnaam" onChangeText={setDraftName} /><View style={s.chips}>{avatars.map((avatar, index) => <Pressable key={index} onPress={() => setDraftAvatar(index)} accessibilityLabel={`Avatar ${index + 1}`} accessibilityRole="button" accessibilityState={{ selected: index === draftAvatar }} style={[s.chip, draftAvatar === index && s.chipActive]}><Text style={s.avatar}>{avatar}</Text></Pressable>)}</View><ReadingLevelPicker value={draftReadingLevel} onChange={setDraftReadingLevel} /><Button label={editingId ? 'Bewaar dit profiel' : 'Maak mijn wereld'} disabled={!draftName.trim() || (!editingId && store.profiles.length >= 5)} onPress={saveProfile} />{editingId && <Button secondary label="Annuleren" onPress={() => { setEditingId(null); setDraftName(''); setDraftReadingLevel('6to8'); }} />}</View></ScrollView>}
+    {screen === 'treasures' && <ScrollView contentContainerStyle={s.panel}>
+      <Text style={s.eyebrow}>HERINNERINGEN OM TE BEWAREN</Text><Text style={s.heading}>Jouw schatkist.</Text>
+      {[...new Set([...profileStories.map(item => item.id), ...Object.keys(profile.lastCompletedPicks || {})])].map(id => {
+        const route = completedRoute(profile, id), version = completedVersion(profile, id) || content.contentVersion;
+        const item = releaseCatalog[version]?.stories.find(value => value.id === id);
+        if (!route || !item?.endings[route.join('')]) return null;
+        return <View key={id} style={s.settingCard}><Text style={s.avatar}>⭐</Text><Text style={s.cardTitle}>{item.stamp}</Text><Text style={s.body}>{item.endings[route.join('')].keepsake}</Text><Button secondary label="Lees mijn route terug" onPress={() => reread(id)} /><Button secondary label="Open mijn avontuur" onPress={() => openStory(id)} /></View>;
+      })}
+      {completedCount(profile) === 0 && <View style={s.empty}><Image source={assets['/brand/mascot.webp']} style={s.mascot} resizeMode="contain" /><Text style={s.cardTitle}>Je eerste schat wacht op je.</Text><Text style={s.body}>Beleef een verhaal helemaal en ontdek jouw herinnering.</Text><Button label="Kies een avontuur" onPress={() => setScreen('library')} /></View>}
+    </ScrollView>}
+    {screen === 'parent' && <ScrollView contentContainerStyle={s.panel}><Text style={s.eyebrow}>VOOR DE GROTE MENSEN</Text><Text style={s.heading}>Hun wereld.{ '\n' }Jouw overzicht.</Text><Text style={s.body}>{runtimeConfig.production ? 'Fabelpad bewaart kindprofielen, favorieten, verhaalroutes en voorkeuren op dit apparaat. Je leest zonder account. Alle dertien verhalen zijn inbegrepen.' : 'Demo op dit apparaat. Er is geen ouderaccount, betaling of cloudsynchronisatie aangesloten. Kinderen hebben hier geen e-mailadres nodig.'}</Text><View style={s.settingCard}><Text style={s.cardTitle}>{profile.name}</Text><Text style={s.body}>{Object.keys(profile.picks).length} ontdekte verhalen · {completedCount(profile)} stempels</Text><Button secondary label="Kindprofielen beheren" onPress={() => setScreen('profiles')} /></View><View style={s.settingCard}><ReadingLevelPicker value={readingLevel} onChange={level => updateProfile(p => ({ ...p, readingLevel: level }))} /><View style={s.setting}><Text style={s.settingLabel}>Rustige bewegingen</Text><Switch accessibilityLabel="Rustige bewegingen" value={profile.calm} onValueChange={value => updateProfile(p => ({ ...p, calm: value }))} /></View><View style={s.setting}><Text style={s.settingLabel}>Grotere verhaaltekst</Text><Switch accessibilityLabel="Grotere verhaaltekst" value={profile.largeText} onValueChange={value => updateProfile(p => ({ ...p, largeText: value }))} /></View><Text style={s.small}>De voorkeur voor minder beweging van het besturingssysteem wordt ook gevolgd.</Text></View><View style={s.settingCard}><Text style={s.cardTitle}>Verhalen voor onderweg</Text><Text style={s.body}>Alle verhaalteksten en illustraties zitten in de app. Je kunt zonder internet lezen. Voorlezen gebruikt uitsluitend een geïnstalleerde Nederlandse offline apparaatstem; de naam uit het kindprofiel wordt niet aan die stem doorgegeven.</Text></View>{contentChanged && <View style={s.settingCard}><Text style={s.cardTitle}>Nieuwe verhaalversie</Text><Text style={s.body}>Een eerder opgeslagen verhaalversie ontbreekt. Je oude routes zijn bewaard en worden niet op andere teksten toegepast. Je kunt bewust opnieuw beginnen met de meegeleverde verhalen.</Text><Button label="Met nieuwe verhalen opnieuw beginnen" onPress={() => Alert.alert('Alle verhaalroutes opnieuw beginnen?', 'Profielen en favorieten blijven bewaard. De oude routes worden gewist.', [{ text: 'Terug', style: 'cancel' }, { text: 'Opnieuw beginnen', style: 'destructive', onPress: () => { const next = { ...store, contentVersion: content.contentVersion, profiles: store.profiles.map(p => ({ ...p, picks: {}, storyVersions: {}, lastCompletedPicks: {}, lastCompletedStoryVersions: {} })) }; setContentChanged(false); commit(next); } }])} /></View>}{storageError && <View style={s.settingCard}><Text style={s.cardTitle}>Opslag vraagt aandacht</Text><Text style={s.body}>{message}</Text><Button label="Deze sessie alsnog bewaren" onPress={() => { setSaving(true); void persistStore(store).then(() => { setStorageError(false); setSaving(false); setMessage('Deze sessie is nu bewaard.'); }).catch(() => { setSaving(false); setMessage('Bewaren lukt nog niet. Houd de app open.'); }); }} /></View>}<View style={s.settingCard}><Text style={s.cardTitle}>{runtimeConfig.production ? 'Alle verhalen inbegrepen' : 'Demo-abonnement'}</Text><Text style={s.body}>{runtimeConfig.production ? 'Alle dertien verhalen zijn beschikbaar. De app bevat geen advertenties, betaalde aankopen of abonnementen.' : 'Alle verhalen zijn voor deze native prototype-test toegankelijk. Aankopen en abonnementen zijn niet aangesloten.'}</Text></View>{runtimeConfig.production && <View style={s.settingCard}><Text style={s.cardTitle}>Privacy en hulp</Text><Text style={s.body}>Kindprofielen en leesgegevens blijven op dit apparaat. Je kunt alle lokale gegevens hieronder wissen. Een externe website of e-mailapp openen is voor ouders.</Text>{!!runtimeConfig.privacyUrl && <Button secondary label="Privacybeleid" onPress={() => openParentLink(runtimeConfig.privacyUrl)} />}{!!runtimeConfig.supportUrl && <Button secondary label="Contact en hulp" onPress={() => openParentLink(runtimeConfig.supportUrl)} />}{pendingExternal && <View><Text style={s.body}>Voor ouders: vul je geboortejaar in om de externe website of e-mailapp te openen. Dit antwoord wordt niet bewaard of verzonden.</Text><TextInput accessibilityLabel="Geboortejaar van de ouder" value={parentYear} onChangeText={setParentYear} keyboardType="number-pad" maxLength={4} style={s.search} /><Button label="Open externe app" disabled={!/^\d{4}$/.test(parentYear) || new Date().getFullYear() - Number(parentYear) < 19 || new Date().getFullYear() - Number(parentYear) > 120} onPress={confirmParentLink} /><Button secondary label="Annuleren" onPress={() => { setPendingExternal(null); setParentYear(''); }} /></View>}</View>}<Button secondary label={runtimeConfig.production ? 'Alle gegevens op dit apparaat wissen' : 'Demo op dit apparaat wissen'} onPress={() => Alert.alert(runtimeConfig.production ? 'Alle lokale gegevens wissen?' : 'Alle demogegevens wissen?', 'Alle kindprofielen, favorieten, routes en voorkeuren worden van dit apparaat verwijderd. Daarna begin je met een nieuw leeg profiel.', [{ text: 'Bewaren', style: 'cancel' }, { text: 'Wissen', style: 'destructive', onPress: () => { void removeStore().then(() => { const fresh = freshStore(content.contentVersion); storeRef.current = fresh; setStore(fresh); setStorageError(false); setContentChanged(false); setScreen('library'); }).catch(() => setMessage('Wissen is niet gelukt.')); } }])} /></ScrollView>}
     {!!message && screen === 'parent' && <Text accessibilityLiveRegion="polite" style={s.status}>{message}</Text>}
     {screen !== 'reader' && <SafeAreaView edges={['bottom']} style={s.bottom}><View style={s.tabs}>{([{ id: 'library', text: '⌂ Ontdek' }, { id: 'treasures', text: '☆ Schatkist' }, { id: 'profiles', text: '☺ Wie speelt?' }, { id: 'parent', text: '⚙ Ouders' }] as { id: Screen; text: string }[]).map(tab => <Pressable key={tab.id} onPress={() => setScreen(tab.id)} accessibilityRole="button" accessibilityState={{ selected: screen === tab.id }} style={s.tab}><Text style={[s.tabText, screen === tab.id && s.tabActive]}>{tab.text}</Text></Pressable>)}</View></SafeAreaView>}
   </SafeAreaView>;
 }
 
 const s = StyleSheet.create({
+  levelPicker: { gap: 11, marginTop: 18, marginBottom: 12 }, levelOption: { minHeight: 48, justifyContent: 'center' },
+  playPrent: { marginTop: 18, borderRadius: 24, overflow: 'hidden', backgroundColor: '#214d38', minHeight: 460, justifyContent: 'flex-end' },
+  playArt: { position: 'absolute', width: '100%', height: '100%' },
+  playShade: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, backgroundColor: 'rgba(17, 42, 29, .27)' },
+  playChoices: { padding: 16, paddingTop: 200, gap: 12 },
+  illustratedChoice: { flexDirection: 'row', gap: 13, alignItems: 'center', marginTop: 0, backgroundColor: '#fffbee', minHeight: 72 },
+  choiceSymbol: { width: 46, height: 46, borderRadius: 23, backgroundColor: '#dceacc', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  choiceSymbolGold: { backgroundColor: '#f8e3a2' }, choiceGlyph: { fontSize: 25, color: '#24543e' }, choiceCopy: { flex: 1 },
   root: { flex: 1, backgroundColor: '#fffbee' }, center: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 20 }, header: { paddingHorizontal: 20, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderBottomWidth: 1, borderColor: '#e5e8d7' }, logo: { width: 135, height: 54 }, profileButton: { flexDirection: 'row', alignItems: 'center', gap: 7, padding: 9, borderRadius: 18, backgroundColor: '#e9efdc', maxWidth: 180 }, profileName: { fontWeight: '700', color: '#244d36', flexShrink: 1 }, avatar: { fontSize: 27 }, library: { padding: 20, gap: 20, paddingBottom: 35 }, eyebrow: { fontSize: 11, fontWeight: '800', color: '#547559', letterSpacing: 1.4, marginBottom: 8 }, heading: { fontSize: 37, lineHeight: 41, color: '#214d38', fontWeight: '800', letterSpacing: -1.2 }, subtitle: { fontSize: 15, color: '#697260', lineHeight: 23, marginTop: 12, marginBottom: 23 }, hero: { borderRadius: 28, overflow: 'hidden', backgroundColor: '#214d38', marginBottom: 23 }, heroImage: { height: 230, width: '100%' }, heroLabel: { padding: 21 }, heroTitle: { fontSize: 29, fontWeight: '800', lineHeight: 32, color: '#fffbee' }, heroAction: { color: '#ffda72', fontWeight: '800', marginTop: 15, fontSize: 16 }, search: { backgroundColor: '#fffef8', borderColor: '#d4ddc7', borderWidth: 1, borderRadius: 16, padding: 15, minHeight: 50, color: '#244d36', fontSize: 16, marginTop: 12, marginBottom: 12 }, chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 18 }, chip: { paddingHorizontal: 16, paddingVertical: 11, backgroundColor: '#edf0df', borderRadius: 24, minHeight: 44 }, chipActive: { backgroundColor: '#24543e' }, chipText: { color: '#516b51', fontWeight: '700' }, chipTextActive: { color: '#fffbee' }, card: { borderWidth: 1, borderColor: '#dde3cd', backgroundColor: '#fffef8', borderRadius: 25, overflow: 'hidden', marginBottom: 20 }, cardImage: { width: '100%', height: 210 }, cardCopy: { padding: 21 }, cardTitle: { color: '#244d36', fontSize: 24, fontWeight: '800', lineHeight: 29, marginBottom: 9 }, body: { color: '#68745f', fontSize: 15, lineHeight: 24 }, small: { color: '#6a765f', fontSize: 12, lineHeight: 20 }, readLink: { fontWeight: '800', color: '#24543e', marginTop: 20, fontSize: 15 }, heart: { position: 'absolute', right: 14, top: 14, backgroundColor: '#fffbee', width: 47, height: 47, borderRadius: 24, alignItems: 'center', justifyContent: 'center' }, heartText: { color: '#436d4c', fontSize: 30 }, demoNote: { color: '#77806d', fontSize: 12, lineHeight: 20, marginTop: 17, marginBottom: 12 }, button: { backgroundColor: '#24543e', borderRadius: 16, minHeight: 50, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 13, marginTop: 12 }, buttonText: { color: '#fffbee', fontSize: 15, fontWeight: '800', textAlign: 'center' }, secondary: { backgroundColor: '#e8eedb' }, secondaryText: { color: '#24543e' }, readerBar: { minHeight: 64, paddingHorizontal: 12, paddingVertical: 8, gap: 10, flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1, borderColor: '#e5e8d7', backgroundColor: '#fffbee' }, readerBack: { minHeight: 48, minWidth: 48, alignItems: 'center', justifyContent: 'center', backgroundColor: '#e8eedb', borderRadius: 16 }, readerBackText: { fontSize: 27, color: '#24543e' }, readerBookTitle: { flex: 1, color: '#244d36', fontSize: 18, fontWeight: '800', lineHeight: 26 }, reader: { padding: 22, maxWidth: 860, alignSelf: 'center', width: '100%', paddingBottom: 24 }, readerWide: { paddingHorizontal: 36, paddingTop: 28 }, readerHero: { width: '100%', borderRadius: 24, overflow: 'hidden', backgroundColor: '#214d38' }, readerImage: { width: '100%', height: '100%' }, readerHeroLabel: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: 'rgba(20, 49, 35, .83)', paddingHorizontal: 20, paddingVertical: 14 }, readerHeroTitle: { color: '#fffbee', fontSize: 22, lineHeight: 30, fontWeight: '800' }, readerInfo: { marginTop: 23 }, readerTitle: { color: '#244d36', fontSize: 32, fontWeight: '800', lineHeight: 37, marginVertical: 20 }, readerText: { color: '#364a36', fontSize: 19, lineHeight: 31, marginBottom: 21 }, readerChoices: { marginTop: 7 }, readerChoiceHeading: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 12 }, readerChoiceTitle: { flexGrow: 1, flexShrink: 1, flexBasis: 155, marginBottom: 0 }, readerMode: { minWidth: 48, minHeight: 48, marginLeft: 'auto', paddingHorizontal: 15, paddingVertical: 12, borderRadius: 16, backgroundColor: '#e8eedb', alignItems: 'center', justifyContent: 'center' }, readerModeFull: { width: '100%' }, readerModeText: { color: '#24543e', fontSize: 14, lineHeight: 22, fontWeight: '800', textAlign: 'center' }, readerControls: { marginTop: 24 }, progress: { color: '#68745f', fontSize: 13 }, dots: { flexDirection: 'row', gap: 6, marginTop: 11 }, dot: { height: 6, width: 34, backgroundColor: '#e2e6d4', borderRadius: 4 }, dotFilled: { backgroundColor: '#7c9d60' }, choice: { padding: 20, backgroundColor: '#eff3e3', borderWidth: 1, borderColor: '#d8e1c5', borderRadius: 20, marginTop: 13, minHeight: 85 }, choiceTitle: { color: '#24543e', fontSize: 18, fontWeight: '800', marginBottom: 5 }, keepsake: { backgroundColor: '#f3e6ae', borderRadius: 22, padding: 25, marginVertical: 16 }, panel: { padding: 23, gap: 18, width: '100%', maxWidth: 850, alignSelf: 'center', paddingBottom: 35 }, settingCard: { padding: 22, backgroundColor: '#f0f2e3', borderColor: '#dfe5cf', borderWidth: 1, borderRadius: 22, gap: 8 }, setting: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', minHeight: 54 }, settingLabel: { fontSize: 15, fontWeight: '700', color: '#34533d', flexShrink: 1 }, profileRow: { flexDirection: 'row', padding: 14, backgroundColor: '#eff3e3', borderRadius: 22, alignItems: 'center', justifyContent: 'space-between', gap: 12 }, profileSelect: { flex: 1, flexDirection: 'row', gap: 13, alignItems: 'center', padding: 7 }, empty: { padding: 28, alignItems: 'center', backgroundColor: '#edf0df', borderRadius: 23, marginTop: 16 }, mascot: { height: 180, width: 180, marginBottom: 20 }, bottom: { backgroundColor: '#fffdf4', borderTopWidth: 1, borderColor: '#dde3cd' }, tabs: { flexDirection: 'row', paddingVertical: 13 }, tab: { flex: 1, minHeight: 44, alignItems: 'center', justifyContent: 'center' }, tabText: { fontSize: 11, fontWeight: '700', color: '#8b927f' }, tabActive: { color: '#24543e' }, status: { padding: 12, backgroundColor: '#e9efdc', color: '#34533d', fontSize: 12, textAlign: 'center' },
 });

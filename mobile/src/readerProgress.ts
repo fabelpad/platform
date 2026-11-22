@@ -6,5 +6,12 @@ export function appendChoice(store: Store, profileId: string, storyId: string, e
   const profile = store.profiles.find(item => item.id === profileId);
   const current = profile?.picks[storyId];
   if (!profile || !current || current.length >= parts || current.length !== expectedRoute.length || current.some((value, index) => value !== expectedRoute[index])) return store;
-  return { ...store, profiles: store.profiles.map(item => item.id === profileId ? { ...item, picks: { ...item.picks, [storyId]: [...current, choice] } } : item) };
+  const route = [...current, choice];
+  return { ...store, profiles: store.profiles.map(item => item.id === profileId ? {
+    ...item, picks: { ...item.picks, [storyId]: route },
+    ...(route.length === parts ? {
+      lastCompletedPicks: { ...item.lastCompletedPicks, [storyId]: [...route] },
+      lastCompletedStoryVersions: { ...item.lastCompletedStoryVersions, [storyId]: item.storyVersions?.[storyId] || store.contentVersion },
+    } : {}),
+  } : item) };
 }

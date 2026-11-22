@@ -134,8 +134,8 @@ try {
     const release = buildStoryRelease(storyId), browserRelease = await localRelease(storyId);
     assert.deepEqual(release, browserRelease, 'Browser and server must materialize identical content, routes and release hash');
     assert.equal(Object.keys(release.scenes).length, 31); assert.equal(Object.keys(release.endings).length, 32);
-    const { metadata, parts, nameToken, scenes, endings } = release;
-    assert.equal(createHash('sha256').update(canonicalContentJson({ endings, scenes, nameToken, parts, metadata })).digest('hex').slice(0,16), release.contentVersion);
+    const { metadata, parts, nameToken, scenes, endings, readingLevels } = release;
+    assert.equal(createHash('sha256').update(canonicalContentJson({ endings, scenes, nameToken, parts, metadata, readingLevels })).digest('hex').slice(0,16), release.contentVersion);
     assert.ok(scenes[''].text.includes(nameToken));
   }
   const base = buildStoryRelease('station');

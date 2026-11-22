@@ -17,10 +17,28 @@ try {
   const editorial = await import(await compileSource(new URL('../src/editorialStore.ts', import.meta.url), temp));
   const profiles = await import(await compileSource(new URL('../src/profileStorage.ts', import.meta.url), temp));
   const original = await content.localRelease('dream');
+  const readings = await import(await compileSource(new URL('../src/contentReadingLevels.ts', import.meta.url), temp));
+  const legacy = await content.localRelease('dream', false, false);
+  assert.notEqual(original.contentVersion, legacy.contentVersion, 'New snapshots hash the reading variants as well as original prose.');
+  assert.deepEqual(original.scenes, legacy.scenes);
+  assert.deepEqual(original.endings, legacy.endings);
+  const legacyBytes = JSON.stringify(legacy);
+  const legacyReading = readings.readingLevelsForRelease(legacy);
+  assert.deepEqual(legacyReading, original.readingLevels, 'A byte-compatible old route can use all supplied reading views.');
+  assert.equal(JSON.stringify(legacy), legacyBytes, 'Reading views never mutate a pinned historical release.');
+  // Real PostgREST JSONB may reorder nested object fields. Compare canonical
+  // values rather than relying on JavaScript insertion order.
+  const reverseKeys = value => Array.isArray(value) ? value.map(reverseKeys) : value && typeof value === 'object' ? Object.fromEntries(Object.entries(value).reverse().map(([key, item]) => [key, reverseKeys(item)])) : value;
+  assert.deepEqual(readings.readingLevelsForRelease(reverseKeys(legacy)), original.readingLevels);
+  blockContent = true;
+  assert.equal((await content.loadContentRelease('dream', legacy.contentVersion, false)).contentVersion, legacy.contentVersion, 'Old canonical pins remain readable offline without a writable cache.');
+  blockContent = false;
   const draft = editorial.getEditorialDraft('dream');
   draft.chapters['1'] = {text:'Een nieuwe editie voor {{naam}}.'};
   assert.equal(editorial.publishEditorialDraft('dream',draft).errors.length,0);
   const current = await content.localRelease('dream',true);
+  assert.equal(current.readingLevels, undefined, 'Custom editorial prose must not be replaced by unrelated bundled reading text.');
+  assert.equal(readings.readingLevelsForRelease(current), undefined);
   assert.notEqual(original.contentVersion,current.contentVersion);
   blockContent = true;
   const oldOffline = await content.loadContentRelease('dream',original.contentVersion,false);

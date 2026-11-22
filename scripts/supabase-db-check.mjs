@@ -87,8 +87,8 @@ try {
   const { advanceStoryMemory, emptyStoryMemory } = await import(await compileSource(new URL('../src/storyMemory.ts', import.meta.url), temp));
   const { validateFamilySnapshot } = await import(await compileSource(new URL('../lib/familyValidation.ts', import.meta.url), temp));
   for (const story of ['station','dream','toy','weather','moonbakery','ocean','garden','clock','library','balloon','forest','snow','stars']) {
-    const { metadata, parts, nameToken, scenes, endings, contentVersion } = buildStoryRelease(story);
-    const payload = { metadata, parts, nameToken, scenes, endings };
+    const { metadata, parts, nameToken, scenes, endings, readingLevels, contentVersion } = buildStoryRelease(story);
+    const payload = { metadata, parts, nameToken, scenes, endings, readingLevels };
     const canonical = (await db.query('select private.canonical_content_json($1::jsonb) as text', [JSON.stringify(payload)])).rows[0].text;
     assert.equal(canonical, canonicalContentJson(payload), 'PostgreSQL and JS must produce identical canonical release bytes');
     assert.equal(createHash('sha256').update(canonical).digest('hex').slice(0,16), contentVersion);

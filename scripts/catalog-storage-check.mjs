@@ -58,11 +58,11 @@ try {
   const children = Array.from({ length: 5 }, (_, i) => ({ id: `catalog-child-${i}`, name: `Avonturier ${i + 1}`, avatar: i % 4 }));
   profiles.saveFamily({ version: 1, children, activeId: children[3].id });
   for (const child of children) {
-    for (const id of ids) profiles.saveChild(child.id, `story-${id}`, { picks: [0, 1, 0, 1], updatedAt: Date.parse(at) });
+    for (const id of ids) profiles.saveChild(child.id, `story-${id}`, { picks: [0, 1, 0, 1], updatedAt: Date.parse(at), lastCompletedPicks: [1, 0, 1, 0, 1], lastCompletedContentVersion: 'a'.repeat(64) });
     profiles.saveChild(child.id, 'favorites', ids);
     profiles.saveChild(child.id, 'started', ids);
     profiles.saveChild(child.id, 'completed', completed);
-    profiles.saveChild(child.id, 'prefs', { calm: true, muted: false });
+    profiles.saveChild(child.id, 'prefs', { calm: true, muted: false, readingLevel: 'under6', textSize: 'large' });
     profiles.saveChild(child.id, 'memory', fullMemory);
   }
   const snapshot = profiles.exportSnapshot();

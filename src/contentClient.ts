@@ -3,6 +3,7 @@ import { getScene, getEnding } from './storyData';
 import { worlds } from './worlds';
 import { getEditorialPublication } from './editorialStore';
 import type { ContentRelease } from '../lib/server/content';
+import { bundledReadingLevels } from './contentReadingLevels';
 
 const memoryReleases = new Map<string, ContentRelease>();
 const key = (id: string, version: string) => `fabelpad-content-v1:${id}:${version}`;
@@ -17,7 +18,7 @@ function cached(id: string, version: string): ContentRelease | null {
     return value?.storyId === id && value.contentVersion === version && value.parts === 5 && Object.keys(value.scenes).length === 31 && Object.keys(value.endings).length === 32 ? value : null;
   } catch { return null; }
 }
-export async function localRelease(id: string, editorial = false): Promise<ContentRelease> {
+export async function localRelease(id: string, editorial = false, includeReadingLevels = true): Promise<ContentRelease> {
   const world = worlds.find(w => w.id === id)!;
   const publication = editorial ? getEditorialPublication(id) : undefined;
   const metadata = publication?.metadata ?? { title: world.title, description: world.description, image: world.image };
@@ -32,7 +33,8 @@ export async function localRelease(id: string, editorial = false): Promise<Conte
     const picks = Array.from({ length: 5 }, (_, bit) => (route >> (4 - bit)) & 1);
     endings[picks.join('')] = getEnding(id, picks, '__FABELPAD_CHILD__');
   }
-  const payload = { metadata, parts: 5 as const, nameToken: '__FABELPAD_CHILD__' as const, scenes, endings };
+  const readingLevels = includeReadingLevels && (!publication || Object.keys(publication.chapters).length === 0) ? bundledReadingLevels(id) : undefined;
+  const payload = { metadata, parts: 5 as const, nameToken: '__FABELPAD_CHILD__' as const, scenes, endings, ...(readingLevels ? { readingLevels } : {}) };
   const hash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(canonicalContentJson(payload)));
   const contentVersion = Array.from(new Uint8Array(hash), byte => byte.toString(16).padStart(2, '0')).join('').slice(0,16);
   return { storyId: id, contentVersion, publishedAt: publication?.publishedAt ?? null, bundled: true, ...payload };
@@ -41,6 +43,12 @@ export async function loadContentRelease(id: string, version: string | undefined
   if (version) { const stored = cached(id, version); if (stored) return stored; }
   const bundled = await localRelease(id);
   if (version === bundled.contentVersion) { cacheRelease(bundled); return bundled; }
+  // Keep the previous canonical release available even when storage was full
+  // during the old visit. Reading views do not rewrite its version or choices.
+  if (version) {
+    const legacy = await localRelease(id, false, false);
+    if (version === legacy.contentVersion) { cacheRelease(legacy); return legacy; }
+  }
   if (!cloud) {
     const editorial = await localRelease(id, true);
     if (!version || version === editorial.contentVersion) { cacheRelease(editorial); return editorial; }

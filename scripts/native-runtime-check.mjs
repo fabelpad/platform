@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
-import { mkdtemp, rm, readFile } from 'node:fs/promises';
+import { mkdtemp, rm, readFile, readdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import { createHash } from 'node:crypto';
 import { compileSource } from './source-test-loader.mjs';
 
 const directory = await mkdtemp(path.join(tmpdir(), 'fabelpad-native-runtime-'));
@@ -10,10 +11,53 @@ try {
   const { appendChoice } = await import(await compileSource(new URL('../mobile/src/readerProgress.ts', import.meta.url), directory));
   const { createStorageQueue } = await import(await compileSource(new URL('../mobile/src/storageQueue.ts', import.meta.url), directory));
   const { storiesForProfile, normalizeStoryVersions } = await import(await compileSource(new URL('../mobile/src/storyReleases.ts', import.meta.url), directory));
+  const { normalizeReadingLevel, normalizeReadingHistory, readingContent, withCompatibleReading, completedRoute, completedVersion, completedCount } = await import(await compileSource(new URL('../mobile/src/readingLevels.ts', import.meta.url), directory));
+  const { getReadingScene, getReadingEnding } = await import(await compileSource(new URL('../src/storyReadingLevels.ts', import.meta.url), directory));
   const catalog = JSON.parse(await readFile(new URL('../mobile/src/content.json', import.meta.url), 'utf8'));
   assert.equal(catalog.stories.length, 13);
   assert.equal(catalog.stories.reduce((sum, story) => sum + Object.keys(story.scenes).length, 0), 403);
   assert.equal(catalog.stories.reduce((sum, story) => sum + Object.keys(story.endings).length, 0), 416);
+  assert.equal(catalog.parts, 5);
+  let readingScenes = 0, readingEndings = 0;
+  for (const story of catalog.stories) {
+    for (const level of ['under6', '6to8', '9plus']) {
+      const variant = readingContent(story, level);
+      assert.equal(Object.keys(variant.scenes).length, 31, `${story.id}/${level}: all chapter variants`);
+      assert.equal(Object.keys(variant.endings).length, 32, `${story.id}/${level}: all endings`);
+      for (const [route, scene] of Object.entries(variant.scenes)) {
+        assert.equal(scene.choices.length, 2, `${story.id}/${route}/${level}: exactly two choices`);
+        assert.deepEqual(scene, getReadingScene(story.id, route.length, [...route].map(Number), catalog.nameToken, level), 'Bundled chapter is the actual web-source variant');
+        readingScenes += 1;
+      }
+      for (const [route, ending] of Object.entries(variant.endings)) {
+        assert.deepEqual(ending, getReadingEnding(story.id, [...route].map(Number), catalog.nameToken, level), 'Bundled ending is the actual web-source variant');
+        assert.equal(ending.keepsake, story.endings[route].keepsake, 'A reading level never changes the earned keepsake');
+        readingEndings += 1;
+      }
+    }
+    assert.deepEqual(story.scenes, story.readingLevels['9plus'].scenes);
+    assert.deepEqual(story.endings, story.readingLevels['9plus'].endings);
+    for (let step = 0; step < 5; step += 1) {
+      const art = story.id === 'station' && step < 2 ? '/art/play/station-platform.webp' : story.playImage || story.image;
+      assert(catalog.assets[art], `${story.id}/${step}: a bundled play illustration exists`);
+    }
+  }
+  assert.equal(readingScenes, 1209); assert.equal(readingEndings, 1248);
+  for (const [asset, hash] of Object.entries(catalog.assets)) {
+    assert.equal(createHash('sha256').update(await readFile(new URL(`../mobile/assets${asset}`, import.meta.url))).digest('hex'), hash, `Bundled illustration matches its immutable content checksum: ${asset}`);
+  }
+  const versions = (await readdir(new URL('../mobile/src/releases/', import.meta.url))).filter(name => /^[a-f0-9]{16}\.json$/.test(name));
+  for (const filename of versions) {
+    const release = JSON.parse(await readFile(new URL(`../mobile/src/releases/${filename}`, import.meta.url), 'utf8'));
+    assert.equal(createHash('sha256').update(JSON.stringify({ stories: release.stories, checksums: release.assets })).digest('hex').slice(0, 16), release.contentVersion, 'Archived content keeps its hashed payload');
+    for (const [asset, hash] of Object.entries(release.assets)) assert.equal(createHash('sha256').update(await readFile(new URL(`../mobile/assets${asset}`, import.meta.url))).digest('hex'), hash, 'Older releases retain their original illustration bytes');
+    for (const legacy of release.stories) {
+      const current = catalog.stories.find(story => story.id === legacy.id);
+      if (JSON.stringify(legacy.scenes) === JSON.stringify(current?.scenes) && JSON.stringify(legacy.endings) === JSON.stringify(current?.endings)) {
+        assert.deepEqual(withCompatibleReading(legacy, current).readingLevels, current.readingLevels, 'Unchanged legacy routes can use current presentation rewrites');
+      }
+    }
+  }
 
   for (const choice of [0, 1]) {
     const callbacks = [], chosen = [], canceled = [];
@@ -50,6 +94,38 @@ try {
   }
 
   const profile = id => ({ id, name: id, avatar: 0, picks: { station: [] }, favorites: [], calm: false, largeText: false });
+  assert.equal(normalizeReadingLevel(undefined), '6to8');
+  assert.equal(normalizeReadingLevel('unknown'), '6to8');
+  const migrated = { ...profile('migrated'), picks: { station: [1, 0, 1, 0, 1] }, storyVersions: { station: 'legacy-version' }, readingLevel: 'malformed', lastCompletedPicks: { invalid: [0] } };
+  normalizeReadingHistory(migrated);
+  assert.equal(migrated.readingLevel, '6to8');
+  assert.deepEqual(completedRoute(migrated, 'station'), [1, 0, 1, 0, 1]);
+  assert.equal(completedVersion(migrated, 'station'), 'legacy-version');
+  assert.equal(completedCount(migrated), 1);
+  assert(!migrated.lastCompletedPicks.invalid, 'Malformed history does not discard valid progress');
+  const editedLegacy = structuredClone(catalog.stories[0]); delete editedLegacy.readingLevels;
+  editedLegacy.scenes[''].text = 'An earlier different editorial release';
+  assert.equal(withCompatibleReading(editedLegacy, catalog.stories[0]), editedLegacy, 'A different old story never borrows the current reading text');
+  assert.equal(readingContent(editedLegacy, 'under6'), editedLegacy, 'An incompatible pinned release retains its original text');
+
+  for (const story of catalog.stories) for (let route = 0; route < 32; route += 1) for (const readingLevel of ['under6', '6to8', '9plus']) {
+    const choices = Array.from({ length: 5 }, (_, index) => (route >> (4 - index)) & 1);
+    let progress = { schemaVersion: 1, contentVersion: catalog.contentVersion, activeId: 'route', profiles: [{ ...profile('route'), picks: { [story.id]: [] }, storyVersions: { [story.id]: catalog.contentVersion }, readingLevel }] };
+    for (const [step, choice] of choices.entries()) {
+      const before = progress.profiles[0];
+      const differentLevel = { ...before, readingLevel: readingLevel === 'under6' ? '9plus' : 'under6' };
+      assert.deepEqual(differentLevel.picks, before.picks, 'Switching level preserves the active route and chapter');
+      progress = appendChoice(progress, 'route', story.id, choices.slice(0, step), choice, 5);
+      if (step < 4) assert.equal(completedRoute(progress.profiles[0], story.id), undefined, 'A keepsake is not granted before the fifth choice');
+    }
+    const finished = progress.profiles[0];
+    assert.deepEqual(finished.lastCompletedPicks[story.id], choices);
+    assert.equal(finished.lastCompletedStoryVersions[story.id], catalog.contentVersion);
+    const restarted = { ...finished, picks: { ...finished.picks, [story.id]: [] }, storyVersions: { ...finished.storyVersions, [story.id]: 'next-version' } };
+    assert.deepEqual(completedRoute(restarted, story.id), choices, 'Restart retains the last completed route');
+    assert.equal(completedVersion(restarted, story.id), catalog.contentVersion, 'A saved keepsake keeps its original content release');
+    assert.equal(completedCount(restarted), 1);
+  }
   let store = { schemaVersion: 1, contentVersion: catalog.contentVersion, activeId: 'a', profiles: [profile('a'), profile('b')] };
   const initial = store;
   store = appendChoice(store, 'a', 'station', [], 0, 5);
@@ -98,5 +174,5 @@ try {
   await Promise.all([first, deletion, last]);
   assert.deepEqual(JSON.parse(durable), { route: [1, 1] }, 'Deletion is ordered with later writes');
   assert.deepEqual(operations.map(([operation]) => operation), ['set', 'set', 'remove', 'set']);
-  console.log('Native runtime geslaagd: 13 verhalen / 403 scènes / 416 eindes; stationsacties, dubbele tik, timercleanup, profielhervatten, versievaste verhalen/eindes na updates, opslagfout en schrijf-/wisvolgorde.');
+  console.log('Native runtime geslaagd: 13 verhalen / 65 hoofdstukken / 403 scènes / 416 eindroutes × 3 leesniveaus (1209 scènes / 1248 eindes); 20 gecontroleerde runtime-illustraties, onveranderlijke releases, veilige legacy-leesniveaus, vijfdekeuze/aandenken en laatstvoltooide route; stationsacties, dubbele tik, timercleanup, profielhervatten, versievaste verhalen/eindes na updates, opslagfout en schrijf-/wisvolgorde. Geen toesteltest.');
 } finally { await rm(directory, { recursive: true, force: true }); }

@@ -14,7 +14,7 @@ async function deviceProfile(page: Page, options: { large?: boolean; muted?: boo
     if (!localStorage.getItem(prefs)) localStorage.setItem(prefs, JSON.stringify(settings));
     const saved = `${prefix}fabelpad-child-${profile}-story-station`;
     if (initialPicks && !localStorage.getItem(saved)) localStorage.setItem(saved, JSON.stringify({ picks: initialPicks, revision: initialPicks.length, updatedAt: 1, storyId: 'station' }));
-  }, { prefix: scope, profile: child, settings: { muted: options.muted ?? false, calm: options.calm ?? false, textSize: options.large ? 'large' : 'normal' }, initialPicks: options.picks });
+  }, { prefix: scope, profile: child, settings: { muted: options.muted ?? false, calm: options.calm ?? false, textSize: options.large ? 'large' : 'normal', readingLevel: '9plus' }, initialPicks: options.picks });
 }
 
 async function progress(page: Page): Promise<Progress> {
@@ -104,9 +104,11 @@ for (const choice of [0, 1] as const) test(`both playable station parts keep rou
   expect((await progress(page)).picks).toEqual([choice, choice]);
   expect((await progress(page)).revision).toBe(2);
   await expect(page.locator('.reader-story-text')).toContainText(choice === 0 ? 'zingende bloesembomen' : 'De lantaarns wijzen');
-  await expect(page.locator('.reader-choice')).toHaveCount(2);
+  await expect(page.locator('.illustrated-choice-option')).toHaveCount(2);
   await expect(page.locator('.reader-play-panel')).toHaveCount(0);
-  await expect(page.locator('.reader-mode')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Naar leesmodus', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Naar leesmodus', exact: true }).click();
+  await expect(page.locator('.reader-choice')).toHaveCount(2);
 });
 
 for (const part of [1, 2]) test(`leaving playable part ${part} cancels its pending choice on mode change and close`, async ({ page }) => {
@@ -155,7 +157,7 @@ test('large text, ending, restart and reopening preserve progress and restore th
   await expect(page.locator('.reader-shell')).toHaveClass(/reader-large-text/);
   expect(await page.locator('.reader-story-text p').first().evaluate(node => parseFloat(getComputedStyle(node).fontSize))).toBeGreaterThanOrEqual(19);
   expect(await page.evaluate(() => document.body.style.overflow)).toBe('hidden');
-  await page.locator('.reader-choice').last().click();
+  await page.locator('.illustrated-choice-option').last().click();
   await expect(page.getByText('Jouw avontuur is compleet', { exact: true })).toBeVisible();
   await expect(page.locator('.reader-scene h2')).toBeFocused();
   await expect.poll(() => page.locator('.reader-layout').evaluate(node => node.scrollTop)).toBeLessThanOrEqual(1);
@@ -206,7 +208,8 @@ test('local narration pauses and resumes without restarting when the play mode c
   await sceneBeginsAtTop(page, 3);
   expect((await progress(page)).picks).toEqual([1, 0]);
   await expect(page.locator('.reader-story-text')).toContainText('zingende bloesembomen');
-  await expect(page.locator('.reader-mode,.reader-play-panel')).toHaveCount(0);
+  await expect(page.locator('.reader-play-panel')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Naar speelmodus', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Verhaal sluiten', exact: true }).click();
   await expect(page.locator('.reader-shell')).toHaveCount(0);
   await page.getByRole('button', { name: 'Geluid uitzetten', exact: true }).click();

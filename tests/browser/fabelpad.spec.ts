@@ -20,7 +20,7 @@ test('website, child library, family and admin routes stay distinct without simu
   await page.evaluate(() => localStorage.setItem('fabelpad-prototype-access-v1', JSON.stringify({ testAccess: true, freeStory: 'station', plan: 'free' })));
   await page.goto('/lezen?story=dream');
   await expect(page.getByRole('dialog', { name: /Droompost/i })).toBeVisible();
-  await page.locator('.reader-choice').first().click();
+  await page.locator('.reader-choice,.illustrated-choice-option').first().click();
   await expect(page.getByText('Deel 2 van 5', { exact: true })).toBeVisible();
   await page.goto('/ouders');
   await expect(page.getByRole('heading', { level: 1 })).toContainText('Hun avonturen');
@@ -54,7 +54,7 @@ test('story persists its route/version, rejects double taps and retains a prior 
   const dialog = page.getByRole('dialog', { name: /Droompost/i });
   await expect(dialog).toBeVisible();
   await expect(dialog.getByText('Deel 1 van 5', { exact: true })).toBeVisible();
-  await page.locator('.reader-choice').first().evaluate(button => { (button as HTMLButtonElement).click(); (button as HTMLButtonElement).click(); });
+  await page.locator('.reader-choice,.illustrated-choice-option').first().evaluate(button => { (button as HTMLButtonElement).click(); (button as HTMLButtonElement).click(); });
   await expect(dialog.getByText('Deel 2 van 5', { exact: true })).toBeVisible();
   const savedBefore = await page.evaluate(() => Object.entries(localStorage).find(([key]) => key.includes('story-dream'))?.[1]);
   expect(JSON.parse(savedBefore!).picks).toEqual([0]);
@@ -67,7 +67,7 @@ test('story persists its route/version, rejects double taps and retains a prior 
   await expect(page.locator('.reader-story-text')).not.toContainText('Deze tekst is pas later gepubliceerd.');
   for (let part = 2; part <= 5; part++) {
     await expect(page.getByText(`Deel ${part} van 5`, { exact: true })).toBeVisible();
-    await page.locator('.reader-choice').first().click();
+    await page.locator('.reader-choice,.illustrated-choice-option').first().click();
   }
   await expect(page.getByText('Jouw avontuur is compleet', { exact: true })).toBeVisible();
   await expect(page.locator('.reader-keepsake strong')).not.toBeEmpty();
@@ -81,8 +81,8 @@ test('phone layout and storage failures remain usable and truthful', async ({ pa
   await page.addInitScript(() => { Storage.prototype.setItem = () => { throw new DOMException('Unavailable', 'QuotaExceededError'); }; });
   await page.goto('/lezen?story=toy');
   await expect(page.locator('.reader-saved')).toContainText('Bewaren lukt niet');
-  await expect(page.locator('.reader-choice')).toHaveCount(2);
-  await page.locator('.reader-choice').first().click();
+  await expect(page.locator('.reader-choice,.illustrated-choice-option')).toHaveCount(2);
+  await page.locator('.reader-choice,.illustrated-choice-option').first().click();
   await expect(page.getByText('Deel 2 van 5', { exact: true })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
 });
@@ -117,7 +117,7 @@ test('family UI uses server metadata, isolates siblings and opens parent setting
   await expect(page.locator('.world-card')).toHaveCount(13);
   await expect(page.locator('.world-grid')).not.toContainText('Uitsluitend demoversie');
   await page.getByRole('button', { name: 'Open De Droompost' }).click();
-  await page.locator('.reader-choice').first().click();
+  await page.locator('.reader-choice,.illustrated-choice-option').first().click();
   await expect(page.getByText('Deel 2 van 5', { exact:true })).toBeVisible();
   await page.getByRole('button', { name:'Verhaal sluiten' }).click();
   await page.getByRole('button', { name:'Kindprofiel kiezen' }).click();
