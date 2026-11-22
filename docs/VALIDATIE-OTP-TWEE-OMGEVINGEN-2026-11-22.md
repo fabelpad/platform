@@ -1,6 +1,6 @@
 # Fabelpad — verificatie van OTP en twee omgevingen
 
-Uitgevoerd op **22 november 2026** op de development-VPS. Geteste broncommit: **`070a039e1de4c39fac12d79d293104a0e89c8f00`**. De daaropvolgende bewijscommit wijzigt uitsluitend documentatie.
+Uitgevoerd op **22 november 2026** op de development-VPS. Geteste applicatiebron: **`070a039e1de4c39fac12d79d293104a0e89c8f00`**. De daaropvolgende bewijscommit wijzigt uitsluitend documentatie. Een latere CI-fix ruimt alleen ongebruikte pakketten op de tijdelijke hosted runner op; applicatiecode en buildconfiguratie blijven gelijk.
 
 ## Schone lokale builds
 
@@ -41,6 +41,8 @@ De browserscenario's omvatten bestaande lees-/opslag-/gezins-/studioflows, OTP m
 [Hostbewijs](deploy-evidence/dg-vps-08-2026-11-22.json): twee eigen doelen voorbereid,4188/4189 vrij, rechten gescheiden, runners ongeregistreerd en alle eigen app-/runnerdiensten disabled/inactive. Relevante bestaande diensten/configuraties/healthresponses/currentlinks vóór en na gelijk. Geen doelkandidaat of actieve Fabelpad-release.
 
 ## Open acceptatie
+
+De eerste PR-verificatie stopte bij de capaciteitspreflight: de tijdelijke GitHub-runner had12.884.598.784 bytes vrij, net onder12GiB. De workflow ruimt nu, na controle op `RUNNER_ENVIRONMENT=github-hosted`, uitsluitend de ongebruikte `/usr/share/dotnet` en `/opt/ghc` op. Dit is dezelfde bestaande stap als in Android-CI, zonder verlaging van de capaciteitsdrempel of wijziging op de VPS. De opvolgende GitHub-run is het verificatiebewijs voor deze CI-wijziging.
 
 Afgeschermde Resend-key, geverifieerd verzenddomein en Supabase Auth-/secretbeheer ontbreken. Daardoor zijn echte OTP-bezorging, accountaanmaak van de aangewezen beheerder en root-readiness nog niet uitgevoerd. Runnergroepbeheer ontbreekt eveneens. Main-integratie vereist daarnaast controle van geërfde organisatie-Playflags en eventuele Supabase-GitHub-integratie; de huidige toegang toont die niet volledig.
 

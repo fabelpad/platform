@@ -33,6 +33,11 @@ jobs:
         env:
           npm_config_cache: ${{ runner.temp }}/fabelpad-npm-cache
         run: npm install --global pnpm@11.25.0
+      - name: Maak ruimte op de tijdelijke GitHub-runner
+        run: |
+          set -euo pipefail
+          test "$RUNNER_ENVIRONMENT" = github-hosted
+          sudo rm -rf -- /usr/share/dotnet /opt/ghc
       - name: Controleer toolchain, bytes en inodes
         run: node scripts/local-preflight.mjs --android
       - name: Installeer webdependencies uit lockfile
