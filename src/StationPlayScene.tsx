@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { ArrowLeft, ArrowRight, Check, KeyRound, Leaf, Music2, Sparkles, Star, Ticket, Volume2 } from 'lucide-react';
 import { initialStationPlayState, reduceStationPlay, stationInstruction } from './storyPlayLogic';
@@ -32,21 +32,21 @@ export default function StationPlayScene({ step, previousChoice, childName, mute
   const leaving = state.phase === 'leaving';
   const done = state.phase === 'repaired' || state.phase === 'map';
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     active.current = true;
     if (stateRef.current.step !== step) {
       clearTimeout(timer.current); generation.current += 1;
       const initial = initialStationPlayState(step); stateRef.current = initial; setState(initial); committed.current = false;
     }
     return () => {
-      active.current = false; generation.current += 1; clearTimeout(timer.current);
+      active.current = false; generation.current += 1; clearTimeout(timer.current); timer.current = undefined;
       if (audio.current && audio.current.state !== 'closed') void audio.current.close().catch(() => {});
       audio.current = null;
       if (!readInstruction.current && 'speechSynthesis' in window) window.speechSynthesis.cancel();
     };
   }, [step]);
   useEffect(() => {
-    if (phaseFocus.current) { instructionRef.current?.focus(); phaseFocus.current = false; }
+    if (phaseFocus.current) { instructionRef.current?.focus({ preventScroll: true }); phaseFocus.current = false; }
   }, [state.phase]);
   useEffect(() => {
     if (muted && audio.current && audio.current.state !== 'closed') void audio.current.suspend().catch(() => {});
@@ -67,12 +67,14 @@ export default function StationPlayScene({ step, previousChoice, childName, mute
     } catch { /* A visual response always remains available. */ }
   }
   function apply(action: StationPlayAction) {
+    if (!active.current || committed.current) return;
     const next = reduceStationPlay(stateRef.current, action);
     if (next === stateRef.current) return;
     stateRef.current = next; phaseFocus.current = true; setState(next); chime(next.phase === 'repaired' || next.phase === 'map');
     if (next.phase === 'leaving' && next.choice !== null) {
       const token = generation.current, choice = next.choice;
       timer.current = setTimeout(() => {
+        timer.current = undefined;
         if (!active.current || committed.current || generation.current !== token) return;
         committed.current = true; chooseCallback.current(choice);
       }, reducedMotion ? 100 : 1050);

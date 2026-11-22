@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
-import { AnimatePresence, motion } from 'motion/react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { motion, useReducedMotion } from 'motion/react';
 import { ArrowLeft, ArrowRight, BookOpen, Check, Compass, Heart, Leaf, Moon, Music2, Pause, Play, RotateCcw, Sparkles, VolumeX, X } from 'lucide-react';
 import { getEnding, getScene } from './storyData';
 import { readChild, saveChild } from './profileStorage';
@@ -29,6 +29,8 @@ function loadPicks(profileId: string, world: string): number[] {
 }
 
 export default function StoryReader({ profileId, worldId, childName, muted, reducedMotion, textSize, cloudContent = false, previewLimit, onRequestParents, onClose, onComplete }: Props) {
+  const systemReducedMotion = useReducedMotion();
+  const calmMotion = reducedMotion || systemReducedMotion === true;
   const world = isStoryId(worldId) ? worldId : 'station';
   const [saved] = useState(() => readChild<Saved | null>(profileId, `story-${world}`, null));
   const [release, setRelease] = useState<ContentRelease | null>(null);
@@ -40,16 +42,20 @@ export default function StoryReader({ profileId, worldId, childName, muted, redu
   const [picks, setPicks] = useState(() => loadPicks(profileId, world));
   const [voiceState, setVoiceState] = useState<'idle' | 'speaking' | 'paused'>('idle');
   const [playEnabled, setPlayEnabled] = useState(true);
+  const [modePageMinHeight, setModePageMinHeight] = useState(0);
   const [closing, setClosing] = useState(false);
   const closeRequested = useRef(false);
   const [greeting, setGreeting] = useState(() => continuityGreeting(getStoryMemory(profileId), world, childName));
   const dialogRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const pageRef = useRef<HTMLDivElement>(null);
+  const modeButtonRef = useRef<HTMLButtonElement>(null);
+  const modeScrollRestore = useRef<number | null>(null);
   const sceneHeadingRef = useRef<HTMLHeadingElement>(null);
   const focusNextScene = useRef(false);
   const currentPicks = useRef(picks);
   currentPicks.current = picks;
   const voiceToken = useRef(0);
-  const playPanel = useRef<HTMLDivElement>(null);
   const closeRef = useRef(onClose);
   closeRef.current = requestClose;
   const complete = picks.length === TOTAL;
@@ -71,6 +77,23 @@ export default function StoryReader({ profileId, worldId, childName, muted, redu
     return () => synth.removeEventListener('voiceschanged', update);
   }, []);
   const activeText = accessLocked ? 'Dit avontuur gaat verder in het gezinspakket. Vraag een grote avonturier om samen te kijken.' : complete ? `${ending.title}. ${ending.text}` : `${picks.length === 0 && greeting ? `${greeting} ` : ''}${scene.title}. ${scene.text}`;
+
+  useLayoutEffect(() => {
+    if (!release || !focusNextScene.current) return;
+    // The new scene, ending or access gate is already mounted. Never let an
+    // outgoing animation or a play instruction move focus back to the choices.
+    focusNextScene.current = false;
+    scrollRef.current?.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    sceneHeadingRef.current?.focus({ preventScroll: true });
+  }, [release, picks.length, accessLocked]);
+
+  useLayoutEffect(() => {
+    if (modeScrollRestore.current === null) return;
+    const top = modeScrollRestore.current;
+    modeScrollRestore.current = null;
+    scrollRef.current?.scrollTo({ top, behavior: 'instant' });
+    modeButtonRef.current?.focus({ preventScroll: true });
+  }, [playEnabled]);
 
   useEffect(() => {
     const memory = backfillStoryMemory(profileId, childName);
@@ -139,9 +162,39 @@ export default function StoryReader({ profileId, worldId, childName, muted, redu
     setDurable(saveChild(profileId, `story-${world}`, { picks: next, updatedAt: Date.now(), storyId: world, contentVersion: release.contentVersion, revision: revision.current }));
     voiceToken.current += 1; if (speechAvailable) window.speechSynthesis.cancel(); setVoiceState('idle');
     recordStoryProgress(profileId, world, next, childName);
+    setModePageMinHeight(0);
     focusNextScene.current = true;
     setPicks(next);
     if (next.length === TOTAL) onComplete(world, personalText(release.endings[next.join('')].title, childName));
+  }
+
+  function restart() {
+    if (!release || closeRequested.current || currentPicks.current.length !== TOTAL) return;
+    focusNextScene.current = true;
+    setModePageMinHeight(0);
+    setGreeting(continuityGreeting(getStoryMemory(profileId), world, childName));
+    openStoryThread(profileId, world, []);
+    currentPicks.current = [];
+    revision.current += 1;
+    setDurable(saveChild(profileId, `story-${world}`, { picks: [], updatedAt: Date.now(), storyId: world, contentVersion: release.contentVersion, revision: revision.current }));
+    voiceToken.current += 1;
+    if (speechAvailable) window.speechSynthesis.cancel();
+    setVoiceState('idle');
+    setPicks([]);
+  }
+
+  function togglePlay(button: HTMLButtonElement) {
+    const layout = scrollRef.current;
+    const page = pageRef.current;
+    if (layout && page) {
+      const pageTop = page.getBoundingClientRect().top - layout.getBoundingClientRect().top + layout.scrollTop;
+      // A shorter button list must not clamp the reader's current scroll
+      // position. Keep only the already-visible viewport, not an empty scene.
+      setModePageMinHeight(Math.max(0, Math.ceil(layout.scrollTop + layout.clientHeight - pageTop)));
+      modeScrollRestore.current = layout.scrollTop;
+    }
+    setPlayEnabled(value => !value);
+    button.focus({ preventScroll: true });
   }
 
   function readText(text: string) {
@@ -172,36 +225,38 @@ export default function StoryReader({ profileId, worldId, childName, muted, redu
 
   if (!release || releaseError) return <div className="reader-backdrop"><div className="modal" role="dialog" aria-modal="true" aria-label="Verhaal openen"><h2>{releaseError ? 'Een klein omweggetje.' : 'We leggen je verhaal klaar…'}</h2><p role="status">{releaseError || 'De tekst en de bewaarde verhaalversie worden opgehaald.'}</p><button className="account-primary" onClick={requestClose}>Terug naar de verhalen</button></div></div>;
 
-  return <motion.div className="reader-backdrop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: reducedMotion ? 0 : .22 }}>
+  return <motion.div className="reader-backdrop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: calmMotion ? 0 : .22 }}>
     <div ref={dialogRef} className={`reader-shell reader-world-${world} ${textSize === 'large' ? 'reader-large-text' : ''}`} role="dialog" aria-modal="true" aria-labelledby="reader-story-title">
       <header className="reader-topbar">
         <button className="reader-back" onClick={requestClose} aria-label="Terug naar je verhalen"><ArrowLeft size={20} /><span>Mijn verhalen</span></button>
         <div className="reader-book-title" id="reader-story-title"><BookOpen size={16} />{metadata.title}</div>
-        {canPlay && <button className="reader-mode" onClick={() => { const next = !playEnabled; setPlayEnabled(next); if (next) requestAnimationFrame(() => playPanel.current?.scrollIntoView({ behavior: reducedMotion ? 'instant' : 'smooth', block: 'start' })); }} aria-pressed={playEnabled}>{playEnabled ? 'Naar leesmodus' : 'Naar speelmodus'}</button>}
         <button className="reader-close" onClick={requestClose} aria-label="Verhaal sluiten"><X size={21} /></button>
       </header>
-      <div className={`reader-layout ${showPlay ? 'reader-has-play' : ''}`}>
-        {showPlay ? <div ref={playPanel} className="reader-play-panel"><StationPlayScene key={`${world}-${picks.length}`} step={picks.length as 0 | 1} previousChoice={picks[0]} childName={childName} muted={muted} reducedMotion={reducedMotion} onChoose={choose} onReadInstruction={readText} /></div> : <div className="reader-art">
-          <motion.img src={metadata.image} alt={metadata.imageAlt} initial={{ scale: 1.04 }} animate={{ scale: 1 }} transition={{ duration: reducedMotion ? 0 : 1.2 }} />
+      <div ref={scrollRef} className="reader-layout">
+        <div className="reader-art">
+          <motion.img src={metadata.image} alt={metadata.imageAlt} initial={{ scale: calmMotion ? 1 : 1.04 }} animate={{ scale: 1 }} transition={{ duration: calmMotion ? 0 : 1.2 }} />
           <div className="reader-art-shade" />
           <span className="reader-art-badge"><Sparkles size={15} />Dit is jouw avontuur</span>
           <div className="reader-art-caption"><span>Fabelpad presenteert</span><p>{metadata.title}</p><small>Een kleine keuze. Een wereld vol verhalen.</small></div>
-        </div>}
-        <div className="reader-page">
+        </div>
+        <div ref={pageRef} className="reader-page" style={modePageMinHeight && !accessLocked && !complete ? { minHeight: modePageMinHeight } : undefined}>
           <div className="reader-progress-row"><span>{complete ? 'Jouw avontuur is compleet' : `Deel ${picks.length + 1} van ${TOTAL}`}</span><div className="reader-progress-dots" aria-label={`${Math.min(picks.length + 1, TOTAL)} van ${TOTAL} delen`}>{Array.from({ length: TOTAL }, (_, i) => <i key={i} className={i <= picks.length ? 'is-active' : ''} />)}</div></div>
           {greeting && !complete && <div className="reader-continuity"><Sparkles size={17} /><span>{greeting}</span></div>}
-          {accessLocked ? <div className="reader-access-gate"><Sparkles size={34} /><span className="reader-eyebrow">ER WACHT NOG EEN HELE WERELD</span><h2>Samen een nieuw<br />pad ontdekken?</h2><p>{previewLimit === 1 ? 'Je eerste deel is uit. Je keuze en je plek blijven bewaard.' : 'Dit verhaal hoort bij het gezinspakket.'} Vraag een grote avonturier om samen te kijken.</p><button className="reader-primary" onClick={() => { requestClose(); onRequestParents?.(); }}>Even voor de ouders <ArrowRight size={17} /></button><button className="reader-restart" onClick={requestClose}>Terug naar de verhalen</button><small>Voorbeeld van gratis toegang · er wordt niets gekocht.</small></div> : <AnimatePresence mode="wait" initial={false}>
-            <motion.div className="reader-scene" key={picks.length} variants={{ hidden: { opacity: 0, y: reducedMotion ? 0 : 12 }, visible: { opacity: 1, y: 0 }, exit: { opacity: 0, y: reducedMotion ? 0 : -8 } }} initial="hidden" animate="visible" exit="exit" transition={{ duration: reducedMotion ? 0 : .2 }} onAnimationComplete={(definition) => { if (definition === 'visible' && focusNextScene.current) { if (showPlay) { playPanel.current?.querySelector<HTMLElement>('h3,button:not([disabled])')?.focus({ preventScroll: true }); playPanel.current?.scrollIntoView({ behavior: reducedMotion ? 'instant' : 'smooth', block: 'start' }); } else sceneHeadingRef.current?.focus(); focusNextScene.current = false; } }}>
+          {accessLocked ? <div className="reader-access-gate"><Sparkles size={34} /><span className="reader-eyebrow">ER WACHT NOG EEN HELE WERELD</span><h2 ref={sceneHeadingRef} tabIndex={-1}>Samen een nieuw<br />pad ontdekken?</h2><p>{previewLimit === 1 ? 'Je eerste deel is uit. Je keuze en je plek blijven bewaard.' : 'Dit verhaal hoort bij het gezinspakket.'} Vraag een grote avonturier om samen te kijken.</p><button className="reader-primary" onClick={() => { requestClose(); onRequestParents?.(); }}>Even voor de ouders <ArrowRight size={17} /></button><button className="reader-restart" onClick={requestClose}>Terug naar de verhalen</button><small>Voorbeeld van gratis toegang · er wordt niets gekocht.</small></div> :
+            <motion.div className="reader-scene" key={picks.length} initial={{ opacity: 0, y: calmMotion ? 0 : 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: calmMotion ? 0 : .2 }}>
               {complete && <div className="reader-ending-icon"><Check size={27} /></div>}
               <p className="reader-eyebrow">{complete ? 'Een einde dat jij hebt gekozen' : picks.length === 0 ? 'Er was eens…' : 'En toen…'}</p>
               <h2 ref={sceneHeadingRef} tabIndex={-1}>{complete ? ending.title : scene.title}</h2>
               <div className="reader-story-text">{(complete ? ending.text : scene.text).split(/\n\s*\n/u).map((paragraph, index) => <p key={index}>{paragraph}</p>)}</div>
               {complete ? <>
                 <div className="reader-keepsake"><Sparkles size={23} /><div><span>Een herinnering voor je verzameling</span><strong>{ending.keepsake}</strong></div></div>
-                <div className="reader-ending-actions"><button className="reader-primary" onClick={requestClose}>Terug naar de wereld <ArrowRight size={18} /></button><button className="reader-restart" onClick={() => { focusNextScene.current = true; setGreeting(continuityGreeting(getStoryMemory(profileId), world, childName)); openStoryThread(profileId, world, []); currentPicks.current = []; revision.current += 1; setDurable(saveChild(profileId, `story-${world}`, { picks: [], updatedAt: Date.now(), storyId: world, contentVersion: release.contentVersion, revision: revision.current })); setPicks([]); }}><RotateCcw size={17} />Een ander pad ontdekken</button></div>
-              </> : showPlay ? <div className="reader-play-hint"><Sparkles size={20} /><div><strong>Jouw keuze komt tot leven.</strong><p>Speel in de prent, of kies leesmodus om de knoppen te gebruiken.</p></div><button onClick={() => playPanel.current?.scrollIntoView({ behavior: reducedMotion ? 'instant' : 'smooth', block: 'start' })}>Naar de speelprent <ArrowRight size={16} /></button></div> : <div className="reader-choices"><p>Wat kies jij?</p>{scene.choices.map((choice, i) => { const Icon = iconMap[choice.icon]; return <motion.button key={choice.label} className="reader-choice" onClick={() => choose(i)} whileHover={reducedMotion ? undefined : { y: -3 }} whileTap={reducedMotion ? undefined : { scale: .98 }}><span className="reader-choice-icon"><Icon size={23} /></span><span><strong>{choice.label}</strong><small>{choice.hint}</small></span><ArrowRight className="reader-choice-arrow" size={20} /></motion.button>; })}</div>}
+                <div className="reader-ending-actions"><button className="reader-primary" onClick={requestClose}>Terug naar de wereld <ArrowRight size={18} /></button><button className="reader-restart" onClick={restart}><RotateCcw size={17} />Een ander pad ontdekken</button></div>
+              </> : <section className="reader-choice-section" aria-labelledby="reader-choice-title">
+                <div className="reader-choice-heading"><h3 id="reader-choice-title">Wat kies jij?</h3>{canPlay && <button ref={modeButtonRef} className="reader-mode" onClick={event => togglePlay(event.currentTarget)} aria-pressed={playEnabled}>{playEnabled ? 'Naar leesmodus' : 'Naar speelmodus'}</button>}</div>
+                {showPlay ? <div className="reader-play-panel"><StationPlayScene key={`${world}-${picks.length}`} step={picks.length as 0 | 1} previousChoice={picks[0]} childName={childName} muted={muted} reducedMotion={calmMotion} onChoose={choose} onReadInstruction={readText} /></div> : <div className="reader-choices">{scene.choices.map((choice, i) => { const Icon = iconMap[choice.icon]; return <motion.button key={choice.label} className="reader-choice" onClick={() => choose(i)} whileHover={calmMotion ? undefined : { y: -3 }} whileTap={calmMotion ? undefined : { scale: .98 }}><span className="reader-choice-icon"><Icon size={23} /></span><span><strong>{choice.label}</strong><small>{choice.hint}</small></span><ArrowRight className="reader-choice-arrow" size={20} /></motion.button>; })}</div>}
+              </section>}
             </motion.div>
-          </AnimatePresence>}
+          }
           <footer className="reader-controls"><button className={`reader-speech ${voiceState !== 'idle' ? 'is-speaking' : ''}`} disabled={!speechAvailable || muted} onClick={toggleSpeech} title={!speechAvailable ? 'Er is geen offline Nederlandse stem beschikbaar. Lees samen verder of installeer een offline stem in je apparaatinstellingen.' : muted ? 'Zet het geluid aan in het ouderhoekje om te luisteren' : undefined}>{muted ? <VolumeX size={17} /> : voiceState === 'speaking' ? <Pause size={17} /> : <Play size={17} fill="currentColor" />}<span>{!speechAvailable ? 'Lees gezellig samen' : muted ? 'Geluid staat uit' : voiceState === 'speaking' ? 'Even pauzeren' : voiceState === 'paused' ? 'Verder luisteren' : 'Lees voor'}</span></button><span className="reader-saved" role="status"><Check size={13} />{durable ? 'Je plek staat op dit apparaat' : 'Bewaren lukt niet · houd dit venster open'}</span></footer>{!speechAvailable && <p className="reader-speech-note">Voorlezen kan met een geïnstalleerde offline Nederlandse stem. Lees ondertussen gezellig samen.</p>}
         </div>
       </div>
