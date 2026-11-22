@@ -1,0 +1,85 @@
+{
+  "checkedDate": "2026-11-22",
+  "appSourceSha": "2467a47cba3f9f6aa3852b38a3749965fcb042bc",
+  "localBuild": {
+    "cleanGitArchive": true,
+    "workDirectory": "/tmp/fabelpad-privacy180-clean-20261122-16_fxsxi",
+    "nodeVersion": "24.18.0",
+    "pnpmVersion": "11.25.0",
+    "nextVersion": "16.3.4",
+    "dataMode": "local",
+    "installCommand": "pnpm install --frozen-lockfile",
+    "buildCommand": "bash scripts/local-build.sh",
+    "passed": true
+  },
+  "browserTests": {
+    "passed": 37,
+    "total": 37,
+    "suiteSeconds": 25.1,
+    "syntheticDataOnly": true,
+    "applicationBuildUnchangedFromCleanArchive": true,
+    "correctedTestFile": "tests/browser/legal.spec.ts",
+    "correctedTestFileSha256": "6ee1fb6c8a332a0e474069aee294da1cf83a900963efca39c00ff5d1271dd316",
+    "testCorrection": "Assert rendered version text and exact download link instead of a raw HTML substring split by React comment nodes. No application-code change.",
+    "temporaryServerStopped": true,
+    "realLoginOrMailPerformed": false
+  },
+  "privacyVersion": {
+    "currentPrepared": "2026-11-22.1",
+    "sha256": "c3f6186be703dda5320b70227070fea79e395eac225dbbbde0420913c57727e4",
+    "bytes": 22560,
+    "termsUnchanged": "2026-11-22",
+    "historicalFileHashes": {
+      "algemene-voorwaarden.md": "8da71baa717f1e98b393320532670b4ebbddacbd390a14dba3c4cc144b394840",
+      "privacyverklaring.md": "97673d3103443115097def26e20e6c677650dcb760d095de900ae3c5c5961cb7",
+      "manifest.json": "c90cde47311eb92c59c4fe2e84df391e3c9b0176eeac6eb2294fab4de398a82e",
+      "herroepingsformulier.txt": "69c36bd1489d82b038d590e14de8491d3c54a709fb352e53d8ecc4c419d6b79b"
+    },
+    "oldVersionRedirectAndUnknownVersion404Passed": true
+  },
+  "database": {
+    "newMigrationHashes": {
+      "20261122190748_backup_erasure_evidence_retention.sql": "b436de9753f28f90b44605c7988c1992fdea410b3688c0d5b42e1fa5c9de0977",
+      "20261122190924_privacy_backup_support_update.sql": "d362f0b8bad9074fd910d4dfd64122635c68b2a5f7723aa1359d882bfc4232a6"
+    },
+    "localUpgradeTestsPassed": true,
+    "historicalAcceptanceAndDocumentBytesPreserved": true,
+    "fixedErasureEvidenceRetentionDays": 210,
+    "longExpiryClamped": true,
+    "retriesDoNotExtendRetention": true,
+    "childProofSurvivesAccountCascade": true,
+    "applicationRoleDirectAccessDenied": true,
+    "warmPreparedFunctionRenameProbePassed": true,
+    "migrationsAppliedToHostedProjects": false,
+    "independentRestoreJournalImplemented": false,
+    "realBackupRestorePerformed": false
+  },
+  "github": {
+    "webCi": {
+      "runId": 45059786135,
+      "status": "success",
+      "sourceSha": "2467a47cba3f9f6aa3852b38a3749965fcb042bc"
+    },
+    "nativeCi": {
+      "runId": 45059786129,
+      "status": "in_progress_at_check",
+      "sourceSha": "2467a47cba3f9f6aa3852b38a3749965fcb042bc"
+    },
+    "nativeSourceChanged": false,
+    "playUploadTriggered": false
+  },
+  "liveChanges": {
+    "sshHostMutations": false,
+    "supabaseMutations": false,
+    "publicRoutingActivated": false,
+    "newAppReleaseActivated": false,
+    "existingLoopbackAppSha": "c1a9829c6580b835b9845dd672c9d89127f60c64"
+  },
+  "remainingExecution": [
+    "Release the newly versioned app and migrations through exact-SHA CI/candidate gates.",
+    "Configure the separate Resend API route safely and test real delivery.",
+    "Verify real OTP/Google/onboarding in each environment.",
+    "Enforce actual mailbox retention and provider-log criteria.",
+    "Do not restore user traffic from a backup without complete current erasure and withdrawal coverage."
+  ]
+}

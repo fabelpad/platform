@@ -46,7 +46,7 @@ test('legal pages are public, readable on a phone and match their versioned down
   await expect(page.getByRole('main')).not.toContainText('btw');
 });
 
-test('historical privacy links preserve exact old bytes and reject ambiguous versions', async ({ request }) => {
+test('historical privacy links preserve exact old bytes and reject ambiguous versions', async ({ page, request }) => {
   for (const route of ['/privacyverklaring', '/privacy']) {
     const historical = await request.get(`${route}?versie=2026-11-22`, { maxRedirects: 0 });
     expect(historical.status()).toBe(307);
@@ -58,7 +58,9 @@ test('historical privacy links preserve exact old bytes and reject ambiguous ver
     const current = await request.get(`${route}?versie=2026-11-22.1`);
     expect(current.status()).toBe(200);
     expect(current.headers()['content-type']).toContain('text/html');
-    expect(await current.text()).toContain('Versie 2026-11-22.1');
+    await page.goto(`${route}?versie=2026-11-22.1`);
+    await expect(page.getByText('Versie 2026-11-22.1', { exact: true })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Deze versie als tekst bewaren' })).toHaveAttribute('href', '/legal/2026-11-22.1/privacyverklaring.md');
     expect((await request.get(`${route}?versie=not-a-version`)).status()).toBe(404);
     expect((await request.get(`${route}?versie=2026-11-22&versie=2026-11-22.1`)).status()).toBe(404);
   }

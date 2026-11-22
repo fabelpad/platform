@@ -40,3 +40,7 @@ De AVG verlangt een bewaartermijn of bruikbare criteria per verwerking; er geldt
 - SHA-256: `c3f6186be703dda5320b70227070fea79e395eac225dbbbde0420913c57727e4`.
 - Eerdere privacyversie `2026-11-22` en voorwaardenversie `2026-11-22` blijven intact.
 - Live uitrol is afzonderlijk van deze bronwijziging; raadpleeg [de uitvoeringsstatus](STAGING-PRODUCTION-STATUS.md).
+
+## Uitgevoerde broncontrole
+
+De schone volledige lokale build van `2467a47cba3f9f6aa3852b38a3749965fcb042bc` slaagt. Alle **37 browsertests** slagen op die applicatiebuild met de gecorrigeerde DOM-versieassertie, waaronder historische redirects, exacte downloadhashes en onbekende/dubbele versievragen. De database-upgradeproeven bewaren oorspronkelijke aanvaardingen en testen de vaste 210-dagenlimiet. [Het validatiebewijs](deploy-evidence/privacy-update-validation-2026-11-22.json) onderscheidt deze broncontroles van nog niet uitgevoerde live migraties, nieuwe VPS-activatie, echte aanmelding/mail en back-upherstel. De web-CI op die bron-SHA is geslaagd; de native-CI liep bij deze laatste controle nog.
