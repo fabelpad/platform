@@ -42,6 +42,7 @@ Keys/tokens niet in chat sturen. Gebruik een afgeschermd secretpad of voer de to
 
 ## Instructies en bewijs
 
+- [Schone lokale builds en9 geslaagde browsertests](VALIDATIE-OTP-TWEE-OMGEVINGEN-2026-11-22.md): volledige normale buildroute en afzonderlijke staging-/productionconfiguratiebuilds uit commit `070a039e1de4c39fac12d79d293104a0e89c8f00` geslaagd. Dit zijn lokale builds, geen doelkandidaten of mailacceptatie.
 - [Gegevensbronnen en vier GitHub-variabelen](INRICHTING.md)
 - [Mailconfiguratie per account, verborgen terminalinvoer](EMAIL-CONFIGURATIE.md)
 - [HTML-templates en Supabase-schermvolgorde](EMAIL-TEMPLATES.md)

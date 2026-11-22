@@ -63,6 +63,8 @@ bash scripts/local-build.sh
 
 Een lokale productiebundel is geen kandidaat op de doel-VPS. Pas wanneer de doelrunner, exacte main-SHA met geslaagde vereiste CI, veilige doelconfiguratie en capaciteit beschikbaar zijn, kan de afzonderlijke kandidaatworkflow bouwen. De buildroute activeert geen app.
 
+De daadwerkelijk uitgevoerde schone lokale builds van22november en9 geslaagde browserscenario's zijn vastgelegd in [het verificatieverslag](VALIDATIE-OTP-TWEE-OMGEVINGEN-2026-11-22.md), inclusief exacte bron-SHA en grenzen van de provider-/doelacceptatie.
+
 ## Native Android
 
 De eerste native productieversie is **Fabelpad 1.0.0 (1), `nl.fabelpad.app`**, gratis en lokaal zonder accounts of abonnementen. Deze webdeployopdracht verandert die scope niet. Volg voor Android het [Play-runbook](GOOGLE-PLAY-RELEASE-RUNBOOK.md), het [productie-invulblad](GOOGLE-PLAY-INVULBLAD-PRODUCTIE.md) en het [buildbewijs](ANDROID-PRODUCTIE-VALIDATIE.md). Historische demoresultaten in `mobile/VALIDATIE.md` zijn geen actuele productiestatus.
