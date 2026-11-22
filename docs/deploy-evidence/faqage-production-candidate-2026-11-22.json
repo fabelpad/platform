@@ -1,0 +1,308 @@
+{
+  "checkedAt": "2026-11-22T22:16:24.512251+00:00",
+  "phase": "candidate",
+  "expectedSha": "d2d8d3e3667d636ad6352bf8c6dca0108e7d2fd9",
+  "hostname": "dg-vps-08",
+  "machineId": "05db94b99eca4c3d815f6585ef8ed517",
+  "scope": "read-only artifact/configuration ownership and loopback process liveness; no login/mail/public-routing proof",
+  "hostWritesPerformed": false,
+  "credentialFilesRead": false,
+  "configurationValuesLogged": false,
+  "targets": {
+    "production": {
+      "id": "d2d8d3e3667d636ad6352bf8c6dca0108e7d2fd9-45076551688-1",
+      "checks": {
+        "profileIdentity": true,
+        "allTrustedAdapterHashes": true,
+        "buildFileOwnershipAndRoleAccess": true,
+        "runtimeSourceFileOwnershipAndRoleAccess": true,
+        "previousHealthyReleasePreserved": true,
+        "candidateNotActivated": true,
+        "candidateTreeOwnershipAndModes": true,
+        "candidateTreeRoleAccess": true,
+        "installedContractFullArtifactAndConfigValidation": true,
+        "serviceIdentity": true,
+        "previousAppStillActive": true,
+        "previousHealthPreserved": true,
+        "candidateProtection": true,
+        "candidateManifestProtection": true
+      },
+      "configurationFiles": {
+        "build": {
+          "metadata": {
+            "exists": true,
+            "uid": 0,
+            "gid": 979,
+            "mode": "0o640",
+            "file": true,
+            "directory": false,
+            "symlink": false,
+            "links": 1
+          },
+          "trustedRootChain": true,
+          "expectedRootAppMode": true,
+          "roles": {
+            "runner": {
+              "read": false,
+              "write": false
+            },
+            "build": {
+              "read": true,
+              "write": false
+            },
+            "app": {
+              "read": false,
+              "write": false
+            }
+          }
+        },
+        "runtimeSource": {
+          "metadata": {
+            "exists": true,
+            "uid": 0,
+            "gid": 978,
+            "mode": "0o640",
+            "file": true,
+            "directory": false,
+            "symlink": false,
+            "links": 1
+          },
+          "trustedRootChain": true,
+          "expectedRootAppMode": true,
+          "roles": {
+            "runner": {
+              "read": false,
+              "write": false
+            },
+            "build": {
+              "read": false,
+              "write": false
+            },
+            "app": {
+              "read": true,
+              "write": false
+            }
+          }
+        }
+      },
+      "roleAccess": {
+        "candidate": {
+          "runner": {
+            "read": false,
+            "write": false
+          },
+          "build": {
+            "read": false,
+            "write": false
+          },
+          "app": {
+            "read": true,
+            "write": false
+          }
+        }
+      },
+      "artifactMetadata": {
+        "candidate": {
+          "directories": 3741,
+          "files": 19535,
+          "symlinks": 209,
+          "ownershipViolations": 0,
+          "writeOrSpecialModeViolations": 0,
+          "specialOrHardlinkViolations": 0
+        }
+      },
+      "profileTrusted": true,
+      "adapterHashesMatch": {
+        "release-contract.mjs": true,
+        "host-runtime.mjs": true,
+        "candidate-build.sh": true,
+        "candidate-build.mjs": true,
+        "candidate-worker.mjs": true,
+        "locked-operation.mjs": true,
+        "activate.mjs": true,
+        "rollback.mjs": true,
+        "release-actions.mjs": true,
+        "verify-release-sha.mjs": true,
+        "seal-artifact.py": true,
+        "bounded-operation.py": true
+      },
+      "configId": "faqage-20261122-prd",
+      "manifest": {
+        "id": "d2d8d3e3667d636ad6352bf8c6dca0108e7d2fd9-45076551688-1",
+        "sha": "d2d8d3e3667d636ad6352bf8c6dca0108e7d2fd9",
+        "siteId": "fabelpad-vps08-production",
+        "environment": "production",
+        "configId": "faqage-20261122-prd",
+        "buildConfigDigest": "ff7a65cc96d14e0cbafe45ebc5d50a4272576db33fde27eeacf94737fb748f9d",
+        "artifactDigest": "3148588bb854850dd82b8ce337156a8477a85f9cfa95dacefbb773d734032baa",
+        "ciRunId": "45075010480",
+        "ciRunAttempt": "1",
+        "ciJobId": "137370204532",
+        "workflowSha": "d2d8d3e3667d636ad6352bf8c6dca0108e7d2fd9",
+        "workflowJobId": 137375029921,
+        "builtAt": "2026-11-22T22:15:21.474Z",
+        "sealedAt": "2026-11-22T22:15:30.871Z"
+      },
+      "candidateProtection": {
+        "metadata": {
+          "exists": true,
+          "uid": 0,
+          "gid": 978,
+          "mode": "0o750",
+          "file": false,
+          "directory": true,
+          "symlink": false,
+          "links": 3
+        },
+        "trustedRootChain": true,
+        "expectedRootAppMode": true
+      },
+      "candidateManifestProtection": {
+        "metadata": {
+          "exists": true,
+          "uid": 0,
+          "gid": 978,
+          "mode": "0o640",
+          "file": true,
+          "directory": false,
+          "symlink": false,
+          "links": 1
+        },
+        "trustedRootChain": true,
+        "expectedRootAppMode": true
+      },
+      "current": {
+        "metadata": {
+          "exists": true,
+          "uid": 0,
+          "gid": 0,
+          "mode": "0o777",
+          "file": false,
+          "directory": false,
+          "symlink": true,
+          "links": 1
+        },
+        "target": "/srv/sites/fabelpad-vps08-production/releases/003670aad04ecdf761b21627d8624dea50403ae5-45072710965-1"
+      },
+      "previous": {
+        "metadata": {
+          "exists": true,
+          "uid": 0,
+          "gid": 0,
+          "mode": "0o777",
+          "file": false,
+          "directory": false,
+          "symlink": true,
+          "links": 1
+        },
+        "target": "releases/538c6b719e372f4dca99cfa2bc824cbf6310f5c1-45062081153-1"
+      },
+      "installedContract": {
+        "ok": true,
+        "candidateManifestValid": true,
+        "buildConfigurationMatchesManifest": true,
+        "sourceRuntimeMatchesBuildAndTarget": true,
+        "candidateArtifactMatchesManifest": true,
+        "artifactDigest": "3148588bb854850dd82b8ce337156a8477a85f9cfa95dacefbb773d734032baa"
+      },
+      "service": {
+        "MainPID": "437056",
+        "EnvironmentFiles": "/srv/sites/fabelpad-vps08-production/current/runtime.env (ignore_errors=no)",
+        "WorkingDirectory": "/srv/sites/fabelpad-vps08-production/current/artifact",
+        "User": "app-fab-v08-prd",
+        "Group": "app-fab-v08-prd",
+        "LoadState": "loaded",
+        "ActiveState": "active",
+        "SubState": "running",
+        "FragmentPath": "/etc/systemd/system/fabelpad-vps08-production.service",
+        "UnitFileState": "enabled",
+        "ActiveEnterTimestamp": "Sun 2026-11-22 22:35:43 CET"
+      },
+      "previousHealth": {
+        "status": 200,
+        "revision": "003670aad04ecdf761b21627d8624dea50403ae5",
+        "environment": "production"
+      }
+    }
+  },
+  "existingServices": {
+    "caddy.service": {
+      "matchesBaseline": true,
+      "MainPID": "4564",
+      "ActiveState": "active",
+      "SubState": "running",
+      "FragmentPath": "/usr/lib/systemd/system/caddy.service",
+      "ActiveEnterTimestamp": "Fri 2026-11-20 18:03:07 CET"
+    },
+    "ssh.service": {
+      "matchesBaseline": true,
+      "MainPID": "1016",
+      "ActiveState": "active",
+      "SubState": "running",
+      "FragmentPath": "/usr/lib/systemd/system/ssh.service",
+      "ActiveEnterTimestamp": "Fri 2026-11-20 16:31:24 CET"
+    },
+    "tailscaled.service": {
+      "matchesBaseline": true,
+      "MainPID": "1876",
+      "ActiveState": "active",
+      "SubState": "running",
+      "FragmentPath": "/usr/lib/systemd/system/tailscaled.service",
+      "ActiveEnterTimestamp": "Fri 2026-11-20 16:50:13 CET"
+    },
+    "castiq-staging-runner.service": {
+      "matchesBaseline": true,
+      "MainPID": "29204",
+      "ActiveState": "active",
+      "SubState": "running",
+      "FragmentPath": "/etc/systemd/system/castiq-staging-runner.service",
+      "ActiveEnterTimestamp": "Fri 2026-11-20 19:37:42 CET"
+    },
+    "castiq-staging.service": {
+      "matchesBaseline": true,
+      "MainPID": "0",
+      "ActiveState": "inactive",
+      "SubState": "dead",
+      "FragmentPath": "/etc/systemd/system/castiq-staging.service",
+      "ActiveEnterTimestamp": ""
+    },
+    "castiq-staging-worker.service": {
+      "matchesBaseline": true,
+      "MainPID": "0",
+      "ActiveState": "inactive",
+      "SubState": "dead",
+      "FragmentPath": "/etc/systemd/system/castiq-staging-worker.service",
+      "ActiveEnterTimestamp": ""
+    }
+  },
+  "existingConfigurationHashes": {
+    "/etc/caddy/Caddyfile": {
+      "sha256": "3acfe7107fb2f3ec21e3c0292daf2725be21b79c707a41394c848b1ee3aeefab",
+      "matchesBaseline": true
+    },
+    "/etc/ssh/sshd_config": {
+      "sha256": "64325541513d33ea1d2ccd19c77750d458e67e7967fd2e7ef81d92f0aa2ffe21",
+      "matchesBaseline": true
+    },
+    "/etc/systemd/system/castiq-staging-runner.service": {
+      "sha256": "891f77c9d835118ad9825bd64c9e11d79a1256cffaac7702a20a2c5e80965df1",
+      "matchesBaseline": true
+    },
+    "/etc/systemd/system/castiq-staging-worker.service": {
+      "sha256": "b1bfc083595033f5683969fb7ea1ce38feec3a4b9e2505228ca19b6216a9b181",
+      "matchesBaseline": true
+    },
+    "/etc/systemd/system/castiq-staging.service": {
+      "sha256": "a16d927eb7f9c765d4fda52b0e6de8869613a71f1589ec44adf87411adb00dca",
+      "matchesBaseline": true
+    },
+    "/etc/tmpfiles.d/castiq-staging-build-lock.conf": {
+      "sha256": "fab97967efd29ab9828124b84c648a757911bc602d6420289f81ea88196057cb",
+      "matchesBaseline": true
+    }
+  },
+  "failures": [],
+  "warnings": [],
+  "passed": true,
+  "completedAt": "2026-11-22T22:16:26.002393+00:00"
+}

@@ -1,0 +1,30 @@
+{
+  "checkedAt": "2026-11-22T22:18:04.908319+00:00",
+  "readOnly": true,
+  "paths": {
+    "/etc/caddy/Caddyfile": {
+      "sha256": "3acfe7107fb2f3ec21e3c0292daf2725be21b79c707a41394c848b1ee3aeefab"
+    },
+    "/etc/caddy/sites/fabelpad-vps08-staging.caddy": {
+      "sha256": "ba6facd1a010dab378eeb170cbaf26b2969c38f4fbfd735269a873280d039acb"
+    }
+  },
+  "defaultHttp": {
+    "fabelpad.nl": {
+      "status": 200,
+      "bodySha256": "cceac34b8028aaf370ad368ce255280b3e14981c523a8459a51822fc795bba47"
+    },
+    "dg-unconfigured-host.invalid": {
+      "status": 200,
+      "bodySha256": "cceac34b8028aaf370ad368ce255280b3e14981c523a8459a51822fc795bba47"
+    }
+  },
+  "productionPublicRouteAbsent": true,
+  "checks": {
+    "baseCaddyUnchanged": true,
+    "stagingCaddyUnchanged": true,
+    "productionPublicRouteAbsent": true,
+    "existingDefaultHostsUnchanged": true
+  },
+  "passed": true
+}

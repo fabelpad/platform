@@ -1,0 +1,22 @@
+{
+  "checkedAt": "2026-11-22T22:00:20.915045+00:00",
+  "applicationSha": "d2d8d3e3667d636ad6352bf8c6dca0108e7d2fd9",
+  "scope": "Audience labels removed from marketing and reader UI; approximate age guidance only in FAQ",
+  "cleanGitArchive": true,
+  "cleanDirectory": "/tmp/fabelpad-faqage-clean-20261122-ci3paqde",
+  "install": "pnpm install --frozen-lockfile",
+  "build": "bash scripts/local-build.sh",
+  "node": "24.18.0",
+  "pnpm": "11.25.0",
+  "next": "16.3.4",
+  "dataMode": "local",
+  "buildPassed": true,
+  "buildSeconds": 41.4,
+  "targetedBrowserChecksPassed": 39,
+  "temporaryServerStopped": true,
+  "newPersistentTestsAdded": false,
+  "buildLogSha256": "e3de0acf404014380681cc50f7edfe184a96843a318da447d6b03037a3b07949",
+  "nativeSourceChanged": false,
+  "databaseOrLegalDocumentVersionChanged": false,
+  "realAuthOrMailPerformed": false
+}

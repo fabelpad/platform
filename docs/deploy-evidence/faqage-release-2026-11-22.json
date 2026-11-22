@@ -1,0 +1,175 @@
+{
+  "checkedAt": "2026-11-22T22:18:14.727702+00:00",
+  "repository": "fabelpad/platform",
+  "integrationBranch": "main",
+  "applicationSha": "d2d8d3e3667d636ad6352bf8c6dca0108e7d2fd9",
+  "scope": "Remove audience age labels from marketing and reader; approximate audience ages only in FAQ. No account, native release, database or legal-version change.",
+  "faqAnswer": "Fabelpad is bedoeld voor kinderen van ongeveer 3 tot 10 jaar.",
+  "sourceFiles": [
+    "src/App.tsx",
+    "src/MarketingSite.tsx",
+    "README.md",
+    "docs/GOOGLE-PLAY-INVULBLAD-PRODUCTIE.md",
+    "docs/GOOGLE-PLAY-RELEASE-RUNBOOK.md"
+  ],
+  "githubRuns": {
+    "webCi": {
+      "conclusion": "success",
+      "createdAt": "2026-11-22T21:58:08Z",
+      "databaseId": 45075010480,
+      "event": "push",
+      "headSha": "d2d8d3e3667d636ad6352bf8c6dca0108e7d2fd9",
+      "status": "completed",
+      "updatedAt": "2026-11-22T21:59:40Z",
+      "url": "https://github.com/fabelpad/platform/actions/runs/45075010480"
+    },
+    "nativeCi": {
+      "conclusion": "success",
+      "createdAt": "2026-11-22T21:58:08Z",
+      "databaseId": 45075010469,
+      "event": "push",
+      "headSha": "d2d8d3e3667d636ad6352bf8c6dca0108e7d2fd9",
+      "status": "completed",
+      "updatedAt": "2026-11-22T22:11:21Z",
+      "url": "https://github.com/fabelpad/platform/actions/runs/45075010469"
+    },
+    "stagingCandidate": {
+      "conclusion": "success",
+      "createdAt": "2026-11-22T22:11:44Z",
+      "databaseId": 45076337234,
+      "event": "workflow_dispatch",
+      "headSha": "d2d8d3e3667d636ad6352bf8c6dca0108e7d2fd9",
+      "status": "completed",
+      "updatedAt": "2026-11-22T22:13:23Z",
+      "url": "https://github.com/fabelpad/platform/actions/runs/45076337234"
+    },
+    "productionCandidate": {
+      "conclusion": "success",
+      "createdAt": "2026-11-22T22:14:00Z",
+      "databaseId": 45076551688,
+      "event": "workflow_dispatch",
+      "headSha": "d2d8d3e3667d636ad6352bf8c6dca0108e7d2fd9",
+      "status": "completed",
+      "updatedAt": "2026-11-22T22:15:35Z",
+      "url": "https://github.com/fabelpad/platform/actions/runs/45076551688"
+    },
+    "stagingActivation": {
+      "conclusion": "success",
+      "createdAt": "2026-11-22T22:14:11Z",
+      "databaseId": 45076570283,
+      "event": "workflow_dispatch",
+      "headSha": "d2d8d3e3667d636ad6352bf8c6dca0108e7d2fd9",
+      "status": "completed",
+      "updatedAt": "2026-11-22T22:15:04Z",
+      "url": "https://github.com/fabelpad/platform/actions/runs/45076570283"
+    },
+    "productionActivation": {
+      "conclusion": "success",
+      "createdAt": "2026-11-22T22:16:44Z",
+      "databaseId": 45076812862,
+      "event": "workflow_dispatch",
+      "headSha": "d2d8d3e3667d636ad6352bf8c6dca0108e7d2fd9",
+      "status": "completed",
+      "updatedAt": "2026-11-22T22:17:44Z",
+      "url": "https://github.com/fabelpad/platform/actions/runs/45076812862"
+    }
+  },
+  "localValidation": {
+    "checkedAt": "2026-11-22T22:00:20.915045+00:00",
+    "applicationSha": "d2d8d3e3667d636ad6352bf8c6dca0108e7d2fd9",
+    "scope": "Audience labels removed from marketing and reader UI; approximate age guidance only in FAQ",
+    "cleanGitArchive": true,
+    "cleanDirectory": "/tmp/fabelpad-faqage-clean-20261122-ci3paqde",
+    "install": "pnpm install --frozen-lockfile",
+    "build": "bash scripts/local-build.sh",
+    "node": "24.18.0",
+    "pnpm": "11.25.0",
+    "next": "16.3.4",
+    "dataMode": "local",
+    "buildPassed": true,
+    "buildSeconds": 41.4,
+    "targetedBrowserChecksPassed": 39,
+    "temporaryServerStopped": true,
+    "newPersistentTestsAdded": false,
+    "buildLogSha256": "e3de0acf404014380681cc50f7edfe184a96843a318da447d6b03037a3b07949",
+    "nativeSourceChanged": false,
+    "databaseOrLegalDocumentVersionChanged": false,
+    "realAuthOrMailPerformed": false
+  },
+  "environments": {
+    "staging": {
+      "candidateId": "d2d8d3e3667d636ad6352bf8c6dca0108e7d2fd9-45076337234-1",
+      "configId": "faqage-20261122-stg",
+      "artifactDigest": "ade4ec285f8516f8a9d940d9362d2594bef9302d558b7d59a79a4933a98776f0",
+      "runtimeConfigDigest": "7dd2c4c5f1f76082b3fbd09c49949cd8e0db3da9a89fb914a8c59595fae2c833",
+      "serviceActive": true,
+      "serviceEnabled": true,
+      "healthExactSha": true,
+      "current": "/srv/sites/fabelpad-vps08-staging/releases/d2d8d3e3667d636ad6352bf8c6dca0108e7d2fd9-45076337234-1",
+      "previous": "releases/003670aad04ecdf761b21627d8624dea50403ae5-45072508682-1",
+      "loopbackPort": 4188,
+      "publiclyActive": true
+    },
+    "production": {
+      "candidateId": "d2d8d3e3667d636ad6352bf8c6dca0108e7d2fd9-45076551688-1",
+      "configId": "faqage-20261122-prd",
+      "artifactDigest": "3148588bb854850dd82b8ce337156a8477a85f9cfa95dacefbb773d734032baa",
+      "runtimeConfigDigest": "6213c814ba2f2c052df9952dd8851410dd8e956e118c128c16038a8eb67f30d5",
+      "serviceActive": true,
+      "serviceEnabled": true,
+      "healthExactSha": true,
+      "current": "/srv/sites/fabelpad-vps08-production/releases/d2d8d3e3667d636ad6352bf8c6dca0108e7d2fd9-45076551688-1",
+      "previous": "releases/003670aad04ecdf761b21627d8624dea50403ae5-45072710965-1",
+      "loopbackPort": 4189,
+      "publiclyActive": false
+    }
+  },
+  "publicStaging": {
+    "httpTlsChecksPassed": 23,
+    "targetedBrowserChecksPassed": 39,
+    "readOnly": true,
+    "realAuthOrMailPerformed": false
+  },
+  "existingEnvironmentPreservation": {
+    "sixExistingServicesMatchBaseline": true,
+    "sharedConfigurationHashesMatchBaseline": true,
+    "productionPublicRouteRemainsAbsent": true,
+    "stagingProxyUnchanged": true,
+    "defaultHostsUnchanged": true,
+    "dnsFirewallSharedSshPackagesChanged": false,
+    "hostAdaptersChanged": false,
+    "databaseChangesPerformed": false
+  },
+  "configuration": {
+    "githubVariableNamesUnchanged": [
+      "FABELPAD_APP_ORIGIN",
+      "FABELPAD_DATA_MODE",
+      "NEXT_PUBLIC_SUPABASE_URL",
+      "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY"
+    ],
+    "newSecretsAdded": false
+  },
+  "rollback": {
+    "previousAppSha": "003670aad04ecdf761b21627d8624dea50403ae5",
+    "appAndRuntimePaired": true,
+    "liveRollbackPerformed": false,
+    "oldAgeLabelsWouldReturn": true
+  },
+  "androidAndStore": {
+    "nativeSourceChanged": false,
+    "signedBundleOrPlayUploadTriggered": false,
+    "playConsoleChanged": false,
+    "storeArtworkInstruction": "No audience age labels in images or promotional copy; mandatory Console age-group declarations remain separate."
+  },
+  "evidenceFiles": [
+    "faqage-activated-2026-11-22.json",
+    "faqage-host-before-2026-11-22.json",
+    "faqage-local-browser-2026-11-22.json",
+    "faqage-local-validation-2026-11-22.json",
+    "faqage-production-candidate-2026-11-22.json",
+    "faqage-routing-2026-11-22.json",
+    "faqage-staging-browser-2026-11-22.json",
+    "faqage-staging-candidate-2026-11-22.json",
+    "faqage-staging-public-2026-11-22.json"
+  ]
+}
