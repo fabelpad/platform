@@ -110,10 +110,15 @@ test('deletion shows family impact, requires fresh authentication and purges onl
   await session(page);
   let fresh = false;
   await page.addInitScript(id => { localStorage.setItem(`fabelpad-scope-${encodeURIComponent(`parent:${id}`)}::fabelpad-family`, 'synthetic-current'); localStorage.setItem('fabelpad-scope-other::fabelpad-family', 'synthetic-other'); }, parent.id);
-  await page.route('**/api/parent/deletion', route => fresh ? route.fulfill({ json: { status: { ...active, state: 'deletion_pending', deletionDeadline: '2026-12-22T12:00:00Z' } } }) : route.fulfill({ status: 428, json: { error: 'fresh_auth_required', message: 'Bevestig opnieuw dat jij het bent.' } }));
+  await page.route('**/api/parent/deletion', route => {
+    if (route.request().method() === 'GET') return route.fulfill({ json: { deletionDeadlineMinute: '2026-12-22T12:00:00Z', expiresAt: '2026-11-22T12:01:00Z' } });
+    expect(route.request().postDataJSON()).toEqual({ confirm: true, expectedDeadlineMinute: '2026-12-22T12:00:00Z' });
+    return fresh ? route.fulfill({ json: { status: { ...active, state: 'deletion_pending', deletionDeadline: '2026-12-22T12:00:00Z' } } }) : route.fulfill({ status: 428, json: { error: 'fresh_auth_required', message: 'Bevestig opnieuw dat jij het bent.' } });
+  });
   await page.goto('/profiel/account');
   await page.getByRole('button', { name: 'Account verwijderen', exact: true }).click();
   await expect(page.getByText('Alle online kinderprofielen, verhaalkeuzes, favorieten en leesvoortgang van dit gezin worden geraakt.', { exact: false })).toBeVisible();
+  await expect(page.getByText('Als je nu bevestigt, kun je het account alleen herstellen tot', { exact: false })).toContainText('22 december 2026 om 13:00 (Nederlandse tijd)');
   const confirm = page.getByRole('button', { name: 'Bevestig account verwijderen' });
   await expect(confirm).toBeDisabled();
   await page.getByRole('checkbox').check();
@@ -124,6 +129,53 @@ test('deletion shows family impact, requires fresh authentication and purges onl
   await expect(page.getByText('De definitieve verwijderdeadline is', { exact: false })).toBeVisible();
   expect(await page.evaluate(id => localStorage.getItem(`fabelpad-scope-${encodeURIComponent(`parent:${id}`)}::fabelpad-family`), parent.id)).toBeNull();
   expect(await page.evaluate(() => localStorage.getItem('fabelpad-scope-other::fabelpad-family'))).toBe('synthetic-other');
+});
+
+test('deletion waits for an exact server preview and a changed minute requires a new explicit confirmation', async ({ page }) => {
+  await session(page);
+  let releasePreview: (() => void) | undefined;
+  let previews = 0, submissions = 0;
+  const submittedMinutes: string[] = [];
+  await page.route('**/api/parent/deletion', async route => {
+    if (route.request().method() === 'GET') {
+      previews++;
+      if (previews === 1) await new Promise<void>(resolve => { releasePreview = resolve; });
+      return route.fulfill({ json: { deletionDeadlineMinute: previews === 1 ? '2026-12-22T12:00:00Z' : '2026-12-22T12:01:00Z' } });
+    }
+    submissions++; submittedMinutes.push(route.request().postDataJSON().expectedDeadlineMinute);
+    return submissions === 1 ? route.fulfill({ status: 409, json: { error: 'deletion_preview_expired', message: 'De getoonde minuut is verlopen.' } }) : route.fulfill({ json: { status: { ...active, state: 'deletion_pending', deletionDeadline: '2026-12-22T12:01:37Z' } } });
+  });
+  await page.goto('/profiel/account');
+  await page.getByRole('button', { name: 'Account verwijderen', exact: true }).click();
+  const confirm = page.getByRole('button', { name: 'Bevestig account verwijderen' });
+  await expect(page.getByRole('checkbox')).toBeDisabled(); await expect(confirm).toBeDisabled();
+  expect(submissions).toBe(0);
+  await expect.poll(() => !!releasePreview).toBeTruthy(); releasePreview!();
+  const preview = page.getByText('Als je nu bevestigt, kun je het account alleen herstellen tot', { exact: false });
+  await expect(preview).toContainText('22 december 2026 om 13:00 (Nederlandse tijd)');
+  await page.getByRole('checkbox').check(); await confirm.click();
+  await expect(preview).toContainText('22 december 2026 om 13:01 (Nederlandse tijd)');
+  await expect(page.getByRole('checkbox')).not.toBeChecked(); await expect(confirm).toBeDisabled();
+  await expect(page.getByText('Er is nog geen verwijderaanvraag vastgelegd.', { exact: false })).toBeVisible();
+  expect(submissions).toBe(1);
+  await page.getByRole('checkbox').check(); await confirm.click();
+  await expect(page.getByText('De definitieve verwijderdeadline is', { exact: false })).toBeVisible();
+  expect(submittedMinutes).toEqual(['2026-12-22T12:00:00Z', '2026-12-22T12:01:00Z']);
+});
+
+test('a preview requiring fresh authentication cannot confirm or submit a deletion', async ({ page }) => {
+  await session(page);
+  let submissions = 0;
+  await page.route('**/api/parent/deletion', route => {
+    if (route.request().method() !== 'GET') submissions++;
+    return route.fulfill({ status: 428, json: { error: 'fresh_auth_required', message: 'Log opnieuw in om de datum te bekijken.' } });
+  });
+  await page.goto('/profiel/account');
+  await page.getByRole('button', { name: 'Account verwijderen', exact: true }).click();
+  await expect(page.getByRole('link', { name: 'Bevestig opnieuw met e-mailcode of Google' })).toBeVisible();
+  await expect(page.getByRole('checkbox')).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Bevestig account verwijderen' })).toBeDisabled();
+  expect(submissions).toBe(0);
 });
 
 test('fresh authentication screen stays available to an existing signed-in parent', async ({ page }) => {

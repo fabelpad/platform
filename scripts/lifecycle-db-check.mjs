@@ -7,6 +7,7 @@ const {pgcrypto}=await import('@electric-sql/pglite/contrib/pgcrypto');
 const db=new PGlite({extensions:{pgcrypto}});
 const A='11111111-1111-4111-8111-111111111111', B='22222222-2222-4222-8222-222222222222', ADMIN='33333333-3333-4333-8333-333333333333', LEGACY='44444444-4444-4444-8444-444444444444', ABORTED='55555555-5555-4555-8555-555555555555';
 const SESSION='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+const PREVIEW='66666666-6666-4666-8666-666666666666';
 let clock='2026-11-22T12:00:00.000Z';let id=0;
 const event=()=>`bbbbbbbb-bbbb-4bbb-8bbb-${String(++id).padStart(12,'0')}`;
 const fixture=(ids=['child-a'])=>({schemaVersion:1,family:{version:1,children:ids.map((id,i)=>({id,name:'Bijnaam',avatar:i%4})),activeId:ids[0]??''},data:Object.fromEntries(ids.map(id=>[id,{favorites:['station'],prefs:{muted:false,calm:true}}]))});
@@ -40,6 +41,45 @@ try{
  await tick(clock);
  await db.query("insert into auth.users(id,email,email_confirmed_at) values($1,'a@example.test',now()),($2,'b@example.test',now()),($3,'admin@example.test',now()),($4,'aborted@example.test',now())",[A,B,ADMIN,ABORTED]);
  await db.query('insert into public.content_admins(user_id) values($1)',[ADMIN]);
+ // A deadline shown before confirmation must be the minute that is actually
+ // committed. Exercise the new app RPC separately from legacy zero-arg calls.
+ await db.query("insert into auth.users(id,email,email_confirmed_at) values($1,'preview@example.test',now())",[PREVIEW]);
+ await db.query('delete from private.account_lifecycle where parent_id=$1',[PREVIEW]);
+ await identity(PREVIEW);await denied('preview_account_deletion');
+ await owner();assert.equal((await db.query('select count(*)::int n from private.account_lifecycle where parent_id=$1',[PREVIEW])).rows[0].n,0,'Preview cannot provision an absent lifecycle');
+ await db.query('insert into private.account_lifecycle(parent_id) values($1)',[PREVIEW]);
+ await identity(PREVIEW);await denied('preview_account_deletion');await onboard();
+ await identity(PREVIEW,{fresh:false});await denied('preview_account_deletion',[],'28000');await denied('request_account_deletion',['2026-12-22T12:00:00Z'],'28000');
+ await owner();await db.query('delete from auth.sessions where user_id=$1',[PREVIEW]);await identity(PREVIEW,{session:false});await denied('preview_account_deletion');
+ await owner();await db.query("update private.account_lifecycle set terms_version='old-fixture' where parent_id=$1",[PREVIEW]);await identity(PREVIEW);await denied('preview_account_deletion');await owner();await db.query("update private.account_lifecycle set terms_version='2026-11-22' where parent_id=$1",[PREVIEW]);
+ await tick('2026-11-22T12:00:59.900Z');await identity(PREVIEW);
+ // Include a pending warning so a failed confirmation proves cancellation is
+ // rolled back together with the account, outbox insert and revoked sessions.
+ await owner();await db.query("insert into private.lifecycle_outbox(parent_id,kind,dedupe_key) values($1,'inactivity_14','preview-test-warning')",[PREVIEW]);
+ const previewRows=async()=>{await owner();return(await db.query(`select jsonb_build_object(
+  'account',(select to_jsonb(l) from private.account_lifecycle l where parent_id=$1),
+  'acceptances',(select coalesce(jsonb_agg(to_jsonb(a) order by accepted_at),'[]') from private.parent_acceptances a where parent_id=$1),
+  'activity',(select coalesce(jsonb_agg(to_jsonb(a) order by received_at),'[]') from private.family_activity_events a where parent_id=$1),
+  'outbox',(select coalesce(jsonb_agg(to_jsonb(o) order by id),'[]') from private.lifecycle_outbox o where parent_id=$1),
+  'sessions',(select coalesce(jsonb_agg(to_jsonb(s) order by id),'[]') from auth.sessions s where user_id=$1)) as result`,[PREVIEW])).rows[0].result;};
+ let beforePreview=await previewRows();await identity(PREVIEW);const deadlinePreview=await rpc('preview_account_deletion');
+ assert.equal(Date.parse(deadlinePreview.deletionDeadlineMinute),Date.parse('2026-12-22T12:00:00Z'));assert.equal(Date.parse(deadlinePreview.expiresAt),Date.parse('2026-11-22T12:01:00Z'));
+ assert.deepEqual(await previewRows(),beforePreview,'Preview writes no lifecycle, acceptance, activity, outbox or session data');
+ for(const invalid of [null,'infinity','-infinity','2026-12-22T12:00:00.001Z']){await identity(PREVIEW);await assert.rejects(rpc('request_account_deletion',[invalid]),e=>e.code==='P0001'&&e.message==='deletion_preview_expired');}
+ await tick('2026-11-22T12:01:00.000Z');await identity(PREVIEW);beforePreview=await previewRows();await identity(PREVIEW);
+ await assert.rejects(rpc('request_account_deletion',[deadlinePreview.deletionDeadlineMinute]),e=>e.code==='P0001'&&e.message==='deletion_preview_expired');
+ assert.deepEqual(await previewRows(),beforePreview,'Minute rollover atomically rolls back session revocation, warning cancellation, outbox and lifecycle writes');
+ await identity(PREVIEW);const refreshedPreview=await rpc('preview_account_deletion');
+ await tick('2026-11-22T12:01:31.987Z');await identity(PREVIEW);const previewDeletion=await rpc('request_account_deletion',[refreshedPreview.deletionDeadlineMinute]);
+ assert.equal(Date.parse(previewDeletion.deletionDeadline)-Date.parse(clock),30*86400000,'Stored deadline retains exact 30-day duration and sub-minute precision');
+ await denied('get_account_lifecycle');await owner();assert.equal((await db.query('select count(*)::int n from auth.sessions where user_id=$1',[PREVIEW])).rows[0].n,0,'Successful guarded request revokes current sessions');
+ await tick('2026-11-23T12:01:31.987Z');await identity(PREVIEW);beforePreview=await previewRows();await identity(PREVIEW);const pendingPreview=await rpc('preview_account_deletion');
+ assert.equal(pendingPreview.expiresAt,null);assert.equal(pendingPreview.deletionDeadlineMinute,refreshedPreview.deletionDeadlineMinute);assert.deepEqual(await previewRows(),beforePreview,'Pending preview is read-only and preserves the first deadline');
+ await identity(PREVIEW);await assert.rejects(rpc('request_account_deletion',['2026-12-23T12:01:00Z']),e=>e.code==='P0001'&&e.message==='deletion_preview_expired');
+ assert.deepEqual(await previewRows(),beforePreview,'A duplicate with a different deadline cannot change the original request');
+ await identity(PREVIEW);assert.equal((await rpc('request_account_deletion',[pendingPreview.deletionDeadlineMinute])).deletionDeadline,previewDeletion.deletionDeadline,'Correct duplicate is idempotent without extending the deadline');
+ await tick(new Date(Date.parse(previewDeletion.deletionDeadline)).toISOString());await identity(PREVIEW);await denied('preview_account_deletion');
+ await owner();await db.query('delete from private.lifecycle_outbox where parent_id=$1',[PREVIEW]);await db.query('delete from auth.users where id=$1',[PREVIEW]);await tick('2026-11-22T12:00:00.000Z');
  await identity(A);
  assert.equal((await rpc('get_account_lifecycle')).state,'onboarding');
  await denied('save_family_snapshot',[0,JSON.stringify(fixture())]);
@@ -126,7 +166,8 @@ try{
  await owner();await db.query('insert into storage.objects(bucket_id,name,owner_id) values($1,$2,$3)',['private-profile','avatar.png',deletion.parentId]);await db.query('delete from auth.users where id=$1',[deletion.parentId]);await service();let context=await rpc('get_lifecycle_job_context',[deletion.id,deletion.leaseId]);assert.equal(context.alreadyDeleted,true);assert.equal(context.objects.length,1,'Auth disappearance does not hide leftover Storage');await denied('complete_lifecycle_job',[deletion.id,deletion.leaseId,null,true,true],'22023');
  await owner();await db.query('delete from storage.objects where owner_id=$1',[deletion.parentId]);await service();assert.equal(await rpc('complete_lifecycle_job',[deletion.id,deletion.leaseId,null,true,true]),true);assert.equal(await rpc('complete_lifecycle_job',[deletion.id,deletion.leaseId,null,true,true]),false,'Duplicate ack is harmless');
  await owner();row=(await db.query('select parent_id,payload from private.lifecycle_outbox where id=$1',[deletion.id])).rows[0];assert.equal(row.parent_id,null);assert.equal(row.payload.delivery,undefined);assert.equal((await db.query('select count(*)::int n from private.deletion_receipts where operation_id=$1',[deletion.id])).rows[0].n,1);
- for(const role of ['anon','authenticated']){await owner();await db.exec(`set role ${role}`);await denied('claim_lifecycle_jobs',[3]);await denied('verify_lifecycle_worker',['a'.repeat(64)]);await assert.rejects(db.exec('select private.lifecycle_now()'),e=>e.code==='42501');await assert.rejects(db.exec('select * from private.privacy_requests'),e=>e.code==='42501');}
- console.log('Lifecycle PostgreSQL checks passed: current-version onboarding, no retroactive agreement, current-session enforcement, administrator gates, explicit child consent, scoped withdrawal/CAS and resurrection denial, family isolation, validated/deduplicated activity, 30-day fresh-auth deletion/restore boundaries, 90-day warnings/boundary with no extra grace, safe legacy transition, abandoned cleanup, child-scoped AVG erasure and calendar-month response, durable deletion lease and actual Auth/Storage receipt checks.');
+ for(const role of ['anon','authenticated']){await owner();await db.exec(`set role ${role}`);await denied('claim_lifecycle_jobs',[3]);await denied('verify_lifecycle_worker',['a'.repeat(64)]);await assert.rejects(db.exec('select private.lifecycle_now()'),e=>e.code==='42501');await assert.rejects(db.exec('select * from private.privacy_requests'),e=>e.code==='42501');if(role==='anon'){await denied('preview_account_deletion');await denied('request_account_deletion',['2026-12-22T12:00:00Z']);}}
+ await service();await denied('preview_account_deletion');await denied('request_account_deletion',['2026-12-22T12:00:00Z']);
+ console.log('Lifecycle PostgreSQL checks passed: current-version onboarding, no retroactive agreement, current-session enforcement, administrator gates, explicit child consent, scoped withdrawal/CAS and resurrection denial, family isolation, validated/deduplicated activity, read-only deletion preview and atomic minute-rollover rollback, 30-day fresh-auth deletion/restore boundaries, 90-day warnings/boundary with no extra grace, safe legacy transition, abandoned cleanup, child-scoped AVG erasure and calendar-month response, durable deletion lease and actual Auth/Storage receipt checks.');
  console.log('Test clock is replaced only by the PostgreSQL fixture owner; no public clock API exists. PGlite executes SQL/RLS/transactions; true multi-connection contention, provider APIs, mailbox delivery and backup restoration require hosted verification.');
 } catch(error){console.error('Lifecycle DB check failed:',error.code??error.name,error.message,error.where??'');process.exitCode=1;} finally{await db.close();}

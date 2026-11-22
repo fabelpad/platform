@@ -5,11 +5,15 @@ import { checkMutationOrigin, handleApiError, object, privateJson, readJson, Req
 
 const errors: Record<string, { status: number; message: string }> = {
   fresh_auth_required: { status: 428, message: 'Log opnieuw in om deze ouderactie te bevestigen.' },
+  deletion_preview_expired: { status: 409, message: 'De getoonde verwijderdatum is verlopen. Controleer de nieuwe datum en bevestig opnieuw.' },
   document_version_changed: { status: 409, message: 'De juridische documenten zijn gewijzigd. Lees de actuele versie en bevestig opnieuw.' },
   account_blocked: { status: 403, message: 'Je account is afgeschermd. Bekijk de status en eventuele herstelmogelijkheid in je accountoverzicht.' },
   profile_consent_required: { status: 403, message: 'Voor dit online kinderprofiel is eerst afzonderlijke toestemming nodig.' },
   profile_consent_revoked: { status: 403, message: 'De toestemming voor dit kinderprofiel is ingetrokken. Oude gegevens worden niet opnieuw geüpload.' },
 };
+function deadlineMinute(value: unknown): value is string {
+  return typeof value === 'string' && value.length <= 40 && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:00(?:\.0{1,6})?(?:Z|\+00:00)$/u.test(value) && Number.isFinite(Date.parse(value));
+}
 export function parentRpcError(error: { code?: string; message?: string }): never {
   const known = error.message && errors[error.message];
   if (known) throw new RequestError(known.status, error.message!, known.message);
@@ -38,6 +42,12 @@ export async function parentRequest(request: Request, operation: 'status' | 'onb
     const parent = await getVerifiedParent(client);
     if (!parent) throw new RequestError(401, 'not_authenticated', 'Log in om je ouderaccount te beheren.');
     if (operation === 'status') return privateJson(await getParentAccountStatus(client));
+    if (operation === 'deletion' && request.method === 'GET') {
+      const { data, error } = await client.rpc('preview_account_deletion');
+      if (error) parentRpcError(error);
+      if (!object(data) || !deadlineMinute(data.deletionDeadlineMinute) || data.expiresAt != null && (typeof data.expiresAt !== 'string' || data.expiresAt.length > 40 || !Number.isFinite(Date.parse(data.expiresAt)))) throw new Error('Invalid deletion preview');
+      return privateJson({ deletionDeadlineMinute: data.deletionDeadlineMinute, ...(data.expiresAt !== undefined ? { expiresAt: data.expiresAt } : {}) });
+    }
     if (request.headers.get('x-fabelpad-parent') !== parent.id) throw new RequestError(401, 'account_changed', 'Het ouderaccount is gewijzigd. Laad je accountoverzicht opnieuw voordat je deze handeling uitvoert.');
     const input = await readJson(request);
     if (!object(input)) throw new RequestError(422, 'invalid_request');
@@ -56,8 +66,8 @@ export async function parentRequest(request: Request, operation: 'status' | 'onb
         name = 'consent_child_profile'; parameters = { p_child_id: input.profileId, p_consent: consent, p_guardian_declaration: consent }; break;
       }
       case 'deletion':
-        only(['confirm']); if (input.confirm !== true) throw new RequestError(422, 'confirmation_required');
-        name = 'request_account_deletion'; parameters = {}; break;
+        only(['confirm', 'expectedDeadlineMinute']); if (input.confirm !== true || !deadlineMinute(input.expectedDeadlineMinute)) throw new RequestError(422, 'confirmation_required', 'Controleer eerst de exacte verwijderdatum en bevestig je aanvraag.');
+        name = 'request_account_deletion'; parameters = { p_expected_deadline_minute: input.expectedDeadlineMinute }; break;
       case 'restore':
         only(['confirmRestore']); if (input.confirmRestore !== true) throw new RequestError(422, 'confirmation_required');
         name = 'restore_account'; parameters = {}; break;
