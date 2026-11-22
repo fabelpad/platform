@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { cp, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -21,14 +21,52 @@ try {
   assert.equal(privateSpeechText('A.* koos een pad. A.* vond een boek.', 'A.*'), 'Avonturier koos een pad. Avonturier vond een boek.', 'Names are literal text, not regular expressions.');
   assert.equal(privateSpeechText('Een onveranderd verhaal.', ''), 'Een onveranderd verhaal.');
   const { LEGAL_DOCUMENTS, TERMS_VERSION, PRIVACY_VERSION } = await import(await compileSource(new URL('../lib/legal/documents.ts', import.meta.url), temporary));
-  assert.equal(TERMS_VERSION, '2026-11-22'); assert.equal(PRIVACY_VERSION, '2026-11-22');
+  assert.equal(TERMS_VERSION, '2026-11-22'); assert.equal(PRIVACY_VERSION, '2026-11-22.1');
   for (const document of Object.values(LEGAL_DOCUMENTS)) {
     assert.match(document.sha256, /^[a-f0-9]{64}$/);
     const file = await readFile(new URL(`../public${document.downloadUrl}`, import.meta.url));
     assert.equal(createHash('sha256').update(file).digest('hex'), document.sha256, 'Accepted hash must identify the exact downloadable bytes.');
     assert.doesNotMatch(file.toString(), /<!--|\[INVULLEN\]|TODO|BTW[- :]|btw-identificatie/i, 'Publication documents contain no internal instructions, placeholders or business details outside the owner’s scope.');
   }
+  const historicalHashes = {
+    'algemene-voorwaarden.md': '8da71baa717f1e98b393320532670b4ebbddacbd390a14dba3c4cc144b394840',
+    'privacyverklaring.md': '97673d3103443115097def26e20e6c677650dcb760d095de900ae3c5c5961cb7',
+    'manifest.json': 'c90cde47311eb92c59c4fe2e84df391e3c9b0176eeac6eb2294fab4de398a82e',
+    'herroepingsformulier.txt': '69c36bd1489d82b038d590e14de8491d3c54a709fb352e53d8ecc4c419d6b79b',
+  };
+  const assertHistory = async () => {
+    for (const [filename, hash] of Object.entries(historicalHashes)) {
+      const body = await readFile(new URL(`../public/legal/2026-11-22/${filename}`, import.meta.url));
+      assert.equal(createHash('sha256').update(body).digest('hex'), hash, `Previously supplied legal bytes are immutable: ${filename}`);
+    }
+  };
+  await assertHistory();
+  const privacyText = await readFile(new URL(`../public${LEGAL_DOCUMENTS.privacy.downloadUrl}`, import.meta.url), 'utf8');
+  for (const fact of ['Stackmail', 'maximaal twaalf maanden na afsluiting', 'uiterlijk na 180 dagen', 'geen bewaartermijn voor actieve account- of kindgegevens', 'maximaal 210 dagen', 'staat momenteel uit', 'voordat de herstelde omgeving gebruikersverkeer ontvangt', 'aantoonbaar nodig', 'periodieke herbeoordeling']) assert.ok(privacyText.includes(fact), `Current privacy text includes the confirmed safeguard: ${fact}`);
+  const latestManifest = JSON.parse(await readFile(new URL('../public/legal/2026-11-22.1/manifest.json', import.meta.url), 'utf8'));
+  assert.deepEqual(Object.keys(latestManifest), ['privacy'], 'A new privacy version must not silently revise the terms version.');
+  assert.equal(latestManifest.privacy.version, PRIVACY_VERSION);
+  assert.equal(latestManifest.privacy.sha256, LEGAL_DOCUMENTS.privacy.sha256);
   const checked = spawnSync(process.execPath, ['scripts/legal-documents.mjs', '--check'], { cwd: new URL('../', import.meta.url), encoding: 'utf8' });
   assert.equal(checked.status, 0, checked.stderr);
-  console.log('Juridische versie/hashes, productiepublicatietekst en offline webvoorlezen: gerichte controles geslaagd.');
+  const regenerated = spawnSync(process.execPath, ['scripts/legal-documents.mjs', '--write'], { cwd: new URL('../', import.meta.url), encoding: 'utf8' });
+  assert.equal(regenerated.status, 0, regenerated.stderr);
+  await assertHistory();
+
+  // Exercise the actual writer against isolated files. A damaged historical
+  // download must fail before a new version or mutable catalog is written.
+  const fixture = path.join(temporary, 'immutable-output');
+  for (const directory of ['src', 'scripts', 'lib/legal', 'public/legal']) await mkdir(path.join(fixture, directory), { recursive: true });
+  await symlink(new URL('../node_modules', import.meta.url).pathname, path.join(fixture, 'node_modules'), 'dir');
+  for (const filename of ['src/legalContent.ts', 'src/privacyContent.ts', 'scripts/legal-documents.mjs', 'scripts/source-test-loader.mjs']) await cp(new URL(`../${filename}`, import.meta.url), path.join(fixture, filename));
+  await cp(new URL('../public/legal/2026-11-22', import.meta.url), path.join(fixture, 'public/legal/2026-11-22'), { recursive: true });
+  const sentinel = 'A mutable catalog must stay untouched when immutable output conflicts.\n';
+  await writeFile(path.join(fixture, 'lib/legal/documentHashes.ts'), sentinel);
+  await writeFile(path.join(fixture, 'public/legal/2026-11-22/algemene-voorwaarden.md'), 'Synthetic conflicting historical bytes.\n');
+  const rejected = spawnSync(process.execPath, ['scripts/legal-documents.mjs', '--write'], { cwd: fixture, encoding: 'utf8' });
+  assert.notEqual(rejected.status, 0, 'The generator must refuse to overwrite conflicting existing downloads.');
+  assert.match(rejected.stderr, /Historische juridische download wijkt af|Juridische weergave en download verschillen/);
+  assert.equal(await readFile(path.join(fixture, 'lib/legal/documentHashes.ts'), 'utf8'), sentinel);
+  await assert.rejects(readFile(path.join(fixture, 'public/legal/2026-11-22.1/privacyverklaring.md')), { code: 'ENOENT' }, 'A failed preflight creates no partial new privacy version.');
+  console.log('Juridische versies/hashes, onveranderde historische downloads, veilige generator, actuele privacytermijnen en offline webvoorlezen: gerichte controles geslaagd.');
 } finally { await rm(temporary, { recursive: true, force: true }); }

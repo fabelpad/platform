@@ -48,7 +48,7 @@ Voorstel: `noreply@fabelpad.nl`. Dit adres is pas inzetbaar na controle van Rese
 
 ## Resterende gegevens en acceptatie
 
-1. Bevestig de werkelijke maximale back-uptermijnen van beide Supabase-projecten en de VPS, de beheerder van de supportmailbox en de toepasselijke verwerkersafspraken/doorgiftewaarborgen. Deze feiten zijn niet uit de beschikbare connector of DNS af te leiden. De bijlage verlangt dat de openbare privacytekst hiermee klopt vóór publieke activering.
+1. De eigenaar bevestigt maximaal 180 dagen voor back-ups, Stackmail, maximaal 12 maanden na afsluiting voor gewone supportmail en de verwerkers-/doorgifteafspraken. Verwerk deze vastgelegde bron in privacyversie `2026-11-22.1` en test/rol die uit vóór publieke activering; zie `PRIVACY-AANVULLING-180-DAGEN.md`. Providerlogcriteria, daadwerkelijke mailboxopschoning en het weigeren van onvoldoende gedekte herstelpunten blijven afzonderlijke uitvoeringscontroles.
 2. Plaats per omgeving de eigen Resend API-key veilig via **Beheer → E-mail**, na de eerste echte beheerderlogin; zie de optionele API-bootstrap hieronder. De werkende Auth-SMTP-route levert geen API-key voor servicemails.
 3. Rond echte OTP-/Google-/beheerder-/gezins-/studioacceptatie af. Configuratiecontrole, synthetische tests en loopbackhealth zijn afzonderlijke resultaten.
 4. Bouw en activeer elke kandidaat volgens de exact-SHA-route en controleer de eigen service, proxy/TLS en publieke routes volgens het [hostrunbook](DG-VPS-08-TWEE-OMGEVINGEN.md). De [actuele status](STAGING-PRODUCTION-STATUS.md) vermeldt welke stappen werkelijk zijn uitgevoerd.

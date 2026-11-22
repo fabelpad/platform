@@ -1,0 +1,27 @@
+{
+  "confirmedDate": "2026-11-22",
+  "source": "project owner confirmation in this conversation",
+  "scope": "Fabelpad staging and production",
+  "maximumBackupRetentionDays": 180,
+  "supportMailProvider": "Stackmail",
+  "processorAndTransferAgreementsOwnerConfirmed": true,
+  "authTemplatesCopiedOwnerConfirmed": true,
+  "contractCopiesInspected": false,
+  "providerSettingsVerifiedByThisConfirmation": false,
+  "actualRestoreTestPerformed": false,
+  "interactiveAuthenticationVerifiedByThisConfirmation": false,
+  "mailDeliveryVerifiedByThisConfirmation": false,
+  "supportCorrespondenceRetention": "maximum 12 months after case closure; owner confirmed",
+  "currentPublishedLegalVersionModified": false,
+  "publicRoutingActivatedByThisConfirmation": false,
+  "remainingOperationalRequirement": "independent current deletion/withdrawal journal and isolated replay before restored Auth, cron/outbox and user traffic",
+  "supportCorrespondenceRetentionMonthsAfterClosure": 12,
+  "preparedPrivacyVersion": {
+    "version": "2026-11-22.1",
+    "downloadPath": "public/legal/2026-11-22.1/privacyverklaring.md",
+    "sha256": "c3f6186be703dda5320b70227070fea79e395eac225dbbbde0420913c57727e4",
+    "historicalVersionBytesPreserved": true,
+    "liveApplicationUpdated": false,
+    "migrationApplied": false
+  }
+}

@@ -1,5 +1,12 @@
 # Fabelpad — Supabase, beheerrechten en mail
 
+## Voorbereide privacyactualisering — nog niet live toegepast
+
+De eigenaar bevestigt maximaal 180 dagen voor back-ups, Stackmail, maximaal 12 maanden na afsluiting voor gewone supportmail, de verwerkers-/doorgifteafspraken en overgenomen Auth-templates. Nieuwe bronmigraties `20261122190748_backup_erasure_evidence_retention.sql` en `20261122190924_privacy_backup_support_update.sql` bereiden respectievelijk vaste 210-dagenbewaring van minimale wisbewijzen en privacyversie `2026-11-22.1` voor. De tweede migratie voegt een onveranderlijke documentrij toe en laat oude documenten/aanvaardingen intact; huidige onboarding en nieuwe profieltoestemming gebruiken de nieuwe informatieversie. Voorwaarden blijven `2026-11-22`.
+
+De bestaande acht live migraties en loopbackapp `c1a9829…` zijn niet door deze bronwijziging vervangen. Voer de nieuwe migraties pas via de gecontroleerde releaseprocedure uit en leg de eigen live verificatie vast. Een retentiefix binnen dezelfde database is geen onafhankelijke hersteljournal: weiger hersteld gebruikersverkeer zonder volledige actuele verwijder-/intrekkingsdekking. Zie [eigenaarbevestiging en versie](../docs/PRIVACY-AANVULLING-180-DAGEN.md).
+
+
 Gecontroleerd op **22 november 2026**. Dit document betreft uitsluitend de twee onderstaande Fabelpad-projecten. De oorspronkelijke inrichting begon met lege projecten; de actuele toestand omvat acht toegepaste migraties, dertien bronverhalen, de mailbeheerfuncties en de ouder-/privacylevenscyclus. Bij de laatste livecontrole waren er **nul Auth-gebruikers, beheerders, gezinnen en Resend API-mailconfiguraties**. Een ingerichte database of Edge Function is geen actieve webrelease.
 
 | Omgeving | Workspace-account | Project / regio | App-origin |
@@ -22,7 +29,7 @@ De bestaande GitHub environments `staging` en `production` gebruiken uitsluitend
 | `20261122175654_private_pg_net_extension.sql` | `pg_net` in het bedoelde providerschema `extensions` | Toegepast |
 | `20261122182638_account_deletion_deadline_preview.sql` | Alleen-lezen verwijderdatum vóór bevestiging en atomische controle van de bevestigde minuut | Toegepast |
 
-Alle acht lokale migratieversies komen overeen met de gecontroleerde historie van beide projecten. Bij door de beheertool toegekende uitvoeringstijdstempels is uitsluitend de versie-administratie gelijkgetrokken **na vergelijking van de volledige opgeslagen SQL-SHA256**; statements en inhoud zijn behouden. De vijf laatste migraties zijn de nieuwe ouder-/lifecycle-/scheduler-/previewwijzigingen. Hun exacte hashes en controles staan in [google-legal-lifecycle-2026-11-22.json](../docs/deploy-evidence/google-legal-lifecycle-2026-11-22.json). De previewmigratie heeft SHA-256 `465155f8d009f0ddddd8eda0dfe356b903862c47739b1e7c08628d0c3a32b9cc`.
+De acht hierboven opgesomde toegepaste migratieversies komen overeen met de gecontroleerde historie van beide projecten. De twee nieuwe, bovenaan beschreven bronmigraties zijn daarvan afzonderlijk en nog niet live toegepast. Bij door de beheertool toegekende uitvoeringstijdstempels is uitsluitend de versie-administratie gelijkgetrokken **na vergelijking van de volledige opgeslagen SQL-SHA256**; statements en inhoud zijn behouden. De vijf laatste migraties zijn de nieuwe ouder-/lifecycle-/scheduler-/previewwijzigingen. Hun exacte hashes en controles staan in [google-legal-lifecycle-2026-11-22.json](../docs/deploy-evidence/google-legal-lifecycle-2026-11-22.json). De previewmigratie heeft SHA-256 `465155f8d009f0ddddd8eda0dfe356b903862c47739b1e7c08628d0c3a32b9cc`.
 
 Voer reeds toegepaste migraties niet opnieuw uit met een ongecontroleerde `db push`. Controleer altijd expliciet het bedoelde hosted project, de bestaande historie en de geplande nieuwe SQL. [Officieel migratiecontract](https://supabase.com/docs/guides/deployment/database-migrations). De eerder gebruikte Supabase CLI **3.2.0** is een beheertool en geen runtimevoorwaarde; selecteer bij CLI-gebruik een hosted doel expliciet.
 

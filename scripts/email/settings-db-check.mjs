@@ -64,7 +64,7 @@ try {
   await db.query('insert into public.content_admins(user_id) values($1),($2),($3),($4)',[administrator,otherAdministrator,anonymous,unconfirmed]);
 
   for (const id of [administrator,otherAdministrator,parent]) {
-    await identity(id); await rpc('complete_parent_onboarding',['2026-11-22','2026-11-22',true,true]);
+    await identity(id); await rpc('complete_parent_onboarding',['2026-11-22','2026-11-22.1',true,true]);
   }
   await db.exec('reset role');
 

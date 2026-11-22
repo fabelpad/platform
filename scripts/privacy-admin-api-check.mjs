@@ -13,7 +13,7 @@ const beforeEnvironment = { ...process.env }, beforeFetch = globalThis.fetch;
 const cookieKey = Symbol.for('fabelpad.privacy.admin.api.cookies'), beforeCookies = globalThis[cookieKey];
 const actor = { id: '00000000-0000-4000-8000-000000000181', email: 'operator@example.test', email_confirmed_at: '2026-11-22T12:00:00Z', aud: 'authenticated', role: 'authenticated', is_anonymous: false, user_metadata: { admin: true, role: 'admin' } };
 const subject = '00000000-0000-4000-8000-000000000182', caseId = '00000000-0000-4000-8000-000000000183';
-const active = { state: 'active', termsVersion: '2026-11-22', privacyVersion: '2026-11-22', acceptedTermsVersion: '2026-11-22', shownPrivacyVersion: '2026-11-22', lastActivityAt: '2026-11-22T12:00:00Z', deletionDeadline: null, consents: [] };
+const active = { state: 'active', termsVersion: '2026-11-22', privacyVersion: '2026-11-22.1', acceptedTermsVersion: '2026-11-22', shownPrivacyVersion: '2026-11-22.1', lastActivityAt: '2026-11-22T12:00:00Z', deletionDeadline: null, consents: [] };
 const json = (body, status = 200) => Response.json(body, { status, headers: { 'X-Supabase-Api-Version': '2024-01-01' } });
 const expiry = Math.floor(Date.now() / 1000) + 3600;
 const jwt = `${Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url')}.${Buffer.from(JSON.stringify({ sub: actor.id, exp: expiry, aud: 'authenticated', role: 'authenticated' })).toString('base64url')}.synthetic-signature`;

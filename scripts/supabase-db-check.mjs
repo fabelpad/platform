@@ -25,7 +25,7 @@ async function identity(id, role = 'authenticated', extra = {}) {
   await db.query("select set_config('request.jwt.claims', $1, false)", [JSON.stringify({ sub: id,session_id:session,amr:[{method:'otp',timestamp:Math.floor(Date.now()/1000)}], ...extra })]);
   await db.exec(`set role ${role}`);
   if (id && role === 'authenticated' && !extra.is_anonymous) {
-    await db.query("select public.complete_parent_onboarding('2026-11-22','2026-11-22',true,true)");
+    await db.query("select public.complete_parent_onboarding('2026-11-22','2026-11-22.1',true,true)");
     await db.query("select public.consent_child_profile('shared-child-id',true,true)");
   }
 }

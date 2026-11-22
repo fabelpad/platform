@@ -1,4 +1,13 @@
 import type { Metadata } from 'next';
+import { notFound, redirect } from 'next/navigation';
+import { PRIVACY_VERSION } from '../../lib/legal/documents';
 import PrivacyPage from '../../src/PrivacyPage';
 export const metadata: Metadata = { title: 'Privacyverklaring — Fabelpad', description: 'Hoe Fabelpad met gegevens van ouders en kinderen omgaat, voor het webaccount en de afzonderlijke lokale Android-app.', alternates: { canonical: 'https://fabelpad.nl/privacyverklaring' } };
-export default function Page() { return <PrivacyPage />; }
+export default async function Page({ searchParams }: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
+  const version = (await searchParams).versie;
+  if (version === '2026-11-22') redirect('/legal/2026-11-22/privacyverklaring.md');
+  if (version !== undefined && version !== PRIVACY_VERSION) notFound();
+  return <PrivacyPage />;
+}

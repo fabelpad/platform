@@ -11,7 +11,7 @@ const temporary = await mkdtemp(join(tmpdir(), 'fabelpad-parent-api-'));
 const beforeEnvironment = { ...process.env }, beforeFetch = globalThis.fetch;
 const cookieKey = Symbol.for('fabelpad.parent.api.cookies'), beforeCookies = globalThis[cookieKey];
 const parent = { id: '00000000-0000-4000-8000-000000000151', email: 'parent@example.test', email_confirmed_at: '2026-11-22T12:00:00Z', aud: 'authenticated', role: 'authenticated', is_anonymous: false, user_metadata: { role: 'admin' } };
-const active = { state: 'active', termsVersion: '2026-11-22', privacyVersion: '2026-11-22', acceptedTermsVersion: '2026-11-22', shownPrivacyVersion: '2026-11-22', lastActivityAt: '2026-11-22T12:00:00Z', deletionDeadline: null, consents: [] };
+const active = { state: 'active', termsVersion: '2026-11-22', privacyVersion: '2026-11-22.1', acceptedTermsVersion: '2026-11-22', shownPrivacyVersion: '2026-11-22.1', lastActivityAt: '2026-11-22T12:00:00Z', deletionDeadline: null, consents: [] };
 const deadlineMinute = '2026-12-22T12:00:00Z';
 const confirmedDeletion = { confirm: true, expectedDeadlineMinute: deadlineMinute };
 const json = (body, status = 200) => Response.json(body, { status, headers: { 'X-Supabase-Api-Version': '2024-01-01' } });
@@ -72,8 +72,8 @@ try {
   }
   await reset(); result = await outcome('deletion', { confirm: true }, { origin: 'https://attacker.example.test' }); assert.equal(result.response.status, 403); assert.equal(requests.length, 0);
   for (const [operation, body] of [
-    ['onboarding', { parentDeclaration: true, acceptTerms: false, termsVersion: '2026-11-22', privacyVersion: '2026-11-22' }],
-    ['onboarding', { parentDeclaration: true, acceptTerms: true, termsVersion: '2026-11-22', privacyVersion: '2026-11-22', parentId: 'other-parent' }],
+    ['onboarding', { parentDeclaration: true, acceptTerms: false, termsVersion: '2026-11-22', privacyVersion: '2026-11-22.1' }],
+    ['onboarding', { parentDeclaration: true, acceptTerms: true, termsVersion: '2026-11-22', privacyVersion: '2026-11-22.1', parentId: 'other-parent' }],
     ['consent', { profileId: 'child-one', consent: true, guardianDeclaration: false }],
     ['consent', { profileId: '../foreign', consent: true, guardianDeclaration: true }],
     ['deletion', { confirm: true, parentId: 'other-parent' }], ['restore', { confirmRestore: false }],
@@ -87,7 +87,7 @@ try {
   await reset(); rpc = entry => { assert.equal(entry.path, '/rest/v1/rpc/get_account_lifecycle'); return json(active); };
   result = await outcome('status', undefined, {}, 'GET'); assert.equal(result.response.status, 200); assert.deepEqual(result.value, active);
   await reset(); rpc = entry => { assert.equal(entry.path, '/rest/v1/rpc/complete_parent_onboarding'); assert.equal(entry.body.p_parent_declaration, true); assert.equal(entry.body.p_accept_terms, true); return json({ message: 'document_version_changed', code: '22023', details: 'synthetic-private-sql' }, 400); };
-  result = await outcome('onboarding', { parentDeclaration: true, acceptTerms: true, termsVersion: 'obsolete', privacyVersion: '2026-11-22' }); assert.equal(result.response.status, 409); assert.equal(result.value.error, 'document_version_changed');
+  result = await outcome('onboarding', { parentDeclaration: true, acceptTerms: true, termsVersion: 'obsolete', privacyVersion: '2026-11-22.1' }); assert.equal(result.response.status, 409); assert.equal(result.value.error, 'document_version_changed');
   for (const [operation, body, error, expectedStatus, expectedCode] of [
     ['deletion', confirmedDeletion, { code: '28000', message: 'synthetic-private-session-diagnostic' }, 428, 'fresh_auth_required'],
     ['deletion', confirmedDeletion, { code: 'P0001', message: 'deletion_preview_expired' }, 409, 'deletion_preview_expired'],

@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-const activeParent = { state: 'active', termsVersion: '2026-11-22', privacyVersion: '2026-11-22', acceptedTermsVersion: '2026-11-22', shownPrivacyVersion: '2026-11-22', lastActivityAt: '2026-11-22T12:00:00Z', deletionDeadline: null, consents: [] };
+const activeParent = { state: 'active', termsVersion: '2026-11-22', privacyVersion: '2026-11-22.1', acceptedTermsVersion: '2026-11-22', shownPrivacyVersion: '2026-11-22.1', lastActivityAt: '2026-11-22T12:00:00Z', deletionDeadline: null, consents: [] };
 
 test('website, child library, family and admin routes stay distinct', async ({ page, request }) => {
   const errors: string[] = [];

@@ -14,7 +14,7 @@ const contextKey = Symbol.for('fabelpad.auth.contract.cookies');
 const originalContext = globalThis[contextKey];
 let requests = [], writes = [], jar = new Map(), handler;
 let lifecycleState = 'active';
-const lifecycle = () => ({ state: lifecycleState, termsVersion: '2026-11-22', privacyVersion: '2026-11-22', acceptedTermsVersion: lifecycleState === 'onboarding' ? null : '2026-11-22', shownPrivacyVersion: '2026-11-22', lastActivityAt: null, deletionDeadline: lifecycleState === 'deletion_pending' ? '2026-12-22T00:00:00Z' : null, consents: [] });
+const lifecycle = () => ({ state: lifecycleState, termsVersion: '2026-11-22', privacyVersion: '2026-11-22.1', acceptedTermsVersion: lifecycleState === 'onboarding' ? null : '2026-11-22', shownPrivacyVersion: '2026-11-22.1', lastActivityAt: null, deletionDeadline: lifecycleState === 'deletion_pending' ? '2026-12-22T00:00:00Z' : null, consents: [] });
 let checks = 0;
 const parent = { id: '00000000-0000-4000-8000-000000000101', email: 'parent@example.test', aud: 'authenticated', role: 'authenticated', email_confirmed_at: '2026-01-01T00:00:00Z', is_anonymous: false, user_metadata: { full_name: 'Testouder', admin: true, role: 'admin' } };
 const json = (body, status = 200) => Response.json(body, { status });
@@ -76,11 +76,11 @@ try {
   // before Auth is allowed to create even an unconfirmed OTP identity.
   for (const body of [
     { email: parent.email, intent: 'register' },
-    { email: parent.email, intent: 'register', parentDeclaration: true, acceptTerms: false, termsVersion: '2026-11-22', privacyVersion: '2026-11-22' },
-    { email: parent.email, intent: 'register', parentDeclaration: true, acceptTerms: true, termsVersion: 'obsolete', privacyVersion: '2026-11-22' },
+    { email: parent.email, intent: 'register', parentDeclaration: true, acceptTerms: false, termsVersion: '2026-11-22', privacyVersion: '2026-11-22.1' },
+    { email: parent.email, intent: 'register', parentDeclaration: true, acceptTerms: true, termsVersion: 'obsolete', privacyVersion: '2026-11-22.1' },
   ]) { reset(); response = await authMutation(request(body), 'otp'); assert.ok([409, 422].includes(response.status)); assert.equal(requests.length, 0); checks++; }
   reset(); handler = item => { assert.equal(item.url.pathname, '/auth/v1/otp'); assert.equal(item.body.create_user, true); return json({}); };
-  response = await authMutation(request({ email: parent.email, intent: 'register', parentDeclaration: true, acceptTerms: true, termsVersion: '2026-11-22', privacyVersion: '2026-11-22' }), 'otp');
+  response = await authMutation(request({ email: parent.email, intent: 'register', parentDeclaration: true, acceptTerms: true, termsVersion: '2026-11-22', privacyVersion: '2026-11-22.1' }), 'otp');
   assert.equal(response.status, 200); checks++;
 
   // Invalid inputs and cross-site requests never reach the mail provider.

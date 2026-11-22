@@ -4,7 +4,7 @@ import type { PrivacyCase } from '../../lib/privacyAdmin';
 const admin = { id: '11111111-1111-4111-8111-111111111111', email: 'admin@example.test', displayName: 'Testbeheerder' };
 const subject = '22222222-2222-4222-8222-222222222222';
 const caseId = '33333333-3333-4333-8333-333333333333';
-const lifecycle = { state: 'active', termsVersion: '2026-11-22', privacyVersion: '2026-11-22', acceptedTermsVersion: '2026-11-22', shownPrivacyVersion: '2026-11-22', lastActivityAt: '2026-11-22T12:00:00Z', deletionDeadline: null, consents: [] };
+const lifecycle = { state: 'active', termsVersion: '2026-11-22', privacyVersion: '2026-11-22.1', acceptedTermsVersion: '2026-11-22', shownPrivacyVersion: '2026-11-22.1', lastActivityAt: '2026-11-22T12:00:00Z', deletionDeadline: null, consents: [] };
 function mockSession(page: Page, allowed = true) {
   return page.route('**/api/auth/session', route => route.fulfill({ json: { configured: true, parent: admin, admin: allowed, lifecycle } }));
 }

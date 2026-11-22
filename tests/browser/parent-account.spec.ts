@@ -2,7 +2,7 @@ import { test, expect, type Page } from '@playwright/test';
 import type { FamilySnapshot } from '../../src/profileStorage';
 
 const parent = { id: 'synthetic-parent-legal', email: 'parent@example.test', displayName: 'Testouder' };
-const current = { termsVersion: '2026-11-22', privacyVersion: '2026-11-22' };
+const current = { termsVersion: '2026-11-22', privacyVersion: '2026-11-22.1' };
 const active = { state: 'active', ...current, acceptedTermsVersion: current.termsVersion, shownPrivacyVersion: current.privacyVersion, lastActivityAt: '2026-11-22T12:00:00Z', deletionDeadline: null, consents: [] };
 async function session(page: Page, lifecycle: unknown = active) {
   await page.route('**/api/auth/session', route => route.fulfill({ json: { configured: true, parent, admin: false, providers: { email: true, google: true }, lifecycle } }));

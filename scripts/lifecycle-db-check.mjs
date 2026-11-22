@@ -9,6 +9,7 @@ const A='11111111-1111-4111-8111-111111111111', B='22222222-2222-4222-8222-22222
 const SESSION='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const PREVIEW='66666666-6666-4666-8666-666666666666';
 let clock='2026-11-22T12:00:00.000Z';let id=0;
+let currentPrivacyVersion='2026-11-22';
 const event=()=>`bbbbbbbb-bbbb-4bbb-8bbb-${String(++id).padStart(12,'0')}`;
 const fixture=(ids=['child-a'])=>({schemaVersion:1,family:{version:1,children:ids.map((id,i)=>({id,name:'Bijnaam',avatar:i%4})),activeId:ids[0]??''},data:Object.fromEntries(ids.map(id=>[id,{favorites:['station'],prefs:{muted:false,calm:true}}]))});
 const owner=async()=>db.exec('reset role');
@@ -20,9 +21,84 @@ async function identity(actor,{fresh=true,session=true,anonymous=false,method='o
 async function service(){await owner();await db.query("select set_config('request.jwt.claims','{}',false)");await db.exec('set role service_role');}
 async function rpc(name,args=[]){return(await db.query(`select public.${name}(${args.map((_,i)=>'$'+(i+1)).join(',')}) as result`,args)).rows[0].result;}
 async function denied(name,args=[],code='42501'){await assert.rejects(rpc(name,args),e=>e.code===code);}
-const onboard=()=>rpc('complete_parent_onboarding',['2026-11-22','2026-11-22',true,true]);
+const onboard=()=>rpc('complete_parent_onboarding',['2026-11-22',currentPrivacyVersion,true,true]);
 const save=(rev,snapshot)=>rpc('save_family_snapshot',[rev,JSON.stringify(snapshot)]);
 const consent=id=>rpc('consent_child_profile',[id,true,true]);
+async function checkErasureRetentionUpgrade(sql){
+ const subject='77777777-7777-4777-8777-777777777777',operation='cccccccc-cccc-4ccc-8ccc-cccccccccccc',newOperation='dddddddd-dddd-4ddd-8ddd-dddddddddddd';
+ const base='2026-11-22T12:00:00.000Z',baseMs=Date.parse(base),expiry=new Date(baseMs+210*86400000).toISOString();
+ const digest=createHash('sha256').update(subject).digest('hex');
+ await tick(base);
+ await db.query("insert into auth.users(id,email,email_confirmed_at) values($1,'retention-fixture@example.test',now())",[subject]);
+ await db.query("insert into private.child_profile_consents(parent_id,child_id,granted_at,withdrawn_at,privacy_version,guardian_declaration) values($1,'withdrawn-fixture',$2::timestamptz-interval '2 days',$2::timestamptz-interval '1 day','2026-11-22',true)",[subject,base]);
+ await db.query("insert into private.deletion_receipts(operation_id,subject_digest,reason,completed_at,expires_at,auth_deleted,storage_checked) values($1,$2,'parent',$3,$3::timestamptz+interval '90 days',true,true)",[operation,'a'.repeat(64),base]);
+ await db.exec(sql);
+ const receipt=async id=>(await db.query('select * from private.deletion_receipts where operation_id=$1',[id])).rows[0];
+ const evidence=async()=>(await db.query('select * from private.child_erasure_evidence where parent_digest=$1',[digest])).rows[0];
+ assert.equal(new Date((await receipt(operation)).expires_at).toISOString(),expiry,'Existing available 90-day receipts use the fixed 180-day backup horizon plus a 30-day margin');
+ const original=await evidence();assert.ok(original,'Historical withdrawals are backfilled');
+ assert.equal(original.child_digest,createHash('sha256').update('fabelpad-child-erasure-v1:'+subject+':withdrawn-fixture').digest('hex'));
+ assert.equal(new Date(original.expires_at).toISOString(),expiry);
+ assert.deepEqual(Object.keys(original).sort(),['child_digest','expires_at','parent_digest','recorded_at','withdrawn_at'],'Independent FK lifetime receipt contains no raw IDs, e-mail or child data');
+ assert.equal((await db.query("select count(*)::int n from pg_constraint where conrelid='private.child_erasure_evidence'::regclass and contype='f'")).rows[0].n,0);
+ assert.equal((await db.query("select relrowsecurity from pg_class where oid='private.child_erasure_evidence'::regclass")).rows[0].relrowsecurity,true);
+ for(const role of ['anon','authenticated','service_role']){
+  assert.equal((await db.query("select has_table_privilege($1,'private.child_erasure_evidence','SELECT,INSERT,UPDATE,DELETE') allowed",[role])).rows[0].allowed,false);
+  assert.equal((await db.query("select has_function_privilege($1,'private.record_child_erasure_evidence()','EXECUTE') allowed",[role])).rows[0].allowed,false);
+ }
+ // The existing worker still requests its historical 90-day duration; the new
+ // trigger enforces the fixed duration without weakening provider completion gates.
+ await db.query("insert into private.deletion_receipts(operation_id,subject_digest,reason,completed_at,expires_at,auth_deleted,storage_checked) values($1,$2,'parent',$3,$3::timestamptz+interval '90 days',true,true)",[newOperation,'b'.repeat(64),base]);
+ assert.equal(new Date((await receipt(newOperation)).expires_at).toISOString(),expiry);
+ await db.query("update private.deletion_receipts set expires_at=$2::timestamptz+interval '120 days' where operation_id=$1",[newOperation,base]);
+ assert.equal(new Date((await receipt(newOperation)).expires_at).toISOString(),expiry,'A legacy/update path cannot shorten evidence to 90 or 120 days');
+ await db.query("update private.deletion_receipts set expires_at=$2::timestamptz+interval '999 days' where operation_id=$1",[newOperation,base]);
+ assert.equal(new Date((await receipt(newOperation)).expires_at).toISOString(),expiry,'An accidentally long expiry is clamped to the fixed maximum of 210 days');
+ await assert.rejects(db.query("update private.deletion_receipts set completed_at=$2::timestamptz+interval '1 day' where operation_id=$1",[newOperation,base]),e=>e.code==='42501');
+ assert.equal(new Date((await receipt(newOperation)).completed_at).toISOString(),base,'Retry cannot move the original completion time to extend retention');
+ await tick(new Date(baseMs+86400000).toISOString());
+ await db.query('update private.child_profile_consents set withdrawn_at=withdrawn_at where parent_id=$1',[subject]);
+ assert.deepEqual(await evidence(),original,'A no-op withdrawal retry cannot renew the minimal receipt retention');
+ for(const changed of [null,'2026-11-22T12:00:00Z'])await assert.rejects(db.query('update private.child_profile_consents set withdrawn_at=$2 where parent_id=$1',[subject,changed]),e=>e.code==='42501');
+ assert.deepEqual(await evidence(),original,'The first withdrawal cannot be reset or redated to extend retention');
+ // Even if a recovery/import repeats the same subject after its operational
+ // row was removed, the existing digest receipt keeps its original deadline.
+ await db.query('delete from private.child_profile_consents where parent_id=$1',[subject]);
+ await db.query("insert into private.child_profile_consents(parent_id,child_id,granted_at,withdrawn_at,privacy_version,guardian_declaration) values($1,'withdrawn-fixture',$2::timestamptz-interval '2 days',$2,'2026-11-22',true)",[subject,clock]);
+ assert.deepEqual(await evidence(),original,'A repeated digest cannot extend its original recorded-at horizon');
+ await db.query('delete from auth.users where id=$1',[subject]);
+ assert.equal((await db.query('select count(*)::int n from private.child_profile_consents where parent_id=$1',[subject])).rows[0].n,0);
+ assert.deepEqual(await evidence(),original,'The child erasure digest survives the later account FK cascade');
+ for(const days of [120,180,209]){
+  await tick(new Date(baseMs+days*86400000).toISOString());await db.query('select private.prepare_lifecycle_jobs()');
+  assert.ok(await receipt(operation),'Account receipt survives '+days+' days');assert.ok(await evidence(),'Child receipt survives '+days+' days');
+ }
+ await tick(expiry);await db.query('select private.prepare_lifecycle_jobs()');assert.ok(await evidence(),'Cleanup cannot erase evidence before the full recovery horizon');
+ await tick(new Date(Date.parse(expiry)+1).toISOString());await db.query('select private.prepare_lifecycle_jobs()');
+ assert.equal(await receipt(operation),undefined);assert.equal(await receipt(newOperation),undefined);assert.equal(await evidence(),undefined,'Expired minimal evidence is actually cleaned up');
+ await tick(base);
+ console.log('Backup-erasure retention upgrade passed: available legacy receipt backfill, fixed 210-day expiry with long-expiry clamp, immutable completion/withdrawal times, account-cascade-independent child digest evidence, retry/import idempotency, application-role revokes and bounded cleanup at expiry. This is database-local evidence, not an independent restore journal or backup replay proof.');
+}
+async function checkPrivacyDocumentUpgrade(sql){
+ const subject='88888888-8888-4888-8888-888888888888';
+ await tick('2026-11-22T12:00:00.000Z');
+ await db.query("insert into auth.users(id,email,email_confirmed_at) values($1,'historical-legal-fixture@example.test',now())",[subject]);
+ await identity(subject);await rpc('complete_parent_onboarding',['2026-11-22','2026-11-22',true,true]);
+ await owner();
+ const accepted=(await db.query('select * from private.parent_acceptances where parent_id=$1',[subject])).rows[0];
+ const historical=(await db.query("select * from private.legal_document_versions where kind='privacy' and version='2026-11-22'")).rows[0];
+ await db.exec(sql);
+ assert.deepEqual((await db.query('select * from private.parent_acceptances where parent_id=$1',[subject])).rows[0],accepted,'A privacy-information update cannot overwrite an old terms acceptance, shown version, hash, timestamp or channel');
+ assert.deepEqual((await db.query("select * from private.legal_document_versions where kind='privacy' and version='2026-11-22'")).rows[0],historical,'The formerly offered privacy bytes remain immutable after the new document is inserted');
+ await identity(subject);const status=await rpc('get_account_lifecycle');
+ assert.equal(status.privacyVersion,'2026-11-22.1');assert.equal(status.shownPrivacyVersion,'2026-11-22');assert.equal(status.acceptedTermsVersion,'2026-11-22');assert.equal(status.state,'active','Privacy information alone does not fabricate a new agreement or account activity');
+ await denied('complete_parent_onboarding',['2026-11-22','2026-11-22',true,true],'22023');
+ await consent('new-policy-fixture');await owner();
+ assert.equal((await db.query('select privacy_version from private.child_profile_consents where parent_id=$1',[subject])).rows[0].privacy_version,'2026-11-22.1','New explicit child consent records the newly offered privacy version');
+ assert.deepEqual((await db.query('select * from private.parent_acceptances where parent_id=$1',[subject])).rows[0],accepted);
+ await db.query('delete from private.lifecycle_outbox where parent_id=$1',[subject]);await db.query('delete from auth.users where id=$1',[subject]);
+ console.log('Privacy document upgrade passed: original 2026-11-22 bytes and actual parent acceptance remain unchanged; current privacy is 2026-11-22.1, stale onboarding is rejected and new child consent uses the new information version.');
+}
 try{
  await db.exec(`create role anon nologin;create role authenticated nologin;create schema auth;
  create table auth.users(id uuid primary key,email text,email_confirmed_at timestamptz,is_anonymous boolean not null default false,raw_user_meta_data jsonb not null default '{}');
@@ -31,13 +107,22 @@ try{
  grant usage on schema public,auth to anon,authenticated;grant execute on function auth.uid(),auth.jwt() to anon,authenticated;
  insert into auth.users(id,email,email_confirmed_at) values('${LEGACY}','old@example.test',now());`);
  await installEmailVaultTestFixture(db);
- for(const file of(await readdir(new URL('../supabase/migrations/',import.meta.url))).filter(x=>x.endsWith('.sql')).sort())await db.exec(localMigrationSql(await readFile(new URL('../supabase/migrations/'+file,import.meta.url),'utf8')));
- for(const [kind,file] of [['terms','algemene-voorwaarden.md'],['privacy','privacyverklaring.md']]) {
-  const actual=await readFile(new URL('../public/legal/2026-11-22/'+file,import.meta.url),'utf8');
-  const stored=(await db.query('select sha256,document_text from private.legal_document_versions where kind=$1',[kind])).rows[0];
+ for(const file of(await readdir(new URL('../supabase/migrations/',import.meta.url))).filter(x=>x.endsWith('.sql')).sort()){
+  const sql=localMigrationSql(await readFile(new URL('../supabase/migrations/'+file,import.meta.url),'utf8'));
+  if(file.endsWith('_backup_erasure_evidence_retention.sql'))await checkErasureRetentionUpgrade(sql);
+  else if(file==='20261122190924_privacy_backup_support_update.sql')await checkPrivacyDocumentUpgrade(sql);
+  else await db.exec(sql);
+ }
+ const legalCatalog=(await db.query('select kind,version,sha256,document_text from private.legal_document_versions order by kind,version')).rows;
+ currentPrivacyVersion=legalCatalog.filter(document=>document.kind==='privacy').at(-1).version;
+ for(const stored of legalCatalog) {
+  const file=stored.kind==='terms'?'algemene-voorwaarden.md':'privacyverklaring.md';
+  const actual=await readFile(new URL('../public/legal/'+stored.version+'/'+file,import.meta.url),'utf8');
   assert.equal(stored.document_text,actual);assert.equal(stored.sha256,createHash('sha256').update(actual).digest('hex'));
  }
+ assert.equal(legalCatalog.find(document=>document.kind==='privacy'&&document.version==='2026-11-22').sha256,'97673d3103443115097def26e20e6c677650dcb760d095de900ae3c5c5961cb7','Historical privacy download keeps its original exact immutable hash');
  await assert.rejects(db.exec("update private.legal_document_versions set version='forged'"),e=>e.code==='42501');
+ await assert.rejects(db.exec("delete from private.legal_document_versions where kind='privacy' and version='2026-11-22'"),e=>e.code==='42501');
  await tick(clock);
  await db.query("insert into auth.users(id,email,email_confirmed_at) values($1,'a@example.test',now()),($2,'b@example.test',now()),($3,'admin@example.test',now()),($4,'aborted@example.test',now())",[A,B,ADMIN,ABORTED]);
  await db.query('insert into public.content_admins(user_id) values($1)',[ADMIN]);
@@ -81,16 +166,17 @@ try{
  await tick(new Date(Date.parse(previewDeletion.deletionDeadline)).toISOString());await identity(PREVIEW);await denied('preview_account_deletion');
  await owner();await db.query('delete from private.lifecycle_outbox where parent_id=$1',[PREVIEW]);await db.query('delete from auth.users where id=$1',[PREVIEW]);await tick('2026-11-22T12:00:00.000Z');
  await identity(A);
- assert.equal((await rpc('get_account_lifecycle')).state,'onboarding');
+ const initialLifecycle=await rpc('get_account_lifecycle');assert.equal(initialLifecycle.state,'onboarding');assert.equal(initialLifecycle.privacyVersion,currentPrivacyVersion,'RPC and latest immutable privacy catalog agree');
  await denied('save_family_snapshot',[0,JSON.stringify(fixture())]);
- await denied('complete_parent_onboarding',['wrong','2026-11-22',true,true],'22023');
- await denied('complete_parent_onboarding',['2026-11-22','2026-11-22',false,true],'22023');
- await denied('complete_parent_onboarding',['2026-11-22','2026-11-22',true,false],'22023');
+ await denied('complete_parent_onboarding',['wrong',currentPrivacyVersion,true,true],'22023');
+ await denied('complete_parent_onboarding',['2026-11-22',currentPrivacyVersion,false,true],'22023');
+ await denied('complete_parent_onboarding',['2026-11-22',currentPrivacyVersion,true,false],'22023');
+ if(currentPrivacyVersion!=='2026-11-22')await denied('complete_parent_onboarding',['2026-11-22','2026-11-22',true,true],'22023');
  await denied('consent_child_profile',['child-a',true,true]);
  await assert.rejects(db.exec("update private.account_lifecycle set state='active'"),e=>e.code==='42501');
- const accepted=await rpc('complete_parent_onboarding',['2026-11-22','2026-11-22',true,true,'google']);
- assert.equal(accepted.state,'active');assert.equal(accepted.acceptedTermsVersion,'2026-11-22');
- await owner();let row=(await db.query('select * from private.parent_acceptances where parent_id=$1',[A])).rows[0];assert.equal(row.signup_channel,'otp','Editable channel cannot forge OAuth evidence');assert.equal(new Date(row.accepted_at).toISOString(),clock);
+ const accepted=await rpc('complete_parent_onboarding',['2026-11-22',currentPrivacyVersion,true,true,'google']);
+ assert.equal(accepted.state,'active');assert.equal(accepted.acceptedTermsVersion,'2026-11-22');assert.equal(accepted.shownPrivacyVersion,currentPrivacyVersion);
+ await owner();let row=(await db.query('select * from private.parent_acceptances where parent_id=$1',[A])).rows[0];assert.equal(row.signup_channel,'otp','Editable channel cannot forge OAuth evidence');assert.equal(new Date(row.accepted_at).toISOString(),clock);assert.equal(row.privacy_version,currentPrivacyVersion);assert.equal(row.privacy_sha256,legalCatalog.find(document=>document.kind==='privacy'&&document.version===currentPrivacyVersion).sha256);
  await identity(A);await onboard();await owner();assert.equal((await db.query('select count(*)::int n from private.parent_acceptances where parent_id=$1',[A])).rows[0].n,1,'Acceptance retry is idempotent, never retroactive');
  await identity(ADMIN);await denied('save_content_draft',['station',0,'{"metadata":{},"chapters":{}}']);await denied('get_email_settings');await onboard();assert.equal((await rpc('get_email_settings')).revision,0);
  await identity(A);await denied('save_family_snapshot',[0,JSON.stringify(fixture())]);await denied('consent_child_profile',['child-a',true,false],'22023');await consent('child-a');await consent('child-b');
@@ -99,6 +185,7 @@ try{
  // Withdrawal scrubs only its subject, bumps the CAS, and a stale offline blob
  // cannot recreate it even with a current access token or corrected revision.
  await identity(A);await rpc('consent_child_profile',['child-a',false,false]);
+ await owner();assert.equal((await db.query('select count(*)::int n from private.child_erasure_evidence where parent_digest=$1',[createHash('sha256').update(A).digest('hex')])).rows[0].n,1,'Real consent RPC writes its hashed erasure evidence in the scrub transaction');await identity(A);
  let f=(await db.query('select snapshot,revision from public.family_documents')).rows[0];assert.equal(f.revision,2);assert.deepEqual(f.snapshot.family.children.map(c=>c.id),['child-b']);assert.equal(f.snapshot.data['child-a'],undefined);
  await denied('save_family_snapshot',[2,JSON.stringify(fixture(['child-a','child-b']))]);await denied('consent_child_profile',['child-a',true,true]);
  await rpc('consent_child_profile',['child-b',false,false]);f=(await db.query('select snapshot,revision from public.family_documents')).rows[0];assert.equal(f.revision,3);assert.deepEqual(f.snapshot,fixture([]));
@@ -165,7 +252,7 @@ try{
  assert.ok(deletion);await denied('complete_lifecycle_job',[deletion.id,deletion.leaseId,null,true,true],'22023');
  await owner();await db.query('insert into storage.objects(bucket_id,name,owner_id) values($1,$2,$3)',['private-profile','avatar.png',deletion.parentId]);await db.query('delete from auth.users where id=$1',[deletion.parentId]);await service();let context=await rpc('get_lifecycle_job_context',[deletion.id,deletion.leaseId]);assert.equal(context.alreadyDeleted,true);assert.equal(context.objects.length,1,'Auth disappearance does not hide leftover Storage');await denied('complete_lifecycle_job',[deletion.id,deletion.leaseId,null,true,true],'22023');
  await owner();await db.query('delete from storage.objects where owner_id=$1',[deletion.parentId]);await service();assert.equal(await rpc('complete_lifecycle_job',[deletion.id,deletion.leaseId,null,true,true]),true);assert.equal(await rpc('complete_lifecycle_job',[deletion.id,deletion.leaseId,null,true,true]),false,'Duplicate ack is harmless');
- await owner();row=(await db.query('select parent_id,payload from private.lifecycle_outbox where id=$1',[deletion.id])).rows[0];assert.equal(row.parent_id,null);assert.equal(row.payload.delivery,undefined);assert.equal((await db.query('select count(*)::int n from private.deletion_receipts where operation_id=$1',[deletion.id])).rows[0].n,1);
+ await owner();row=(await db.query('select parent_id,payload from private.lifecycle_outbox where id=$1',[deletion.id])).rows[0];assert.equal(row.parent_id,null);assert.equal(row.payload.delivery,undefined);const completedReceipt=(await db.query('select * from private.deletion_receipts where operation_id=$1',[deletion.id])).rows[0];assert.ok(completedReceipt);assert.equal(Date.parse(completedReceipt.expires_at)-Date.parse(completedReceipt.completed_at),210*86400000,'Actual worker completion stores the fixed retention while preserving Auth/Storage proof');
  for(const role of ['anon','authenticated']){await owner();await db.exec(`set role ${role}`);await denied('claim_lifecycle_jobs',[3]);await denied('verify_lifecycle_worker',['a'.repeat(64)]);await assert.rejects(db.exec('select private.lifecycle_now()'),e=>e.code==='42501');await assert.rejects(db.exec('select * from private.privacy_requests'),e=>e.code==='42501');if(role==='anon'){await denied('preview_account_deletion');await denied('request_account_deletion',['2026-12-22T12:00:00Z']);}}
  await service();await denied('preview_account_deletion');await denied('request_account_deletion',['2026-12-22T12:00:00Z']);
  console.log('Lifecycle PostgreSQL checks passed: current-version onboarding, no retroactive agreement, current-session enforcement, administrator gates, explicit child consent, scoped withdrawal/CAS and resurrection denial, family isolation, validated/deduplicated activity, read-only deletion preview and atomic minute-rollover rollback, 30-day fresh-auth deletion/restore boundaries, 90-day warnings/boundary with no extra grace, safe legacy transition, abandoned cleanup, child-scoped AVG erasure and calendar-month response, durable deletion lease and actual Auth/Storage receipt checks.');

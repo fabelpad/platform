@@ -4,6 +4,12 @@ Controledatum: **22 november 2026**. Releasebron: **`c1a9829c6580b835b9845dd672c
 
 **Huidige uitkomst:** de schone lokale webbuild van de exacte release-SHA en alle 36 browsertests slagen. Beide verplichte CI-controles op dezelfde SHA zijn geslaagd. Beide kandidaten zijn op dg-vps-08 gebouwd, onafhankelijk gecontroleerd en geactiveerd op uitsluitend hun eigen loopbackpoort. Beide services zijn actief en starten mee bij een hostherstart. De gezamenlijke release-/rechtenaudit en 22 veilige runtimecontroles per omgeving slagen. Geen publieke Fabelpad-route is toegevoegd. De publieke routes staan uit. Eerst volgt privacyafronding, daarna gecontroleerde staging-HTTPS voor echte acceptatie en vervolgens gecontroleerde production-HTTPS met haar eigen acceptatie.
 
+## Latere eigenaarbevestiging en privacyactualisering
+
+Na de onderstaande release bevestigde de eigenaar: **back-ups maximaal 180 dagen**, **Stackmail**, **gewone supportmail maximaal 12 maanden na afsluiting**, de **verwerkers-/doorgifteafspraken** en **overgenomen Supabase Auth-templates**. Deze informatievragen zijn daarmee beantwoord en worden niet opnieuw gesteld. Zie het [eigenaarbewijs](deploy-evidence/privacy-owner-confirmation-2026-11-22.json) en het [wijzigingsoverzicht](PRIVACY-AANVULLING-180-DAGEN.md).
+
+Privacyversie **`2026-11-22.1`** is in de bron voorbereid met een additieve catalogusmigratie en een gerichte bewaaraanpassing voor minimale wisbewijzen. De historische downloads/aanvaardingen blijven intact. Dit verandert de hieronder bewezen live app-SHA niet vanzelf. Nieuwe lokale/CI-/doelbuilds en eventuele uitrol moeten als afzonderlijke resultaten worden vastgelegd. Echte Auth-/mailbezorging, mailboxopschoning en herstelcontrole blijven uitvoeringsproeven; de eigenaarbevestiging vervangt die niet. Een herstelpunt zonder volledige actuele wis-/intrekkingsdekking mag niet voor gebruikers worden geopend.
+
 ## Build- en releasematrix
 
 | Controle of resultaat | Bron / bewijs | Uitkomst en grens |
@@ -19,7 +25,7 @@ Controledatum: **22 november 2026**. Releasebron: **`c1a9829c6580b835b9845dd672c
 | Loopbackactivering staging | [Run 45057551364](https://github.com/fabelpad/platform/actions/runs/45057551364) | **SUCCESS**, 18:53:37 UTC; gezamenlijke releaseaudit en loopbackhealth PASS |
 | Loopbackactivering production | [Run 45057814826](https://github.com/fabelpad/platform/actions/runs/45057814826) | **SUCCESS**, 18:56:52 UTC; gezamenlijke releaseaudit en loopbackhealth PASS |
 | Veilige runtimecontrole | Beide eigen loopbackpoorten, 18:57 UTC | **22/22 PASS per omgeving**; OAuth-initiatie gecontroleerd, geen aanmelding afgerond |
-| Publieke HTTPS | Caddy-voorbereiding buiten actieve configuratie | Niet geactiveerd; privacyfeiten nog open |
+| Publieke HTTPS | Caddy-voorbereiding buiten actieve configuratie | Niet geactiveerd; nieuwe privacyversie en uitvoeringsacceptatie nog vrij te geven |
 
 De lokale build en de 36 browsertests zijn opnieuw uitgevoerd op een schone `git archive` van exact de huidige release-SHA. De eerdere 34-testbuild is hiermee historisch; de nieuwe release bevat ook de servergestuurde verwijderdatum vóór bevestiging, met een atomische controle bij het verlopen van de getoonde minuut. Zie [het volledige validatierapport](VALIDATIE-GOOGLE-PRIVACY-2026-11-22.md).
 
@@ -89,7 +95,7 @@ Er blijven uitsluitend `FABELPAD_APP_ORIGIN`, `FABELPAD_DATA_MODE`, `NEXT_PUBLIC
 | --- | --- | --- |
 | 1. CI-vrijgave | Exacte main-SHA; schone lokale build, 36 browsertests en beide verplichte CI-controles geslaagd | Afgerond voor deze SHA; een andere SHA opnieuw controleren |
 | 2. Doelkandidaten | Beide kandidaten gebouwd; gezamenlijke kandidaat-/rechtenaudit PASS | Afgerond voor deze twee kandidaat-ID’s |
-| 3. Feitelijke privacy vóór publieke activatie | Juridische routes, versies/downloads, DPIA en gegevensstroominventaris | Werkelijke maximale back-up-/VPS-retentie, supportmailleverancier, operationele termijnen en verwerkers-/doorgifteafspraken bevestigen; publieke tekst daarmee in overeenstemming brengen |
+| 3. Feitelijke privacy vóór publieke activatie | Juridische routes, versies/downloads, DPIA en gegevensstroominventaris | Eigenaargegevens bevestigd: 180 dagen back-ups, Stackmail, supportmail 12 maanden en verwerkers-/doorgifteafspraken. De nieuwe versie `2026-11-22.1` testen en uitrollen; providerlogcriteria, mailbox- en hersteluitvoering apart verifiëren |
 | 4. Eerste aanmelding en beheer | Zescijferige OTP, Google-knop, serveronboarding en beheerderbootstrap | Interactieve OTP-/Google-aanmelding per omgeving; eerste beheerder, voorwaarden en ouder-/profieltoestemming met toegestane testgegevens controleren |
 | 5. Applicatiemail | Vault-beheer, template-editor en outbox | Eigen Resend API-key per omgeving, verzending en echte ontvangst controleren; scheduler-200 alleen is daarvoor onvoldoende |
 | 6. Inactiviteitsbeleid | Uitvoerbare worker en minuutcron | Eerst stagingrapport, werkende waarschuwingen en overgangscontrole; 90-dagenwissing staat tot die afronding uit |
