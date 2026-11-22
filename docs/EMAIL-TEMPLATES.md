@@ -106,7 +106,7 @@ Voer na de veilige inrichting per omgeving deze acceptatie uit:
 
 1. Vraag één OTP aan voor de bevoegde beheerdersmailbox. Controleer de juiste afzender, het juiste onderwerp, Fabelpad-opmaak en op staging de testmarkering.
 2. Controleer de ontvangst in de mailbox zelf. Bekijk zo nodig in het afgeschermde Resend-dashboard de afleverstatus; kopieer geen berichtinhoud of codes naar het project.
-3. Bij een eerste installatie zonder draaiende app gebruik je eerst de zelfstandige OTP-proef uit [EMAIL-CONFIGURATIE.md](EMAIL-CONFIGURATIE.md). Zo kunnen provider/OTP/rol worden bevestigd vóór het host-readinessbewijs en de kandidaatbuild. Controleer na kandidaatbouw ook `/inloggen`, gezinssessie, studio, uitloggen en opnieuw inloggen. Een gewone ouder mag geen beheerrechten krijgen.
+3. Gebruik na de privacycontrole de gecontroleerd vrijgegeven eigen staging-HTTPS-route voor `/registreren` of `/inloggen`, de zes-cijferige code, ouderonboarding, gezinssessie, studio, uitloggen en opnieuw inloggen. Een gewone ouder mag geen beheerrechten krijgen. De oude zelfstandige terminalproef in de alternatieve hookhandleiding vereist een actieve hook en geldt niet voor de huidige SMTP-route; activeer daarvoor geen hook. Herhaal de aanmeld-/mailacceptatie afzonderlijk op productie vóór algemene ingebruikname.
 4. Controleer dat een verkeerde en verlopen code geen sessie opleveren; te snel opnieuw aanvragen toont een begrensde foutmelding.
 5. Controleer gebruikte bevestigingslinks, supportmailbox en privacybestemming. Bij een dubbele e-mailwijziging mogen de twee codes niet verwisseld zijn.
 

@@ -1,0 +1,285 @@
+{
+  "checkedAt": "2026-11-22T18:57:04.308965+00:00",
+  "sha": "c1a9829c6580b835b9845dd672c9d89127f60c64",
+  "host": "dg-vps-08",
+  "scope": "loopback-only process/provider configuration/legal bytes and OAuth initiation; no OAuth completion, OTP, mail, account, database, proxy or public-routing changes",
+  "hostWritesPerformed": false,
+  "secretValuesPersisted": false,
+  "targets": {
+    "staging": {
+      "port": 4188,
+      "checks": {
+        "onlyOwnIpv4LoopbackBind": true,
+        "healthExactRelease": true,
+        "healthNoStore": true,
+        "anonymousSessionProviderStatus": true,
+        "sessionPrivateNoStore": true,
+        "anonymousDenied:GET /api/parent/status": true,
+        "anonymousDenied:GET /api/parent/deletion": true,
+        "anonymousDenied:POST /api/parent/deletion": true,
+        "legalPublic:/algemene-voorwaarden": true,
+        "legalPublic:/privacyverklaring": true,
+        "legalPublic:/privacy": true,
+        "legalPublic:/privacy-voor-kinderen": true,
+        "legalPublic:/bedrijfsgegevens": true,
+        "legalPublic:/herroepen": true,
+        "legalPublic:/account-verwijderen": true,
+        "legalPublic:/privacyverzoek": true,
+        "legalDownload:terms": true,
+        "legalDownload:privacy": true,
+        "legalManifest": true,
+        "googleSvg": true,
+        "googleOAuthInitiation": true,
+        "crossOriginGoogleDenied": true
+      },
+      "routes": {
+        "GET /api/parent/status": {
+          "status": 401,
+          "anonymousDenied": true
+        },
+        "GET /api/parent/deletion": {
+          "status": 401,
+          "anonymousDenied": true
+        },
+        "POST /api/parent/deletion": {
+          "status": 401,
+          "anonymousDenied": true
+        },
+        "/algemene-voorwaarden": {
+          "status": 200,
+          "publicWithoutCookie": true,
+          "html": true
+        },
+        "/privacyverklaring": {
+          "status": 200,
+          "publicWithoutCookie": true,
+          "html": true
+        },
+        "/privacy": {
+          "status": 200,
+          "publicWithoutCookie": true,
+          "html": true
+        },
+        "/privacy-voor-kinderen": {
+          "status": 200,
+          "publicWithoutCookie": true,
+          "html": true
+        },
+        "/bedrijfsgegevens": {
+          "status": 200,
+          "publicWithoutCookie": true,
+          "html": true
+        },
+        "/herroepen": {
+          "status": 200,
+          "publicWithoutCookie": true,
+          "html": true
+        },
+        "/account-verwijderen": {
+          "status": 200,
+          "publicWithoutCookie": true,
+          "html": true
+        },
+        "/privacyverzoek": {
+          "status": 200,
+          "publicWithoutCookie": true,
+          "html": true
+        },
+        "/legal/2026-11-22/algemene-voorwaarden.md": {
+          "status": 200,
+          "sha256": "8da71baa717f1e98b393320532670b4ebbddacbd390a14dba3c4cc144b394840",
+          "matchesCommittedLegalDocument": true
+        },
+        "/legal/2026-11-22/privacyverklaring.md": {
+          "status": 200,
+          "sha256": "97673d3103443115097def26e20e6c677650dcb760d095de900ae3c5c5961cb7",
+          "matchesCommittedLegalDocument": true
+        },
+        "/legal/2026-11-22/manifest.json": {
+          "status": 200,
+          "matchesCommittedManifest": true
+        }
+      },
+      "listening": true,
+      "health": {
+        "status": 200,
+        "ok": true,
+        "service": "fabelpad",
+        "runtime": "nextjs-node",
+        "environment": "staging",
+        "revision": "c1a9829c6580b835b9845dd672c9d89127f60c64",
+        "scope": "process-liveness-only",
+        "backend": "configured-unverified"
+      },
+      "anonymousSession": {
+        "status": 200,
+        "configured": true,
+        "parentAbsent": true,
+        "adminFalse": true,
+        "emailEnabled": true,
+        "googleEnabled": true
+      },
+      "googleIcon": {
+        "status": 200,
+        "svgContentType": true,
+        "matchesCommittedAsset": true,
+        "sha256": "2601692d98e76666994231b0c548c94cd758f2b8b62647489d077ee9a767f00b"
+      },
+      "oauthInitiation": {
+        "status": 200,
+        "ownSupabaseAuthorizeEndpoint": true,
+        "googleProvider": true,
+        "canonicalCallback": true,
+        "pkceS256": true,
+        "pkceChallengePresent": true,
+        "verifierCookiePresent": true,
+        "allVerifierCookiesHttpOnly": true,
+        "allVerifierCookiesSecure": true,
+        "allVerifierCookiesSameSiteLax": true,
+        "allVerifierCookiesRootPath": true,
+        "redirectNotFollowed": true,
+        "urlAndCookieValuesDiscarded": true
+      },
+      "passed": true,
+      "status": "passed"
+    },
+    "production": {
+      "port": 4189,
+      "checks": {
+        "onlyOwnIpv4LoopbackBind": true,
+        "healthExactRelease": true,
+        "healthNoStore": true,
+        "anonymousSessionProviderStatus": true,
+        "sessionPrivateNoStore": true,
+        "anonymousDenied:GET /api/parent/status": true,
+        "anonymousDenied:GET /api/parent/deletion": true,
+        "anonymousDenied:POST /api/parent/deletion": true,
+        "legalPublic:/algemene-voorwaarden": true,
+        "legalPublic:/privacyverklaring": true,
+        "legalPublic:/privacy": true,
+        "legalPublic:/privacy-voor-kinderen": true,
+        "legalPublic:/bedrijfsgegevens": true,
+        "legalPublic:/herroepen": true,
+        "legalPublic:/account-verwijderen": true,
+        "legalPublic:/privacyverzoek": true,
+        "legalDownload:terms": true,
+        "legalDownload:privacy": true,
+        "legalManifest": true,
+        "googleSvg": true,
+        "googleOAuthInitiation": true,
+        "crossOriginGoogleDenied": true
+      },
+      "routes": {
+        "GET /api/parent/status": {
+          "status": 401,
+          "anonymousDenied": true
+        },
+        "GET /api/parent/deletion": {
+          "status": 401,
+          "anonymousDenied": true
+        },
+        "POST /api/parent/deletion": {
+          "status": 401,
+          "anonymousDenied": true
+        },
+        "/algemene-voorwaarden": {
+          "status": 200,
+          "publicWithoutCookie": true,
+          "html": true
+        },
+        "/privacyverklaring": {
+          "status": 200,
+          "publicWithoutCookie": true,
+          "html": true
+        },
+        "/privacy": {
+          "status": 200,
+          "publicWithoutCookie": true,
+          "html": true
+        },
+        "/privacy-voor-kinderen": {
+          "status": 200,
+          "publicWithoutCookie": true,
+          "html": true
+        },
+        "/bedrijfsgegevens": {
+          "status": 200,
+          "publicWithoutCookie": true,
+          "html": true
+        },
+        "/herroepen": {
+          "status": 200,
+          "publicWithoutCookie": true,
+          "html": true
+        },
+        "/account-verwijderen": {
+          "status": 200,
+          "publicWithoutCookie": true,
+          "html": true
+        },
+        "/privacyverzoek": {
+          "status": 200,
+          "publicWithoutCookie": true,
+          "html": true
+        },
+        "/legal/2026-11-22/algemene-voorwaarden.md": {
+          "status": 200,
+          "sha256": "8da71baa717f1e98b393320532670b4ebbddacbd390a14dba3c4cc144b394840",
+          "matchesCommittedLegalDocument": true
+        },
+        "/legal/2026-11-22/privacyverklaring.md": {
+          "status": 200,
+          "sha256": "97673d3103443115097def26e20e6c677650dcb760d095de900ae3c5c5961cb7",
+          "matchesCommittedLegalDocument": true
+        },
+        "/legal/2026-11-22/manifest.json": {
+          "status": 200,
+          "matchesCommittedManifest": true
+        }
+      },
+      "listening": true,
+      "health": {
+        "status": 200,
+        "ok": true,
+        "service": "fabelpad",
+        "runtime": "nextjs-node",
+        "environment": "production",
+        "revision": "c1a9829c6580b835b9845dd672c9d89127f60c64",
+        "scope": "process-liveness-only",
+        "backend": "configured-unverified"
+      },
+      "anonymousSession": {
+        "status": 200,
+        "configured": true,
+        "parentAbsent": true,
+        "adminFalse": true,
+        "emailEnabled": true,
+        "googleEnabled": true
+      },
+      "googleIcon": {
+        "status": 200,
+        "svgContentType": true,
+        "matchesCommittedAsset": true,
+        "sha256": "2601692d98e76666994231b0c548c94cd758f2b8b62647489d077ee9a767f00b"
+      },
+      "oauthInitiation": {
+        "status": 200,
+        "ownSupabaseAuthorizeEndpoint": true,
+        "googleProvider": true,
+        "canonicalCallback": true,
+        "pkceS256": true,
+        "pkceChallengePresent": true,
+        "verifierCookiePresent": true,
+        "allVerifierCookiesHttpOnly": true,
+        "allVerifierCookiesSecure": true,
+        "allVerifierCookiesSameSiteLax": true,
+        "allVerifierCookiesRootPath": true,
+        "redirectNotFollowed": true,
+        "urlAndCookieValuesDiscarded": true
+      },
+      "passed": true,
+      "status": "passed"
+    }
+  },
+  "completedAt": "2026-11-22T18:57:04.560082+00:00"
+}

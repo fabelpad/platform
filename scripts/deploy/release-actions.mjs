@@ -89,6 +89,18 @@ function provisionPublicConfiguration(profile, configId, sha, rawConfig) {
   writeImmutable(`${runtimeDirectory}/${sha}.env`, runtimeText, profile.app.gid);
 }
 
+export function spawnCandidateWorker(profile, work, argv, archive, spawn = spawnSync) {
+  return spawn('/usr/sbin/runuser', ['--user', profile.build.user, '--', profile.node,
+    `${profile.installRoot}/candidate-worker.mjs`, ...argv], {
+    // The caller is the runner account; its checkout is deliberately unreadable
+    // to the builder. Enter the freshly created own build workmap before the
+    // account switch so even the worker's first tar/pnpm version calls have a
+    // readable cwd instead of inheriting the runner's private checkout.
+    cwd: work, env: cleanEnvironment(profile, { build: true }), input: archive, timeout: 40 * 60 * 1000,
+    stdio: ['pipe', 'inherit', 'inherit', 'pipe'], maxBuffer: 65536,
+  });
+}
+
 export async function buildCandidate(argv, token, publicConfig) {
   const args = buildArgs(argv);
   const profile = hostProfile();
@@ -114,11 +126,7 @@ export async function buildCandidate(argv, token, publicConfig) {
   // Download the exact, API-approved source directly. The privileged adapter
   // never invokes Git or executes anything from a runner-writable worktree.
   const archive = await downloadSourceArchive(args.sha, token);
-  const result = spawnSync('/usr/sbin/runuser', ['--user', profile.build.user, '--', profile.node,
-    `${profile.installRoot}/candidate-worker.mjs`, ...argv], {
-    env: cleanEnvironment(profile, { build: true }), input: archive, timeout: 40 * 60 * 1000,
-    stdio: ['pipe', 'inherit', 'inherit', 'pipe'], maxBuffer: 65536,
-  });
+  const result = spawnCandidateWorker(profile, work, argv, archive);
   invariant(!result.error && result.status === 0 && result.output[3]?.length > 0, 'Buildworker heeft geen geldig resultaat opgeleverd.');
   let value;
   try { value = JSON.parse(result.output[3].toString()); } catch { throw new Error('Workerresultaat is geen geldig JSON-manifest; inhoud wordt niet getoond.'); }

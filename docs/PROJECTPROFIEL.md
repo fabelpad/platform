@@ -6,7 +6,7 @@ Bijgewerkt: **22 november 2026**. De eigenaar autoriseert inrichting van **beide
 | --- | --- |
 | Product | Fabelpad; webplatform en afzonderlijke lokale native Android-app |
 | Repository / integratiebranch | [fabelpad/platform](https://github.com/fabelpad/platform), `main`; Git-remote en bestaande CI |
-| Werkbranch | `codex/legal-google-release-20261122`; voortzetting via bestaande PR 3, inclusief de VPS-voorbereiding |
+| Werkbranch | `codex/legal-google-release-20261122`; werk geïntegreerd in `main`; PR 3 is inmiddels gemerged, inclusief de VPS-voorbereiding |
 | Werkcheckout | `/home/codex/repos/fabelpad` |
 | Toolchain | Node `24.18.0`, pnpm `11.25.0`, `pnpm-lock.yaml`; Next `16.3.4`, React `19.2.6` |
 | Installatie / build / start | `pnpm install --frozen-lockfile` / `pnpm build` / `pnpm start --port <poort>`; loopbackbinding |

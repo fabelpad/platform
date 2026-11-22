@@ -13,7 +13,7 @@ Alleen een ingelogde, bevestigde ouder met een actuele databasebeheerrol heeft t
 
 De eigenaar heeft de OTP-route ingericht als **Supabase Auth → custom SMTP → Resend**, met zescijferige codes. Behoud die inrichting. Er wordt geen Send Email Hook geactiveerd. De eerste login werkt via deze SMTP-route en staat los van de Resend-API-koppeling op deze beheerpagina. Controleer de eigen Supabase Site URL, redirects en e-mailinstellingen per omgeving; deel geen key, token of OTP in chat. De Resend-API voor applicatieserviceberichten krijgt afzonderlijk een key via Beheer → E-mail.
 
-Log daarna als **info@dgwebservices.nl** in en open **Beheer → E-mail**. Op een nog niet publiek geactiveerde omgeving volgen deze browserstappen pas bij de afzonderlijk vrijgegeven kandidaatproef/activatie. De zelfstandige OTP-acceptatie uit de configuratiehandleiding kan daarvoor al worden uitgevoerd.
+Log daarna als **info@dgwebservices.nl** in en open **Beheer → E-mail**. Op een nog niet publiek geactiveerde omgeving volgen deze browserstappen na de privacycontrole en gecontroleerde activering van de eigen staging-HTTPS-route. De oude terminalproef uit de alternatieve hookhandleiding vereist die hook en hoort niet bij de huidige SMTP-route. Test de bestaande SMTP-route via de huidige browserflow; zet hiervoor geen hook aan.
 
 1. Controleer bovenaan de omgeving en website. Gebruik voor staging en productie hun eigen Resend-key, bij voorkeur beperkt tot verzenden vanaf het Fabelpad-domein.
 2. Vul de afzendernaam, het geverifieerde afzenderadres, antwoordadres en supportadres in. `noreply@fabelpad.nl` is alleen bruikbaar nadat dat domein en de verzendrechten zijn geverifieerd.

@@ -1,65 +1,104 @@
 # Fabelpad — Supabase, beheerrechten en mail
 
-Gecontroleerd op **22 november 2026**. Deze inrichting betreft uitsluitend onderstaande twee Fabelpad-projecten. Beide waren nieuw/leeg: nul applicatietabellen, nul migraties en nul Auth-gebruikers.
+Gecontroleerd op **22 november 2026**. Dit document betreft uitsluitend de twee onderstaande Fabelpad-projecten. De oorspronkelijke inrichting begon met lege projecten; de actuele toestand omvat acht toegepaste migraties, dertien bronverhalen, de mailbeheerfuncties en de ouder-/privacylevenscyclus. Bij de laatste livecontrole waren er **nul Auth-gebruikers, beheerders, gezinnen en Resend API-mailconfiguraties**. Een ingerichte database of Edge Function is geen actieve webrelease.
 
-| Omgeving | Workspace-account | Project / regio | Site URL |
+| Omgeving | Workspace-account | Project / regio | App-origin |
 | --- | --- | --- | --- |
 | staging | **fabelpad** | `tlwfpivafcokcjyjwgmq` / eu-west-1 | `https://staging.fabelpad.nl` |
 | production | **Duindorpdoet** | `aptprpkosqctwrzeetgs` / eu-west-1 | `https://fabelpad.nl` |
 
-De vier publieke GitHub-variabelen staan per bestaande environment; zie [INRICHTING.md](../docs/INRICHTING.md). De webserver heeft geen service-role key nodig.
+De bestaande GitHub environments `staging` en `production` gebruiken uitsluitend **`FABELPAD_APP_ORIGIN`**, **`FABELPAD_DATA_MODE`**, **`NEXT_PUBLIC_SUPABASE_URL`** en **`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`**. De webserver werkt met publieke projectconfiguratie en de echte gebruikerssessie; hij heeft geen service-role key nodig. Geheimen voor Edge-/servicetaken blijven bij de eigen provider en in het eigen Vault. Zie [INRICHTING.md](../docs/INRICHTING.md) en de [actuele status](../docs/STAGING-PRODUCTION-STATUS.md).
 
 ## Toegepaste migraties
 
-1. `20261104095714_family_content_contract.sql`: eigen gezinsdocumenten, CAS-revisies, expliciete beheerders, afgeschermde contentconcepten en onveranderlijke verhaalreleases.
-2. `20261122140451_verified_bootstrap_admin.sql`: bevestigde eigenaar-mailbox als eerste beheerder en beperkte uitvoerrechten van de platformhelper.
+| Migratie | Contract | Beide projecten |
+| --- | --- | --- |
+| `20261104095714_family_content_contract.sql` | Eigen gezinsdocumenten, CAS-revisies, expliciete beheerders, contentconcepten en onveranderlijke verhaalreleases | Toegepast |
+| `20261122140451_verified_bootstrap_admin.sql` | Bevestigde bootstrapmailbox en beperkte uitvoerrechten | Toegepast |
+| `20261122150754_admin_email_settings.sql` | Afgeschermde mailinstellingen, Vault, testbewijzen en revisiecontrole | Toegepast |
+| `20261122172905_parent_account_lifecycle.sql` | Volwassen ouderonboarding, documentversies, afzonderlijke profieltoestemming, activiteit, verwijdering, AVG-register en duurzame outbox | Toegepast |
+| `20261122174433_lifecycle_worker_schedule.sql` | Eigen afgeschermde schedulerinrichting | Toegepast |
+| `20261122175306_signed_lifecycle_worker_requests.sql` | Projectgebonden HMAC met eenmalige nonce voor onderhoudsaanvragen | Toegepast |
+| `20261122175654_private_pg_net_extension.sql` | `pg_net` in het bedoelde providerschema `extensions` | Toegepast |
+| `20261122182638_account_deletion_deadline_preview.sql` | Alleen-lezen verwijderdatum vóór bevestiging en atomische controle van de bevestigde minuut | Toegepast |
 
-Beide migraties zijn via de verbonden Supabase-beheertool toegepast en daarna gecontroleerd. Die tool gaf uitvoertijdstempels; na vergelijking van de **volledige SQL-SHA256** is uitsluitend de migratieversie-administratie gelijkgetrokken met de bestandsnamen. SQL, naam en inhoud zijn behouden. Beide projecthistories matchen nu de twee bestanden. Gebruik geen tweede ongecontroleerde `db push` om deze migraties opnieuw uit te voeren. [Officieel migratiecontract](https://supabase.com/docs/guides/deployment/database-migrations).
+Alle acht lokale migratieversies komen overeen met de gecontroleerde historie van beide projecten. Bij door de beheertool toegekende uitvoeringstijdstempels is uitsluitend de versie-administratie gelijkgetrokken **na vergelijking van de volledige opgeslagen SQL-SHA256**; statements en inhoud zijn behouden. De vijf laatste migraties zijn de nieuwe ouder-/lifecycle-/scheduler-/previewwijzigingen. Hun exacte hashes en controles staan in [google-legal-lifecycle-2026-11-22.json](../docs/deploy-evidence/google-legal-lifecycle-2026-11-22.json). De previewmigratie heeft SHA-256 `465155f8d009f0ddddd8eda0dfe356b903862c47739b1e7c08628d0c3a32b9cc`.
 
-De tweede migratie is met de officiële, checksum-gecontroleerde **Supabase CLI 3.2.0** en `supabase migration new verified_bootstrap_admin` aangemaakt. Versie 3 heeft andere standaardtargetkeuzes; controleer de actuele help en selecteer een hosted project expliciet. CLI-installatie is geen runtimevoorwaarde.
+Voer reeds toegepaste migraties niet opnieuw uit met een ongecontroleerde `db push`. Controleer altijd expliciet het bedoelde hosted project, de bestaande historie en de geplande nieuwe SQL. [Officieel migratiecontract](https://supabase.com/docs/guides/deployment/database-migrations). De eerder gebruikte Supabase CLI **3.2.0** is een beheertool en geen runtimevoorwaarde; selecteer bij CLI-gebruik een hosted doel expliciet.
 
-## Databasecontract
+## Database- en rechtencontract
 
-- `family_documents`: ouder-UUID als eigenaar, RLS SELECT op eigen rij. Alleen gevalideerde CAS-RPC schrijft een volledig document. Andere gezinnen en anonieme sessies krijgen geen toegang.
-- `content_admins`: alleen eigen rol lezen; geen client-write. Beheerrechten komen uit deze tabel.
-- `content_drafts`: alleen beheerder, met revisiecontrole en gevalideerde RPC.
-- `content_releases`: publiek leesbaar, versiehash en immutable trigger. Publicatie bewaart eerdere verhaalversies; accountverwijdering verwijdert geen publieke verhaalrelease.
-- Privileged functies staan in `private`, met lege search_path, expliciete grants en servercontroles. Public wrappers zijn invokerfuncties.
+- `family_documents`: ouder-UUID als eigenaar; RLS op de eigen rij en gevalideerde CAS-RPC voor wijzigingen. Toegang vereist daarnaast een echte huidige sessie, actuele ouderonboarding en een actief account. Andere gezinnen en anonieme sessies krijgen geen toegang.
+- `content_admins`: alleen de eigen rol lezen, geen client-write. Beheerrechten komen uit de database en worden servermatig gecontroleerd; usermetadata is geen autorisatiebron.
+- `content_drafts`: beperkte beheerdertoegang, revisiecontrole en gevalideerde wijzigings-/publicatie-RPC’s.
+- `content_releases`: publiek leesbaar, versiehash en onveranderlijkheid. Publicatie behoudt eerdere verhaalversies; accountverwijdering verwijdert geen publieke verhaalrelease.
+- Private mail-, ouder-, toestemmings-, activiteit-, AVG-, outbox- en schedulergegevens: directe applicatietoegang geweigerd. Alleen de bedoelde beperkte functies mogen deze gegevens lezen of wijzigen. Service-only taken krijgen geen algemene browser- of Next-serverrechten.
+- Juridische versies: voorwaarden en getoonde privacyversie worden met vaste documenthashes geregistreerd. Een toekomstige documentwijziging vereist een bewuste nieuwe versie; reeds aanvaarde tekst wordt niet stilzwijgend overschreven.
 
-Alle vier tabellen hebben RLS. Publieke REST-controles geven 13 catalogusverhalen en HTTP401 voor anonieme toegang tot gezinnen, beheerderrollen en concepten. Security advisors geven na hardening **nul meldingen** in beide projecten.
+RLS en functiegrants zijn gecontroleerd. De security advisors melden momenteel **0 WARN, 0 ERROR en 13 INFO**. De INFO-meldingen betreffen private tabellen waarvan directe toegang bewust is geweigerd en alleen gecontroleerde functies de route vormen. Dit zijn geen nul meldingen en geen algemene compliancecertificering. Publieke catalogusdata blijft leesbaar; afgeschermde gezins-, rol-, concept- en lifecycledata is niet anoniem toegankelijk.
 
-De 13 bestaande bronverhalen zijn per project geïmporteerd als immutable releases, met dezelfde hashes als web/native. De export is idempotent: bestaande story/version-rijen blijven behouden. Nieuwe content uit de studio gaat via de bestaande validatie/publicatieroute. De export kan opnieuw ter beoordeling worden gemaakt met:
+De **13 bestaande bronverhalen** zijn per project als onveranderlijke releases behouden, met dezelfde hashes als web/native. De export is idempotent: bestaande story/version-rijen blijven staan. Nieuwe studiocontent gebruikt de bestaande validatie- en publicatieroute. Een nieuwe export ter beoordeling maken:
 
 ```bash
 node scripts/supabase-export-content.mjs --output /ABSOLUUT/NIEUW/PAD/content.sql
 ```
 
-Dit commando schrijft alleen een bestand; het voert geen SQL of mail uit. Splits grote imports in begrensde statements, omdat de beheer-API een querylimiet heeft.
+Dit schrijft alleen een bestand en voert geen SQL of mail uit. Beoordeel imports en houd rekening met de querylimiet van de beheer-API.
 
-## Eerste beheerder
+## Eerste beheerder en oudertoegang
 
-**info@dgwebservices.nl** is de expliciete bootstrapmailbox. De trigger vertrouwt uitsluitend `auth.users.email`, `email_confirmed_at` en `is_anonymous`. Na daadwerkelijke adresbevestiging ontstaat automatisch een `content_admins`-rij met `grant_source=bootstrap_email`.
+**`info@dgwebservices.nl`** is de expliciete bootstrapmailbox. De trigger vertrouwt uitsluitend het werkelijke `auth.users.email`, `email_confirmed_at` en `is_anonymous`. Na echte bevestiging kan de automatische `content_admins`-rol met `grant_source=bootstrap_email` ontstaan. Een onbevestigde of anonieme gebruiker en gemanipuleerde usermetadata krijgen geen rol. Verlies van het bevestigde adres trekt de automatische rol in; afzonderlijke handmatige toekenningen blijven behouden.
 
-Een onbevestigde gebruiker, anonieme sessie of gemanipuleerde user_metadata krijgt geen rol. Verlies van het bevestigde adres trekt uitsluitend die automatische rol in. Afzonderlijk handmatig toegekende beheerders blijven behouden. Het verwijderen van de Auth-gebruiker verwijdert diens gezinsdocument en rol via bestaande foreign keys.
+De eigenaar heeft de OTP-route met **zes cijfers** bevestigd; publieke Auth-settings tonen in beide projecten e-mail en Google aan en Auto Confirm uit. Een echte eerste aanmelding is nog nodig. Er is geen fictieve gebruiker aangemaakt of mailbox zonder bezitsbewijs bevestigd. Voor bruikbare ouder-/beheerrechten moet het account bovendien de afzonderlijke volwassen-ouderverklaring en actuele voorwaarden afronden. De privacyverklaring wordt getoond; zij is geen toestemmingscheckbox. Iedere online kindomgeving vereist afzonderlijke oudertoestemming. Controleer na de echte aanmelding de huidige servergeverifieerde gebruiker, onboarding, eigen databasebeheerrol en studio per project. Deel geen OTP, sessie of andere inloggeheimen in chat of logs.
 
-Er zijn nog **nul Auth-gebruikers**. Er is geen fictieve gebruiker aangemaakt en geen mailbox als bevestigd gemarkeerd zonder bewijs van bezit. De eerste geslaagde OTP-aanmelding van het aangewezen adres maakt het account en de beheerrol aan. Geef geen OTP in chat/logs. Controleer daarna servermatig `getUser`, de eigen rol en de studio.
+## Auth-mail: Supabase Custom SMTP via Resend
 
-## E-mail-OTP via Resend API
+**De door de eigenaar ingerichte Supabase Custom SMTP via Resend blijft de actieve verzendroute. Activeer hiervoor geen Send Email Hook.** De aanwezigheid van de gedeployde `auth-email`-functie verandert die keuze niet. De OTP-/Google-UI en serverroutes zijn voorbereid; publieke providerinstellingen en eigenaarbevestiging zijn geen bewijs van interactieve aanmelding of inboxbezorging.
 
-`auth-email` is in beide projecten voorbereid. `verify_jwt=false` is bewust: Auth verstuurt vóór een gebruikerssessie. De handler vereist een geldige **Standard Webhooks HMAC-SHA256-handtekening**, tijdvenster, begrensde body en juiste Site URL. Niet-ondertekende verzoeken kunnen niet mailen. Zolang de bootstrapinstellingen ontbreken, retourneert POST een generieke HTTP503. Na eerste beheeropslag leest de hook de configuratie via het service-only RPC uit Vault; databasefouten vallen niet terug op een oude bootstrapkey.
+Supabase Auth-mail gebruikt de HTML en onderwerpen in **Authentication → Email Templates** van het eigen project. Onder `email-templates/` staan **31 geëxporteerde bestanden**: dertien staging-HTML-templates, dertien productie-HTML-templates, vier synthetische previews en een manifest. Dezelfde gedeelde renderer voedt de Fabelpad-editor. Op **Beheer → E-mailtemplates** kan een Auth-template met de huidige bewerkingen als veilige HTML worden gedownload, met het bijbehorende onderwerp en de vaste Supabase-placeholders. Neem HTML en onderwerp per project handmatig over in het Supabase Dashboard. Opslaan in de Fabelpad-editor synchroniseert ze niet automatisch naar SMTP/Auth.
 
-[functions.auth-email] staat in `config.toml`; imports verwijzen naar de gedeelde `lib/email/`-bron. Dezelfde renderer levert 26 plakklare HTML-bestanden en alle ondersteunde applicatieserviceberichten. Er wordt geen advertentie- of trackingmail toegevoegd.
+`auth-email` **v3** is in beide projecten beschikbaar, maar de hook is **niet actief**. De optionele handler vereist een Standard Webhooks HMAC-handtekening, een beperkt tijdvenster en body, de juiste omgeving/project/origin en eigen verzendconfiguratie. `verify_jwt=false` staat alleen dit pre-loginprotocol toe; het is geen vrije mailendpoint. Gebruik deze reserve-integratie niet om de bestaande SMTP-route te vervangen. Zie de [actuele mailbeheerhandleiding](../docs/EMAIL-BEHEER.md) en [templatehandleiding](../docs/EMAIL-TEMPLATES.md).
 
-Volg [mailconfiguratie](../docs/EMAIL-CONFIGURATIE.md) en [templatehandleiding](../docs/EMAIL-TEMPLATES.md). De workspaceconnector kan geen Auth-instellingen of Edge secrets instellen. Daarvoor is de bedoelde Management PAT plus Resend-key via een afgeschermde bron of de verborgen terminaltool nodig. Geen beheerkeys in GitHub-variabelen.
+## Applicatiemail: Resend API en templates in Beheer
 
-## Resend en templates in Beheer
+Applicatieservicemails hebben een **afzonderlijke Resend API-koppeling** nodig. Werkende Auth-SMTP vult deze koppeling niet in. Per omgeving ontbreekt bij de laatste controle nog de API-key in het eigen Vault. Voer die na de echte beheerderaanmelding in via **Beheer → E-mail**, controleer afzender, reply-to en tracking en voer de echte test-/opslagroute uit. Sleutels komen niet in GitHub-variabelen, broncode, documentatie of procesargumenten.
 
-Migratie `20261122150754_admin_email_settings.sql` voegt twee afgeschermde RLS-tabellen in `private` toe. De Resend-key wordt uitsluitend via Supabase Vault versleuteld bewaard. `get_email_settings()` geeft alleen aan bevestigde huidige beheerders de niet-geheime instellingen terug. Ontsleutelde configuratie, testreservering en atomair opslaan zijn service-only RPC's voor de Edge-runtime; het browser-JWT en de Next-server krijgen deze rechten niet.
+De `email-admin` Edge Function **v3** controleert zelf de echte huidige Auth-gebruiker, het actieve ouderaccount en de actuele databasebeheerrol. De browser krijgt alleen niet-geheime instellingen. Ontsleutelde configuratie en atomair opslaan zijn voor beperkte Edge-servicetaken. Opslag vereist een geaccepteerde test naar uitsluitend de aangemelde beheerder, actuele revisie en een eenmalig bewijs met vervaltijd. Een API-ontvangstbewijs is nog geen bewijs van inboxbezorging.
 
-De `email-admin` Edge Function doet zelf verplicht `getUser` plus databasebeheercontrole; `verify_jwt=false` vervangt die controle niet. Beide Edge-entrypoints controleren de vaste omgeving/project/origin-combinatie voordat zij private configuratie lezen. Opslag vereist een geaccepteerde test naar uitsluitend de ingelogde beheerder, actuele revisie en een eenmalig testbewijs met vervaltijd. Zie [EMAIL-BEHEER.md](../docs/EMAIL-BEHEER.md) voor `/studio/email` en `/studio/email/templates` met alle 17 templates. Deze inrichting maakt geen fictieve beheerder aan en activeert geen toekomstige servicemails zonder echte gebeurtenis.
+`/studio/email/templates` beheert de gedeelde opmaak en Auth-/applicatietemplates. Opgeslagen servicewijzigingen worden gebruikt voor nieuw aangemaakte applicatieberichten; een al vastgelegde outboxpoging behoudt zijn eigen inhoud voor betrouwbare herhaling. Er worden geen toekomstige servicemails verstuurd zonder echte gebeurtenis. Zonder werkende API-configuratie blijft servicemail onvoltooid; verklaar waarschuwingen of verwijderbevestigingen dan niet afgeleverd.
 
-## Verificatie en herstel
+## Ouderlevenscyclus en onderhoud
 
-`pnpm check:backend` draait echte PostgreSQL/RLS/RPC-logica in PGlite met beperkte Auth-stubs, plus 25 scenario's met de geïnstalleerde Supabase Auth/SSR-SDK en een synthetische provider. `pnpm check:email` controleert exports, handtekeningen, ontvangers, timeout/idempotentie en de configuratietool. Dit vervangt geen echte mailbox/OTP-aanmelding.
+`account-maintenance` **v2** is in beide projecten actief. De eigen minuuttaak `fabelpad-account-maintenance` gebruikt een **projectgebonden HMAC-SHA256**, een kort geldigheidsvenster en een atomair eenmalige nonce. De herbruikbare sleutel blijft in Vault en staat niet in de `pg_net`-queue. De worker accepteert geen bearer-Authorizationroute; `verify_jwt=false` vervangt de eigen HMAC-controle niet. Beheer-, claim- en uitvoerfuncties blijven beperkt tot hun bedoelde rollen.
 
-De live controles en migratiehashes staan in [supabase-2026-11-22.json](../docs/deploy-evidence/supabase-2026-11-22.json). Een volgende migratie bij gebruikersdata vereist projectcontrole, passende versleutelde backup, hersteltest en voor-/achterwaartse compatibiliteit. Approllback draait geen database/Auth/Edge/provider terug. De nu toegevoegde schema's worden niet automatisch gedropt bij appfalen; behoud data en onderzoek de eigen wijziging.
+De expliciete gesigneerde proef en daaropvolgende cronaanroepen gaven in beide projecten **HTTP200**, **`completed:0`** en **`deferred:0`**. Dit bewijst de scheduler-/authenticatieroute met een lege werkvoorraad; het bewijst geen echte mailbezorging of verwijdering. Er waren nul Auth-gebruikers. De cron is actief, maar **automatische wissing na 90 dagen staat uit**. Daarvoor zijn eerst een stagingrapport, werkende waarschuwingen en een gecontroleerde overgang vereist.
+
+De app toont vóór een handmatige accountverwijdering de alleen-lezen serverpreview van de verwijderdatum tot op de minuut. De bevestigde minuut wordt in dezelfde SQL-transactie opnieuw gecontroleerd; een verlopen preview vereist nieuwe expliciete bevestiging en draait tussentijdse wijzigingen terug. Verwijdering en expliciet herstel vereisen verse authenticatie. Een gewone login herstelt een account nooit automatisch. Online profielintrekking wist uitsluitend het bedoelde kinderprofiel en blokkeert herupload onder dezelfde ingetrokken identiteit. Zie [LIFECYCLE-IMPLEMENTATIE.md](../docs/LIFECYCLE-IMPLEMENTATIE.md).
+
+AVG-verzoeken kunnen zonder login via [de openbare supportroute](../docs/PRIVACY-SUPPORT-RUNBOOK.md) worden voorbereid. Bevoegde beheerders registreren via `/studio/privacy` minimale zaakmetadata en behandelen verificatie, termijnen en afhandeling. De app is geen gekoppelde supportinbox; de beheerpagina slaat geen volledige mailinhoud op. Een wiszaak mag pas afgerond worden na aantoonbare uitvoering in de juiste scope.
+
+## Verificatie, publicatiegates en herstel
+
+`pnpm check:backend` draait de werkelijke PostgreSQL/RLS/RPC-logica in PGlite, de geïnstalleerde Supabase Auth/SSR-SDK en synthetische providerantwoorden. De actuele controle omvat onder meer:
+
+- **32 Auth-contractscenario’s**, **36 ouder-API-scenario’s** en **48 AVG-beheer-API-scenario’s**.
+- Versiegebonden onboarding, eigenaarschap, sessie- en rolcontrole, profieltoestemming/intrekking, activiteit, verwijderpreview en de atomische terugdraaiing bij een veranderde minuut.
+- Lifecycle-/RLS- en outboxlogica, **18 workertests** en echte pgcrypto-HMAC-uitkomsten vergeleken met Node-crypto, projectbinding en replayweigering.
+
+`pnpm check:email` controleert exports, renderer, optionele hookhandtekeningen, ontvangers, timeout/idempotentie, Vault-/beheergrenzen en configuratietests. Deze lokale tests vervangen geen hosted gelijktijdigheid, echte provider-API, OTP-/Google-aanmelding, inboxbezorging of back-upherstelproef. Het [actuele validatierapport](../docs/VALIDATIE-GOOGLE-PRIVACY-2026-11-22.md) legt de schone exacte bronbuild en **36 geslaagde browsertests** vast; [de statuspagina](../docs/STAGING-PRODUCTION-STATUS.md) houdt CI, kandidaatbouw en activatie afzonderlijk bij.
+
+De inrichting is niet gelijk aan publieke ingebruikname. De webrelease `c1a9829c6580b835b9845dd672c9d89127f60c64` heeft geslaagde verplichte web-CI [45055273294](https://github.com/fabelpad/platform/actions/runs/45055273294) en native CI [45055273282](https://github.com/fabelpad/platform/actions/runs/45055273282). Stagingkandidaat [45057052139](https://github.com/fabelpad/platform/actions/runs/45057052139) en productiekandidaat [45057304416](https://github.com/fabelpad/platform/actions/runs/45057304416) zijn gebouwd; de gezamenlijke kandidaat-/rechtenaudit om **18:52 UTC** slaagt voor beide. Stagingactivering [45057551364](https://github.com/fabelpad/platform/actions/runs/45057551364) en productionactivering [45057814826](https://github.com/fabelpad/platform/actions/runs/45057814826) zijn daarna geslaagd. Beide eigen services zijn actief en boot-enabled, uitsluitend op `127.0.0.1:4188` en `127.0.0.1:4189`. De [gezamenlijke release-/rechtenaudit](../docs/deploy-evidence/loopback-release-2026-11-22.json) en [veilige runtimecontrole](../docs/deploy-evidence/loopback-smoke-2026-11-22.json) om **18:57 UTC** slagen, met 22/22 runtimecontroles per omgeving. Er is geen nieuwe publieke Fabelpad-routing. Loopbackactivering blijft afzonderlijk van publieke openstelling. Vóór publieke online account-/kindverwerking moeten de privacyfeiten kloppen: werkelijke maximale project-/VPS-/providerback-upretentie, supportmailleverancier, operationele termijnen en verwerkers-/doorgifteafspraken staan nog open. Ook de eigen Resend API-key en echte OTP-/Google-/beheer- en mailacceptatie ontbreken nog. Zie [PRIVACY-DATASTROMEN.md](../docs/PRIVACY-DATASTROMEN.md) en de [DPIA](../docs/PRIVACY-DPIA-2026-11-22.md). Geen ontbrekende gate wordt door een groene lokale test als afgerond aangemerkt.
+
+Volg voor de resterende acceptatie deze volgorde: eerst provider-/retentiefeiten en de juiste juridische versie afronden, daarna staging-HTTPS gecontroleerd activeren voor echte OTP-/Google-, beheerder- en API-mailproeven, en vervolgens production-HTTPS gecontroleerd vrijgeven met haar eigen acceptatie. De Google-callback vraagt de juiste bereikbare HTTPS-origin; stel volledige Google-aanmelding niet als voorwaarde vóór staging-HTTPS. Breed gebruik en open verwerking van kindgegevens volgen pas na de betreffende acceptatie. Een afgeschermde API-bootstrap via Edge-configuratie is optioneel onafhankelijk voor te bereiden.
+
+De runtimecontrole bevestigt juridische routes zonder login, exacte documentbytes, Google-icoon, anonieme providerstatus en OAuth-initiatie naar het eigen project met de juiste callback, PKCE en veilige verifiercookie-attributen. De Google-redirect is niet gevolgd; URL-/cookiewaarden zijn niet bewaard. De HTTP200-health heeft de juiste omgeving en app-SHA, maar scope **`process-liveness-only`** en backend **`configured-unverified`**. Dit is geen afgeronde Google-login, OTP-/mailbezorging, echt account of geteste gezinsflow. De zes bestaande service- en configuratiebaselines bleven gelijk.
+
+De live anonieme aanroepen van `preview_account_deletion` en de bewaakte `request_account_deletion` zijn in beide projecten geweigerd met **HTTP401 / SQLSTATE42501**, gecontroleerd om **18:52 UTC**. Dit is bewijs van sessieverplichting, geen echte ouderaanvraag of verwijdering. De lokale audit staat in `/tmp/fabelpad-live-rpc-anonymous-20261122.json`.
+
+De eigen hostadapters zijn voor beide doelen bijgewerkt na een fout met de overgeërfde runnerwerkmap; het bouwproces gebruikt nu de eigen werkmap. Die afzonderlijke infrastructuurwijziging slaagt voor **89 Node-tests en 19 Python-tests** en behoort met de loghelper tot een latere ops-/documentatiecommit. De schone appbuild op de release-SHA bevat **87 releasetests** en **36 browsertests**. De eigen namespace-retentietimers zijn actief om **00, 06, 12 en 18 uur**, met 29-dagenretentie en maximaal 12 uur per journalbestand; de helper slaagt voor zes selftests en echte unitvalidatie. Dit is geen bewijs van back-up- of mailboxretentie. Zie het [validatierapport](../docs/VALIDATIE-GOOGLE-PRIVACY-2026-11-22.md) voor de afzonderlijke kandidaat-, rechten- en hostbewijzen.
+
+De eerdere [eerste-inrichtingscontrole](../docs/deploy-evidence/supabase-2026-11-22.json) en [mailbeheercontrole](../docs/deploy-evidence/email-admin-2026-11-22.json) blijven historische momentopnamen. Gebruik voor de acht migraties, Edge-versies, huidige adviseursmeldingen en scheduler het [nieuwe lifecyclecontrolebewijs](../docs/deploy-evidence/google-legal-lifecycle-2026-11-22.json).
+
+Een volgende migratie bij gebruikersdata vereist projectcontrole, een passende afgeschermde back-up, een herstelplan en voor-/achterwaartse compatibiliteit. Approllback draait database-, Auth-, Edge-, Vault-, SMTP- of providerwijzigingen niet terug. Drop de schema’s niet automatisch bij appfalen. Een herstelde oude database mag verwijderde accounts of ingetrokken kindprofielen niet opnieuw beschikbaar maken; houd verwijderbewijzen/tombstones en de providerafhandeling in het herstelproces betrokken.
+
+De native Android-productie-app blijft afzonderlijk: een lokale, gratis leesapp zonder cloudaccounts. Deze Supabase-inrichting activeert geen Android-login, cloudsynchronisatie, betalingen of Google Play-publicatie.

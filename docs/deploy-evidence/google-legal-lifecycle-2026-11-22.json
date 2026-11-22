@@ -2,7 +2,7 @@
   "checkedDate": "2026-11-22",
   "repository": "fabelpad/platform",
   "integrationBranch": "main",
-  "scope": "Google OTP, legal documents, parent lifecycle and isolated target preparation",
+  "scope": "Google OTP, legal documents, parent lifecycle and isolated staging/production release",
   "supabase": {
     "staging": {
       "account": "fabelpad",
@@ -19,7 +19,7 @@
         "privacy": "97673d3103443115097def26e20e6c677650dcb760d095de900ae3c5c5961cb7"
       },
       "usersAfterMigration": 0,
-      "emailAdminEdgeVersion": 2,
+      "emailAdminEdgeVersion": 3,
       "accountMaintenanceEdgeVersion": 2,
       "unauthenticatedMailAdminStatus": 401,
       "unauthenticatedWorkerStatus": 401,
@@ -46,8 +46,24 @@
         {
           "version": "20261122175654",
           "sha256": "d39736441cc9efd59da1afc8c0214fc8cec466f3d6c73de3b16029cb01c7ffd9"
+        },
+        {
+          "version": "20261122182638",
+          "sha256": "465155f8d009f0ddddd8eda0dfe356b903862c47739b1e7c08628d0c3a32b9cc"
         }
-      ]
+      ],
+      "authEmailEdgeVersion": 3,
+      "authEmailHookEnabled": false,
+      "deadlinePreviewVerification": {
+        "checkedAt": "2026-11-22T18:29:18Z",
+        "previewRpcExists": true,
+        "guardedDeleteRpcExists": true,
+        "authenticatedOnly": true,
+        "anonAndServiceRoleDenied": true,
+        "users": 0,
+        "cronActive": true,
+        "inactivityEnabled": false
+      }
     },
     "production": {
       "account": "Duindorpdoet",
@@ -64,7 +80,7 @@
         "privacy": "97673d3103443115097def26e20e6c677650dcb760d095de900ae3c5c5961cb7"
       },
       "usersAfterMigration": 0,
-      "emailAdminEdgeVersion": 2,
+      "emailAdminEdgeVersion": 3,
       "accountMaintenanceEdgeVersion": 2,
       "unauthenticatedMailAdminStatus": 401,
       "unauthenticatedWorkerStatus": 401,
@@ -91,8 +107,53 @@
         {
           "version": "20261122175654",
           "sha256": "d39736441cc9efd59da1afc8c0214fc8cec466f3d6c73de3b16029cb01c7ffd9"
+        },
+        {
+          "version": "20261122182638",
+          "sha256": "465155f8d009f0ddddd8eda0dfe356b903862c47739b1e7c08628d0c3a32b9cc"
         }
-      ]
+      ],
+      "authEmailEdgeVersion": 3,
+      "authEmailHookEnabled": false,
+      "deadlinePreviewVerification": {
+        "checkedAt": "2026-11-22T18:29:18Z",
+        "previewRpcExists": true,
+        "guardedDeleteRpcExists": true,
+        "authenticatedOnly": true,
+        "anonAndServiceRoleDenied": true,
+        "users": 0,
+        "cronActive": true,
+        "inactivityEnabled": false
+      }
+    },
+    "liveAnonymousDeadlineRpcProbe": {
+      "checkedAt": "2026-11-22T18:52:13.652641+00:00",
+      "targets": {
+        "staging": {
+          "preview_account_deletion": {
+            "status": 401,
+            "databaseErrorCode": "42501",
+            "deniedWithoutSession": true
+          },
+          "request_account_deletion": {
+            "status": 401,
+            "databaseErrorCode": "42501",
+            "deniedWithoutSession": true
+          }
+        },
+        "production": {
+          "preview_account_deletion": {
+            "status": 401,
+            "databaseErrorCode": "42501",
+            "deniedWithoutSession": true
+          },
+          "request_account_deletion": {
+            "status": 401,
+            "databaseErrorCode": "42501",
+            "deniedWithoutSession": true
+          }
+        }
+      }
     }
   },
   "host": {
@@ -137,8 +198,175 @@
         "settingsCheckedAt": "2026-11-22T17:50:30.645511+00:00"
       }
     },
-    "appActivationPerformed": false,
-    "proxyChanged": false
+    "appActivationPerformed": true,
+    "proxyChanged": false,
+    "permissionsAudit": {
+      "checkedAt": "2026-11-22T18:17:13.604333+00:00",
+      "completedAt": "2026-11-22T18:17:50.935717+00:00",
+      "sourceSha": "7690053ca6c0566dc8df67af3a9168b2a64616ed",
+      "sixDistinctRoleUids": true,
+      "sensitiveFilesRead": false,
+      "remoteWritesPerformed": false,
+      "allExistingServiceBaselinesMatch": true,
+      "violations": [],
+      "targets": {
+        "staging": {
+          "profileIdentityMatches": true,
+          "matchingRootOwnedModules": 12,
+          "roleSeparationChecksPassed": true,
+          "sudoersMatch": true,
+          "visudoValid": true,
+          "configurationFilesAtAudit": 0
+        },
+        "production": {
+          "profileIdentityMatches": true,
+          "matchingRootOwnedModules": 12,
+          "roleSeparationChecksPassed": true,
+          "sudoersMatch": true,
+          "visudoValid": true,
+          "configurationFilesAtAudit": 0
+        }
+      }
+    },
+    "preparedProxy": [
+      {
+        "siteId": "fabelpad-vps08-staging",
+        "preparedProxy": "/etc/dg-webservices/fabelpad-vps08-staging/prepared/fabelpad-vps08-staging.caddy.ready",
+        "sha256": "c184b58c98c1a3f806e525b33b451c3466a299655239528bd3952f4e3f547874",
+        "combinedValidation": "passed",
+        "publicRoutingActivated": false
+      },
+      {
+        "siteId": "fabelpad-vps08-production",
+        "preparedProxy": "/etc/dg-webservices/fabelpad-vps08-production/prepared/fabelpad-vps08-production.caddy.ready",
+        "sha256": "628ef1d6819e6d3b3ed143fed00fecfb1e4d6929980550e40261cbb6989c1362",
+        "combinedValidation": "passed",
+        "publicRoutingActivated": false
+      }
+    ],
+    "publicRoutingActive": false,
+    "candidateExists": {
+      "staging": true,
+      "production": true
+    },
+    "privateLogRetention": {
+      "checkedAt": "2026-11-22T18:41:36.756158+00:00",
+      "sourceSha256": "b2da03409b2618fa72bac3994e349a47dc9c3c3cf2aa95304a6b5bf4bb22a0cf",
+      "guardedUpgrade": {
+        "ownTimers": [
+          "fabelpad-vps08-staging-log-retention.timer",
+          "fabelpad-vps08-production-log-retention.timer"
+        ],
+        "oldBytesMatched": true,
+        "newFileSha256": {
+          "staging": "e10688cdf97bf979065b5a408bdb632c83e7ea071cf60b8f15709efef0fe37c3",
+          "production": "69d9af997d40c52f8ea9edac7b4bdddc7585b50b2ecd7e1d99d51ade697613c9"
+        },
+        "appServicesStarted": false,
+        "sharedLoggingChanged": false
+      },
+      "targets": {
+        "staging": {
+          "environment": "staging",
+          "applied": true,
+          "namespace": "fabelpad-vps08-staging",
+          "retentionDays": 29,
+          "maxJournalFileHours": 12,
+          "retentionTimer": "fabelpad-vps08-staging-log-retention.timer",
+          "retentionSchedule": "*-*-* 00,06,12,18:00:00",
+          "timerAccuracySeconds": 60,
+          "timerPersistent": true,
+          "missingNamespaceSkipped": true,
+          "unitVerification": "passed",
+          "timerEnabledAndActive": true,
+          "sharedLoggingChanged": false,
+          "appServicesStarted": false,
+          "configurationFiles": [
+            "/etc/systemd/system/fabelpad-vps08-staging.service.d/30-private-journal.conf",
+            "/etc/systemd/journald@fabelpad-vps08-staging.conf.d/30-retention.conf",
+            "/etc/systemd/system/fabelpad-vps08-staging-log-retention.service",
+            "/etc/systemd/system/fabelpad-vps08-staging-log-retention.timer"
+          ]
+        },
+        "production": {
+          "environment": "production",
+          "applied": true,
+          "namespace": "fabelpad-vps08-production",
+          "retentionDays": 29,
+          "maxJournalFileHours": 12,
+          "retentionTimer": "fabelpad-vps08-production-log-retention.timer",
+          "retentionSchedule": "*-*-* 00,06,12,18:00:00",
+          "timerAccuracySeconds": 60,
+          "timerPersistent": true,
+          "missingNamespaceSkipped": true,
+          "unitVerification": "passed",
+          "timerEnabledAndActive": true,
+          "sharedLoggingChanged": false,
+          "appServicesStarted": false,
+          "configurationFiles": [
+            "/etc/systemd/system/fabelpad-vps08-production.service.d/30-private-journal.conf",
+            "/etc/systemd/journald@fabelpad-vps08-production.conf.d/30-retention.conf",
+            "/etc/systemd/system/fabelpad-vps08-production-log-retention.service",
+            "/etc/systemd/system/fabelpad-vps08-production-log-retention.timer"
+          ]
+        }
+      },
+      "postAppStartReadOnlyCheck": {
+        "checkedAt": "2026-11-22T18:58:07Z",
+        "bothOwnJournalDirectoriesExist": true,
+        "bothTimersActiveAndEnabled": true,
+        "nextRun": "2026-11-23T00:00:00+01:00",
+        "noSharedJournalOperationPerformed": true
+      }
+    },
+    "cwdAdapterUpgrade": {
+      "bundle": "/root/fabelpad-adapters-63600acaf8038166",
+      "bundleDigest": "63600acaf80381661f9cc75e2fd22c534872251bd622dcb17fd28a884363cfec",
+      "targets": {
+        "staging": {
+          "status": "adapters-upgraded",
+          "siteId": "fabelpad-vps08-staging",
+          "installedCodeSha256": {
+            "release-contract.mjs": "058a433951a32e3f5daf8615c5e228519de3649c59b8264ef124326b20a5ee7a",
+            "host-runtime.mjs": "4a630be16ebe64efeb0cb9783172a3b4af24e231b8e0880d933980502e564f27",
+            "candidate-build.sh": "759f9c91ec50025b518e1387752624940c27744e78369407771284e8d8e0cd5a",
+            "candidate-build.mjs": "50a2fb928546e7bad70e4186b41288ee58caae7182cd3cc423531e008fb1c27a",
+            "candidate-worker.mjs": "9cb08898901cae898973fa34338f80fed09fc82e7afd917f0c39b6821bf905ca",
+            "locked-operation.mjs": "bb2428476d6645ae578550ae27ba9b6047d7a129648e02a2f7cec58420757974",
+            "activate.mjs": "65527067c8d62f0f5640bcdc8cf73e584df1f9f00a0029757b66f406672a75d6",
+            "rollback.mjs": "3260d64a2154c0984f4338e6bbcf26242ea936540d1076f6cd61e363dcb77727",
+            "release-actions.mjs": "96ffa0e6e2c163edc94dadabafad44dc8175357b5b50e9c9d9e618e80f4bfbf9",
+            "verify-release-sha.mjs": "e39adc29eed587a4fb4efc85037bf74154fe7102e09a9cd606aafe8fe376600a",
+            "seal-artifact.py": "ddd91b0f977a97cfeed2eacbe0249e3896e1273d09ce519ff559509eb97a2c57",
+            "bounded-operation.py": "5a716e20173a8a6d82b45ff1a414bd1ddef7fd7ee925d57279298eec4b0153d1"
+          },
+          "activation": "not performed"
+        },
+        "production": {
+          "status": "adapters-upgraded",
+          "siteId": "fabelpad-vps08-production",
+          "installedCodeSha256": {
+            "release-contract.mjs": "058a433951a32e3f5daf8615c5e228519de3649c59b8264ef124326b20a5ee7a",
+            "host-runtime.mjs": "4a630be16ebe64efeb0cb9783172a3b4af24e231b8e0880d933980502e564f27",
+            "candidate-build.sh": "f689a9f115ced0febc24f60e91b5acf32fac7ff3dd7f7229610a21fbe6239506",
+            "candidate-build.mjs": "50a2fb928546e7bad70e4186b41288ee58caae7182cd3cc423531e008fb1c27a",
+            "candidate-worker.mjs": "9cb08898901cae898973fa34338f80fed09fc82e7afd917f0c39b6821bf905ca",
+            "locked-operation.mjs": "bb2428476d6645ae578550ae27ba9b6047d7a129648e02a2f7cec58420757974",
+            "activate.mjs": "0cc01f470165c10f06cff00020bc442931ae49670efd033fab0fea3d9b738ccb",
+            "rollback.mjs": "08fa16f89f816d648c99f02638637f610b7f12dbd23d756ce2a99fe79d153b08",
+            "release-actions.mjs": "96ffa0e6e2c163edc94dadabafad44dc8175357b5b50e9c9d9e618e80f4bfbf9",
+            "verify-release-sha.mjs": "e39adc29eed587a4fb4efc85037bf74154fe7102e09a9cd606aafe8fe376600a",
+            "seal-artifact.py": "ddd91b0f977a97cfeed2eacbe0249e3896e1273d09ce519ff559509eb97a2c57",
+            "bounded-operation.py": "5a716e20173a8a6d82b45ff1a414bd1ddef7fd7ee925d57279298eec4b0153d1"
+          },
+          "activation": "not performed"
+        }
+      },
+      "appsActivated": false,
+      "proxyChanged": false,
+      "checkedAt": "2026-11-22T18:47:08.074997+00:00"
+    },
+    "appActivationScope": "own loopback services only; public reverse proxy remains inactive"
   },
   "acceptance": {
     "interactiveOtpLoginVerified": false,
@@ -160,6 +388,164 @@
       "fabelpad.nl MX": "10 mx.stackmail.com."
     },
     "mailboxProviderContractVerified": false,
-    "hostTimers": "No Fabelpad backup timer present; provider snapshots and external backups cannot be inferred from this check"
+    "hostTimers": "No Fabelpad backup timer present; provider snapshots and external backups cannot be inferred from this check",
+    "backupConfigurationCliAccess": "Supabase CLI has no authenticated project-list access; MCP has no project backup/auth-config inspection capability. Generic operator backup documentation is not evidence of this project’s actual retention."
+  },
+  "release": {
+    "sourceSha": "c1a9829c6580b835b9845dd672c9d89127f60c64",
+    "webCi": {
+      "runId": 45055273294,
+      "status": "success"
+    },
+    "androidCi": {
+      "runId": 45055273282,
+      "status": "success"
+    },
+    "localBuild": {
+      "sourceSha": "c1a9829c6580b835b9845dd672c9d89127f60c64",
+      "cleanArchive": true,
+      "installCommand": "pnpm install --frozen-lockfile",
+      "buildCommand": "bash scripts/local-build.sh",
+      "result": "success",
+      "nodeVersion": "24.18.0",
+      "pnpmVersion": "11.25.0",
+      "nextVersion": "16.3.4",
+      "dataMode": "local"
+    },
+    "browserTests": {
+      "count": 36,
+      "passed": 36,
+      "seconds": 23.5,
+      "syntheticDataOnly": true,
+      "temporaryRuntimeStopped": true
+    },
+    "candidateBuilds": {
+      "staging": {
+        "runId": 45057052139,
+        "status": "success",
+        "id": "c1a9829c6580b835b9845dd672c9d89127f60c64-45057052139-1",
+        "sha": "c1a9829c6580b835b9845dd672c9d89127f60c64",
+        "siteId": "fabelpad-vps08-staging",
+        "environment": "staging",
+        "configId": "auth-legal-20261122-stg",
+        "buildConfigDigest": "1363f9f0862687420de4d7ef81e36fb5eb3b5db23dd85634c6b7b540eceff8f8",
+        "artifactDigest": "a5cbb3c1e74e4373d9d57373ad9691867028509adcbf09f262ecd08c1a8aa956",
+        "ciRunId": "45055273294",
+        "ciRunAttempt": "1",
+        "ciJobId": "137309001180",
+        "workflowSha": "c1a9829c6580b835b9845dd672c9d89127f60c64",
+        "workflowJobId": 137314592470,
+        "builtAt": "2026-11-22T18:48:43.828Z",
+        "sealedAt": "2026-11-22T18:48:53.439Z",
+        "allIndependentChecksPassed": true
+      },
+      "production": {
+        "runId": 45057304416,
+        "status": "success",
+        "id": "c1a9829c6580b835b9845dd672c9d89127f60c64-45057304416-1",
+        "sha": "c1a9829c6580b835b9845dd672c9d89127f60c64",
+        "siteId": "fabelpad-vps08-production",
+        "environment": "production",
+        "configId": "auth-legal-20261122-prd",
+        "buildConfigDigest": "ff7a65cc96d14e0cbafe45ebc5d50a4272576db33fde27eeacf94737fb748f9d",
+        "artifactDigest": "d0861cf393ce33e8402817fda7400cc117b30039557f942c0cbd59eb7b8f8141",
+        "ciRunId": "45055273294",
+        "ciRunAttempt": "1",
+        "ciJobId": "137309001180",
+        "workflowSha": "c1a9829c6580b835b9845dd672c9d89127f60c64",
+        "workflowJobId": 137315385325,
+        "builtAt": "2026-11-22T18:51:33.575Z",
+        "sealedAt": "2026-11-22T18:51:43.290Z",
+        "allIndependentChecksPassed": true
+      }
+    },
+    "loopbackActivations": {
+      "staging": {
+        "runId": 45057551364,
+        "status": "success",
+        "id": "c1a9829c6580b835b9845dd672c9d89127f60c64-45057052139-1",
+        "configId": "auth-legal-20261122-stg",
+        "auditPassed": true,
+        "checkedAt": "2026-11-22T18:57:08.552369+00:00",
+        "completedAt": "2026-11-22T18:57:13.714836+00:00",
+        "health": {
+          "status": 200,
+          "ok": true,
+          "service": "fabelpad",
+          "runtime": "nextjs-node",
+          "environment": "staging",
+          "revision": "c1a9829c6580b835b9845dd672c9d89127f60c64",
+          "scope": "process-liveness-only",
+          "backend": "configured-unverified"
+        },
+        "bootEnabled": true,
+        "runtimeConfigDigest": "5e7e5b2859b300b1522f4b5c9b8f4d26699a3d1f0b2e9090263a332244d53af4",
+        "previousReleasePresent": false
+      },
+      "production": {
+        "runId": 45057814826,
+        "status": "success",
+        "id": "c1a9829c6580b835b9845dd672c9d89127f60c64-45057304416-1",
+        "configId": "auth-legal-20261122-prd",
+        "auditPassed": true,
+        "checkedAt": "2026-11-22T18:57:08.552369+00:00",
+        "completedAt": "2026-11-22T18:57:13.714836+00:00",
+        "health": {
+          "status": 200,
+          "ok": true,
+          "service": "fabelpad",
+          "runtime": "nextjs-node",
+          "environment": "production",
+          "revision": "c1a9829c6580b835b9845dd672c9d89127f60c64",
+          "scope": "process-liveness-only",
+          "backend": "configured-unverified"
+        },
+        "bootEnabled": true,
+        "runtimeConfigDigest": "426e29be091917229f419789a3fe978ae18b88871b23a544c59f6d278a349fb1",
+        "previousReleasePresent": false
+      }
+    },
+    "failedCandidateAttempts": [
+      {
+        "environment": "staging",
+        "runId": 45056659715,
+        "result": "failure before installation",
+        "reason": "build account inherited the deliberately unreadable runner working directory",
+        "remediation": "root adapter starts the buildworker in its verified own work directory; no permission widening",
+        "activated": false
+      }
+    ],
+    "deploymentAdapterRegression": {
+      "nodeTests": 89,
+      "pythonInstallerTests": 19,
+      "result": "success",
+      "actualHostBadCwdFails": true,
+      "actualHostOwnWorkCwdSucceeds": true
+    },
+    "candidateAudit": {
+      "checkedAt": "2026-11-22T18:52:24.357425+00:00",
+      "completedAt": "2026-11-22T18:52:27.268806+00:00",
+      "passed": true,
+      "failures": [],
+      "warnings": [],
+      "allExistingServiceAndConfigurationBaselinesMatch": true
+    },
+    "loopbackAudit": {
+      "proof": "loopback-release-2026-11-22.json",
+      "checkedAt": "2026-11-22T18:57:08.552369+00:00",
+      "completedAt": "2026-11-22T18:57:13.714836+00:00",
+      "passed": true,
+      "failures": [],
+      "warnings": [],
+      "allExistingServiceAndConfigurationBaselinesMatch": true
+    },
+    "runtimeSmoke": {
+      "proof": "loopback-smoke-2026-11-22.json",
+      "checkedAt": "2026-11-22T18:57:04.308965+00:00",
+      "checksPerTarget": 22,
+      "allPassed": true,
+      "scope": "loopback-only process/provider configuration/legal bytes and OAuth initiation; no OAuth completion, OTP, mail, account, database, proxy or public-routing changes"
+    },
+    "appSourceAndOperationsProvenance": "Both deployed application artifacts use c1a9829c6580b835b9845dd672c9d89127f60c64 with successful required CI. Root-owned cwd adapter and private-log-retention fixes are separately tested operational changes; their exact installed digests are recorded here and in loopback-release evidence. Later documentation/operations commits do not change the deployed application SHA."
   }
 }

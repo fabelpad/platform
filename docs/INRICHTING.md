@@ -19,8 +19,8 @@ Dit zijn geen secrets. Geen secret/service-role/databasekey in NEXT_PUBLIC-velde
 
 | Naam / gegeven | Bron en opslag | Gebruik |
 | --- | --- | --- |
-| Resend-key | Na eerste beheeropslag: eigen **Supabase Vault**. Vóór eerste login: `RESEND_API_KEY` in Edge Secrets als bootstrap | Alleen Edge-mailfunctie ontsleutelt; nooit build, browserresponse of GitHub-variable |
-| `SEND_EMAIL_HOOK_SECRET` | Cryptografisch gegenereerd per project; Auth Hook en Edge Secrets moeten overeenkomen | Auth/HMAC-verificatie; verschillende secrets per omgeving |
+| Resend-key | Na eerste beheeropslag: eigen **Supabase Vault**. Optionele API-bootstrap vóór de eerste beheeropslag: `RESEND_API_KEY` in Edge Secrets; Auth-SMTP is hiervan onafhankelijk | Alleen Edge-mailfunctie ontsleutelt; nooit build, browserresponse of GitHub-variable |
+| `SEND_EMAIL_HOOK_SECRET` | Alleen bij een later afzonderlijk gekozen Send Email Hook; niet nodig voor de huidige SMTP-route | Niet instellen of activeren voor deze release |
 | Afzender / `FABELPAD_EMAIL_FROM` | Beheer → E-mail; Edge-waarde alleen voor bootstrap | Geverifieerd adres, bewerkbare naam; staging krijgt altijd testmarkering |
 | Antwoordadres / `FABELPAD_EMAIL_REPLY_TO` | Beheer → E-mail; Edge-waarde alleen voor bootstrap | Antwoorden naar de ingestelde support-inbox |
 | `FABELPAD_APP_ORIGIN` | Eigen canonieke origin hierboven; ook Edge-configuratie | Bindt ondertekende mail aan de juiste omgeving |
@@ -38,25 +38,32 @@ De webserver gebruikt gebruikerssessies en RLS. Next-build en normale runtime ve
 
 Paden, service, Node/pnpm, poorten en runnerlabels staan in het beoordeelde root-owned hostprofiel. SHA, workflowrun/poging en configuratie-ID komen uit de releaseprocedure. De vorige gezonde app/configuratie blijft beschikbaar voor herstel.
 
-De adapter zet `FABELPAD_AUTH_EMAIL_ENABLED=true` na een root-owned `email-readiness.json` voor dezelfde omgeving, origin en Supabase-URL. Dit is geen extra GitHub-variable. Google blijft uit. Leg de ontvangst pas aan na echte OTP-aanvraag, bezorgcontrole, sessiecontrole en beheerderacceptatie. De zelfstandige terminalproef kan dit vóór een eerste kandidaat bewijzen; de app-/studioflow volgt na kandidaatbouw. Alleen een HTTP-sendresultaat is onvoldoende.
+De adapter zet `FABELPAD_AUTH_EMAIL_ENABLED=true` en, bij het gecontroleerde v2-configuratiebewijs, `FABELPAD_AUTH_GOOGLE_ENABLED=true`. Het root-owned `email-readiness.json` bindt omgeving, origin en Supabase-URL aan de gecontroleerde publieke providerinstellingen en de SMTP-/OTP-verklaring van de eigenaar. Dit zijn geen extra GitHub-variabelen. De v2-ontvangst vermeldt expliciet `requires-interactive-owner-test`: werkelijke OTP-bezorging, codebevestiging, Google-login, sessie en beheerderacceptatie blijven afzonderlijk te testen. Een instellingencontrole of HTTP-sendresultaat is geen inbox- of loginbewijs.
 
 ## Mail afronden
 
-Volg [EMAIL-CONFIGURATIE.md](EMAIL-CONFIGURATIE.md) voor de veilige tool en [EMAIL-TEMPLATES.md](EMAIL-TEMPLATES.md) voor de plakbestanden. De actieve route is **Supabase Auth → ondertekende Edge Function → Resend API**; er is geen parallel ingestelde SMTP-route.
+Volg [EMAIL-CONFIGURATIE.md](EMAIL-CONFIGURATIE.md) voor de veilige tool en [EMAIL-TEMPLATES.md](EMAIL-TEMPLATES.md) voor de plakbestanden. De actieve Auth-route is **Supabase Auth → Custom SMTP → Resend**, door de eigenaar ingericht en in deze release behouden. Activeer geen Send Email Hook. De afzonderlijke applicatieservicemails gebruiken de Resend API en hun eigen Vault-koppeling; SMTP levert deze key niet automatisch aan de applicatie.
 
 Voorstel: `noreply@fabelpad.nl`. Dit adres is pas inzetbaar na controle van Resend-verzenddomein, DNS en verzendrechten. Controleer DKIM/SPF/DMARC. Laat open-/kliktracking voor OTP uit. API-acceptatie bewijst geen aflevering in de mailbox.
 
-## Resterende toegang en acceptatie
+## Resterende gegevens en acceptatie
 
-1. Afgeschermde Resend API-key en Supabase-beheertoegang voor Auth/mailinstellingen, of de eigenaar voert de verborgen terminalconfiguratie uit. De workspaceconnector biedt SQL/Edge, maar geen Authconfiguratie/secretbeheer.
-2. Geverifieerd eigen verzenddomein, DNS-toegang als verificatie ontbreekt, en bereikbare support-inbox.
-3. GitHub-organisatiebeheer voor een runnergroep met alleen deze repo en geselecteerde main-workflows. De huidige API geeft 403 en mist `admin:org`; geen onbegrensde runner als omweg registreren.
-4. Daarna echte OTP-/beheerder-/gezins-/studioacceptatie, main-CI en aparte kandidaatbouw per doel. Vervolgens eigen service, DNS/proxy/TLS en publieke acceptatie volgens [hostrunbook](DG-VPS-08-TWEE-OMGEVINGEN.md).
+1. Bevestig de werkelijke maximale back-uptermijnen van beide Supabase-projecten en de VPS, de beheerder van de supportmailbox en de toepasselijke verwerkersafspraken/doorgiftewaarborgen. Deze feiten zijn niet uit de beschikbare connector of DNS af te leiden. De bijlage verlangt dat de openbare privacytekst hiermee klopt vóór publieke activering.
+2. Plaats per omgeving de eigen Resend API-key veilig via **Beheer → E-mail**, na de eerste echte beheerderlogin; zie de optionele API-bootstrap hieronder. De werkende Auth-SMTP-route levert geen API-key voor servicemails.
+3. Rond echte OTP-/Google-/beheerder-/gezins-/studioacceptatie af. Configuratiecontrole, synthetische tests en loopbackhealth zijn afzonderlijke resultaten.
+4. Bouw en activeer elke kandidaat volgens de exact-SHA-route en controleer de eigen service, proxy/TLS en publieke routes volgens het [hostrunbook](DG-VPS-08-TWEE-OMGEVINGEN.md). De [actuele status](STAGING-PRODUCTION-STATUS.md) vermeldt welke stappen werkelijk zijn uitgevoerd.
 
-Er wordt geen betaald abonnement aangegaan. De environments bestaan; eerdere opmerkingen dat ze nog aangemaakt moeten worden zijn historisch.
+De repositoryspecifieke runners zijn al geregistreerd: staging ID 21 en production ID 22, met eigen accounts en labels. Een organisatiebrede runnergroep of extra GitHub-variabele is voor deze route niet nodig. Beide bestaande GitHub environments blijven behouden. Er wordt geen betaald abonnement aangegaan.
 
 ## Database en Android
 
-Beide Supabase-projecten waren leeg. Nu zijn de twee schemawijzigingen toegepast, met 13 bronreleases per project en migratie-identiteiten gelijk aan de bestanden. Zie [Supabase-contract](../supabase/README.md) en [bewijs](deploy-evidence/supabase-2026-11-22.json). Latere wijzigingen bij echte gebruikers vereisen een passende backup-, herstel- en compatibiliteitscontrole; approllback herstelt geen database/provider.
+Beide Supabase-projecten waren leeg. De bestaande content-, beheerder- en mailmigraties zijn aangevuld met vijf lifecycle-/scheduler-/deadlinepreview-migraties. Beide projecten bevatten de acht gecommitte migraties met overeenkomende identiteiten en de 13 eerdere contentreleases. Zie het [Supabase-contract](../supabase/README.md), het [eerdere contentbewijs](deploy-evidence/supabase-2026-11-22.json) en het [lifecyclebewijs](deploy-evidence/google-legal-lifecycle-2026-11-22.json). Latere wijzigingen bij echte gebruikers vereisen een passende backup-, herstel- en compatibiliteitscontrole; approllback herstelt geen database/provider.
 
 De lokale native productie-app `nl.fabelpad.app` gebruikt geen Supabase/Resend; zie het [afzonderlijke Play-proces](GOOGLE-PLAY-RELEASE-RUNBOOK.md).
+
+
+## Optionele API-bootstrap zonder de SMTP-route te wijzigen
+
+Als servicemails al vóór de eerste beheeropslag moeten werken, kan de eigenaar per bedoeld Supabase-project onder **Edge Functions → Secrets** `RESEND_API_KEY`, `FABELPAD_EMAIL_FROM` en `FABELPAD_EMAIL_REPLY_TO` afgeschermd plaatsen. Gebruik de eigen geverifieerde afzender en voor staging de naam Fabelpad Staging; het antwoordadres is `support@fabelpad.nl`. Dit zijn Supabase Edge-instellingen, geen GitHub-variabelen. Deel geen key in chat of logs. De bestaande Vault-configuratie blijft altijd leidend zodra deze aanwezig is; bij een leesfout wordt niet teruggevallen op oude credentials.
+
+De API-bootstrap is optioneel en wordt niet door deze opdracht met ontbrekende keys voorgewend. De normale beheerroute blijft: werkelijk registreren/aanmelden als `info@dgwebservices.nl`, ouderonboarding afronden, **Beheer → E-mail** koppelen en de testmail controleren. Verander hiervoor geen werkende Supabase Custom SMTP-instellingen. Controleer voor beide omgevingen afzonderlijk API-afzenderrechten en uitgeschakelde open-/kliktracking. Een geslaagde provideracceptatie bewijst nog geen inboxbezorging.

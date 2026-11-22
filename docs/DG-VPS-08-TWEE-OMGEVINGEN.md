@@ -2,7 +2,7 @@
 
 Actuele overdracht: **22 november 2026**. De eigenaar heeft uitrol naar beide Fabelpad-omgevingen toegestaan. Dit document beschrijft de bestaande doelidentiteiten, de huidige configuratieroute en de uitvoeringsvolgorde; een opdrachtvoorbeeld is geen uitgevoerde deployment.
 
-**Huidige toestand:** beide eigen runners zijn geregistreerd voor uitsluitend repository `fabelpad/platform`, maar staan offline en hun diensten zijn inactief. Beide appservices zijn inactief. Er staan nog **geen doelkandidaten, geen releases en geen `current`-verwijzingen**. Auth gebruikt de bestaande Supabase Custom SMTP via Resend, met volgens de eigenaar zes OTP-cijfers. De publieke Auth-settings bevestigen in beide projecten e-mail en Google. Een interactieve OTP-/OAuth-proef is daarmee niet bewezen.
+**Toestand vóór de kandidaatbouw:** beide eigen runners zijn geregistreerd voor uitsluitend repository `fabelpad/platform`, online en actief. De rechtenaudit van 22 november 2026 om 18:17 UTC bevestigt twaalf correcte root-owned adapters per doel en gescheiden runner-, build- en apprechten. Beide appservices zijn op dat controlemoment inactief, zonder doelkandidaten, releases of `current`-verwijzingen. Zie de [actuele status](STAGING-PRODUCTION-STATUS.md) voor de daarna werkelijk uitgevoerde bouw- en activatiestappen. Auth gebruikt de bestaande Supabase Custom SMTP via Resend, met volgens de eigenaar zes OTP-cijfers. De publieke Auth-settings bevestigen in beide projecten e-mail en Google. Een interactieve OTP-/OAuth-proef is daarmee niet bewezen.
 
 ## Vaste doelidentiteiten
 
@@ -51,9 +51,13 @@ Vervang `<site>` alleen door een van de twee vaste doel-ID's.
 | `/etc/dg-webservices/<site>/email-readiness.json` | Rootbestand met configuratiecontrole v2, `root:root 0600`; geen inlogbewijs |
 | `/etc/dg-webservices/<site>/prepared` | Voorbereide units en inactieve proxysnippet |
 | `/var/lib/dg-build/<site>/{home,work}` | Gescheiden buildwerk zonder toegang tot runtimeconfiguratie |
-| `/opt/actions-runner/<site>` | Eigen geregistreerde runner; dienst nog inactief |
+| `/opt/actions-runner/<site>` | Eigen geregistreerde runner; dienst actief en enabled |
 | `/opt/dg-toolchains/<site>` | Eigen root-owned Node 24.18.0 / pnpm 11.25.0 |
 | `/srv/sites/<site>/{candidates,releases,shared}` | Verzegelde kandidaten, app/config-releases en eigen appschrijfmap |
+
+De applicaties gebruiken afzonderlijke journaldnamespaces met `MaxRetentionSec=29day`, `MaxFileSec=12h`, maximaal 100 MB en zonder syslog-/kernel-/consoleforwarding. Per doel is een eigen root-owned `<site>-log-retention.service` met `.timer` ingericht en enabled/actief: iedere dag om 00:00, 06:00, 12:00 en 18:00 lokale servertijd, maximaal één minuut schedulingmarge, persistent na uitval. De oneshot voert uitsluitend `journalctl --namespace=<site> --rotate --vacuum-time=29days` uit. Een ontbrekende eigen journalmap wordt overgeslagen; de timer start geen app. De marge tot de in de privacytekst genoemde 30 dagen houdt rekening met de periodieke uitvoering en de rotatieperiode van twaalf uur. Dit geldt uitsluitend voor de eigen Fabelpad-applicatielogs; provider-/back-up-/supportretentie blijft afzonderlijk te bevestigen.
+
+De expliciete rotatie is nodig omdat vacuum alleen gearchiveerde bestanden verwijdert. De namespaceoptie begrenst zowel de rotatieverbinding als de geselecteerde journalbestanden; er wordt geen gedeeld journal opgeschoond. Gecontroleerd op 22 november 2026 tegen [officiële journalctl-documentatie](https://www.freedesktop.org/software/systemd/man/255/journalctl.html) en de op de host gebruikte [systemd 255-bron voor namespaceverbinding en rotatie](https://github.com/systemd/systemd/blob/v255/src/journal/journalctl.c). `scripts/deploy/configure-private-logging.py --self-test` controleert zes guardrailscenario’s; de echte gegenereerde unitparen zijn met `systemd-analyze verify` gevalideerd. Het [releasebewijs](deploy-evidence/google-legal-lifecycle-2026-11-22.json) bevat de uitgevoerde hosttoepassing en helperhash.
 
 Elke runner heeft uitsluitend de drie digestgepinde `NOSETENV` sudo-opdrachten voor de eigen kandidaat-, activatie- en rollbackadapter. De gedeelde buildlock is `/run/lock/dg-build.lock`; de bestaande persistentie en andere projecten blijven ongemoeid. Activatie en rollback hebben daarnaast per doel een eigen lock en GitHub-concurrency.
 
@@ -138,7 +142,7 @@ sudo systemctl enable --now "$SITE-runner.service"
 sudo systemctl is-active "$SITE-runner.service"
 ```
 
-Controleer via GitHub dat exact dezelfde runnernaam online is in repository `fabelpad/platform`, met de vaste labels. De registratie is al uitgevoerd; voer daarvoor geen nieuwe registratie of tokenaanvraag uit. Bovenstaande dienststart is een volgende uitvoeringsstap, geen historische startclaim.
+Controleer via GitHub dat exact dezelfde runnernaam online is in repository `fabelpad/platform`, met de vaste labels. De registratie is al uitgevoerd; voer daarvoor geen nieuwe registratie of tokenaanvraag uit. Beide eigen runnerservices zijn al enabled en actief; de opdracht is alleen nodig wanneer een latere statuscontrole uitwijst dat de eigen runner is gestopt.
 
 ## Kandidaat bouwen
 
@@ -162,7 +166,7 @@ SHA: exact 40 kleine hextekens. Configuratie-ID: 1–63 kleine letters/cijfers/s
 
 Installatie gebruikt `pnpm install --frozen-lockfile --prod=false --package-import-method=copy`; daarna de normale projectchecks en `pnpm build`. Output bevat `.next`, `public` en de benodigde `node_modules`. Startcontract: `pnpm start`, door systemd met gepinde Nodebinary op de eigen loopbackpoort. De build voert geen automatische migraties of gebruikersmail uit.
 
-Lifecycle-migratie `20261122172905_parent_account_lifecycle.sql` is in beide Supabase-projecten toegepast; er waren nul Auth-gebruikers. De Edge Functions `email-admin` v2 en `account-maintenance` v1 zijn in beide projecten actief; ongesigneerde probes geven HTTP401 zonder mailverzending. De eigen scheduler wordt afzonderlijk ingericht en geverifieerd. Bulkverwijdering na 90 dagen blijft standaard uit totdat stagingrapport, waarschuwingen, overgang en Resend API-servicemail aantoonbaar kloppen. De werkende SMTP-inrichting vervangt die API-key niet.
+De vijf gecommitte lifecycle-/scheduler-/verwijderpreview-migraties zijn in beide Supabase-projecten toegepast; er waren nul Auth-gebruikers. De Edge Functions `email-admin` v3, `auth-email` v3 en `account-maintenance` v2 zijn in beide projecten actief. De Auth-hook is niet ingeschakeld. Ongesigneerde mailbeheer-/workerprobes geven HTTP401 zonder mailverzending. De eigen minuuttaak `fabelpad-account-maintenance` is in beide projecten ingericht; expliciete en automatische projectgebonden HMAC-aanroepen gaven HTTP200 met nul uitgevoerde/uitgestelde taken. Er staat geen herbruikbaar bearer-token in de netwerkqueue. Bulkverwijdering na 90 dagen blijft standaard uit totdat stagingrapport, waarschuwingen, overgang en Resend API-servicemail aantoonbaar kloppen. De werkende SMTP-inrichting vervangt die API-key niet.
 
 ## Activatie, gebruikersproef en HTTPS
 
@@ -204,4 +208,39 @@ Rollback herstelt app én de bijbehorende runtimeconfiguratie onder hetzelfde do
 Een approllback draait geen database-, Vault-, SMTP- of templateswijzigingen terug. Houd migraties compatibel en leg back-up, herstel en heruitvoering van verwijdertombstones afzonderlijk vast. Herstel nooit verwijderde accounts door een oude databasekopie opnieuw voor gebruikers open te stellen. De actuele testuitkomsten en uitgevoerde hostwijzigingen worden bij de feitelijke release als nieuw bewijs toegevoegd; historische bewijsbestanden blijven intact.
 
 
-Actuele hostaanvulling (22 november 2026, na bovenstaande controles): de twaalf root-owned adapters zijn voor beide doelen bijgewerkt; beide eigen runnerservices zijn gestart en de repository-API meldt runners **21** en **22** als **online**. Het v2-configuratiebewijs staat voor beide doelen in de eigen `email-readiness.json`, `root:root 0600`, met providercontroletijd `2026-11-22T17:50:30.645511+00:00`. Dit is geen interactieve OTP-/Google-acceptatie. Er is hiermee geen app of publieke route geactiveerd.
+## Voorbereide HTTPS-route later activeren
+
+De gecontroleerde bestanden staan buiten de actieve Caddy-import:
+
+- `/etc/dg-webservices/fabelpad-vps08-staging/prepared/fabelpad-vps08-staging.caddy.ready` → `staging.fabelpad.nl`, loopback 4188.
+- `/etc/dg-webservices/fabelpad-vps08-production/prepared/fabelpad-vps08-production.caddy.ready` → `fabelpad.nl`, loopback 4189.
+
+Beide bestanden zijn samen met de bestaande Caddy-configuratie gevalideerd. Er is niets naar `/etc/caddy/sites` gekopieerd, Caddy is niet herladen en certificaatuitgifte is niet gestart. De toen gecontroleerde DNS A-records wijzen naar het op de host geverifieerde publieke adres `204.168.128.28`; dit is geen opdracht om DNS te wijzigen.
+
+**Pas uitvoeren nadat de open privacyfeiten zijn vastgelegd en de bijbehorende documentversie klopt.** Publiceer eerst de eigen stagingroute voor een gecontroleerde aanmeld-/beheer-/mailproef met toegestane testgegevens. De volledige Google-callback en de browserinrichting van Beheer vereisen juist deze canonieke HTTPS-origin; maak daarvan geen onmogelijke voorwaarde vóór staging-HTTPS. Rond stagingacceptatie af, geef daarna de productieroute gecontroleerd vrij en voer daar de eigen eerste beheerder-/mail-/authacceptatie uit vóór algemene ingebruikname of online verwerking van echte kindgegevens. Een optionele API-bootstrap via eigen Edge Secrets kan vooraf, zonder publieke app. Deze opdrachten horen op de geverifieerde doelhost; zij publiceren de gekozen omgeving:
+
+```bash
+set -euo pipefail
+DEPLOY_ENV=staging
+case "$DEPLOY_ENV" in staging) APP_PORT=4188; PUBLIC_ORIGIN=https://staging.fabelpad.nl ;; production) APP_PORT=4189; PUBLIC_ORIGIN=https://fabelpad.nl ;; *) exit 64 ;; esac
+SITE="fabelpad-vps08-$DEPLOY_ENV"
+READY="/etc/dg-webservices/$SITE/prepared/$SITE.caddy.ready"
+DEST="/etc/caddy/sites/$SITE.caddy"
+sudo test -f "$READY"
+sudo test ! -e "$DEST"
+sudo systemd-analyze verify "/etc/systemd/system/$SITE.service"
+curl --fail --silent --show-error "http://127.0.0.1:$APP_PORT/api/health"
+# Controleer omgeving en exact vrijgegeven SHA in deze healthresponse.
+# Controleer DNS opnieuw vóór onderstaande publieke wijziging.
+sudo caddy validate --config "/etc/dg-webservices/$SITE/prepared/validation.Caddyfile" --adapter caddyfile
+sudo install -o root -g root -m 0644 "$READY" "$DEST"
+if ! sudo caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile; then
+  sudo rm -- "$DEST"
+  exit 1
+fi
+sudo systemctl reload caddy
+curl --fail --silent --show-error --retry 5 --retry-delay 3 "$PUBLIC_ORIGIN/api/health"
+curl --fail --silent --show-error "$PUBLIC_ORIGIN/api/auth/session"
+```
+
+Controleer daarna geldig HTTPS, Google/zes-cijferige OTP, de openbare juridische routes en eerste echte ouder-/beheerderonboarding op de publieke origin. Vergelijk de bestaande sites en gedeelde services met de toestand vóór deze eigen routingwijziging. Bij een fout in de eerste publieke routing verwijder je uitsluitend het zojuist toegevoegde eigen `$DEST`, valideer je `/etc/caddy/Caddyfile` opnieuw en herlaad je Caddy. Bewaar de gezonde eigen loopbackrelease voor onderzoek; wijzig geen andere proxysnippet. Een first-install-fout heeft nog geen vorige apprelease om naar terug te rollen.
