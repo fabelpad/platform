@@ -1,23 +1,41 @@
 import { test, expect } from '@playwright/test';
 const activeParent = { state: 'active', termsVersion: '2026-11-22', privacyVersion: '2026-11-22.1', acceptedTermsVersion: '2026-11-22', shownPrivacyVersion: '2026-11-22.1', lastActivityAt: '2026-11-22T12:00:00Z', deletionDeadline: null, consents: [] };
 
-test('website, child library, family and admin routes stay distinct', async ({ page, request }) => {
+test('website, child library, family and admin routes stay distinct without simulated roles or plans', async ({ page, request }) => {
   const errors: string[] = [];
   page.on('pageerror', error => errors.push(error.message));
   await page.goto('/');
   await expect(page.getByRole('heading', { level: 1 })).toContainText('Er was eens');
-  await expect(page.getByRole('complementary', { name: 'Fabelpad prototype-onderdelen' })).toHaveCount(0);
-  await page.getByRole('button', { name: 'Probeer de demo', exact: true }).first().click();
+  await expect(page.locator('body')).not.toContainText(/demo|prototype|founders|abonnementsvoorstel/i);
+  await page.getByRole('button', { name: 'Start met lezen', exact: true }).first().click();
+  await expect(page).toHaveURL(/\/lezen$/);
+  await expect(page.locator('.world-card')).toHaveCount(13);
+  await expect(page.locator('body')).not.toContainText(/demo|prototype/i);
+  await expect(page.getByRole('link', { name: 'Inloggen als ouder', exact: true }).first()).toHaveAttribute('href', '/inloggen');
+  await page.goto('/demo?surface=studio');
   await expect(page).toHaveURL(/\/lezen$/);
   await expect(page.locator('.world-card')).toHaveCount(13);
   await expect(page.getByRole('complementary', { name: 'Fabelpad prototype-onderdelen' })).toHaveCount(0);
-  await page.goto('/demo');
-  await expect(page.getByRole('complementary', { name: 'Fabelpad prototype-onderdelen' })).toBeVisible();
+  // A former local paywall preference must never restrict the free catalogue.
+  await page.evaluate(() => localStorage.setItem('fabelpad-prototype-access-v1', JSON.stringify({ testAccess: true, freeStory: 'station', plan: 'free' })));
+  await page.goto('/lezen?story=dream');
+  await expect(page.getByRole('dialog', { name: /Droompost/i })).toBeVisible();
+  await page.locator('.reader-choice').first().click();
+  await expect(page.getByText('Deel 2 van 5', { exact: true })).toBeVisible();
+  await page.goto('/ouders');
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('Hun avonturen');
+  await expect(page.locator('body')).not.toContainText(/demo|prototype|abonnement|founder/i);
+  await expect(page.getByRole('link', { name: 'Inloggen als ouder' })).toHaveAttribute('href', '/inloggen');
+  await page.goto('/support');
+  await expect(page.getByRole('heading', { level: 1, name: 'Hulp bij Fabelpad' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'support@fabelpad.nl', exact: true }).first()).toHaveAttribute('href', 'mailto:support@fabelpad.nl');
+  await expect(page.locator('body')).not.toContainText(/demo|prototype/i);
   await page.goto('/inloggen');
-  await expect(page.getByText('Ouderaccounts zijn nog niet aangesloten.')).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Ontdek Fabelpad zonder account →' })).toBeVisible();
   await expect(page.getByRole('textbox')).toHaveCount(0);
   await page.goto('/studio');
-  await expect(page.getByText('De beheeromgeving is nog niet aangesloten.')).toBeVisible();
+  await expect(page.getByText('De beheeromgeving is op dit moment niet beschikbaar.', { exact: false })).toBeVisible();
+  await expect(page.locator('body')).not.toContainText(/demo|prototype/i);
   const response = await request.put('/api/content/drafts/station', { data: { baseRevision: 0, draft: {} } });
   expect(response.status()).toBe(503);
   expect((await request.get('/api/family')).status()).toBe(503);

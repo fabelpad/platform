@@ -3,6 +3,7 @@ import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { createHash } from 'node:crypto';
 import { compileSource } from './source-test-loader.mjs';
 
 // Exercise the installed Supabase SSR/Auth SDK against an isolated fake provider.
@@ -14,6 +15,9 @@ const contextKey = Symbol.for('fabelpad.auth.contract.cookies');
 const originalContext = globalThis[contextKey];
 let requests = [], writes = [], jar = new Map(), handler;
 let lifecycleState = 'active';
+let registrationProofs = new Map();
+let completionUnavailable = false;
+const hash = value => createHash('sha256').update(value).digest('hex');
 const lifecycle = () => ({ state: lifecycleState, termsVersion: '2026-11-22', privacyVersion: '2026-11-22.1', acceptedTermsVersion: lifecycleState === 'onboarding' ? null : '2026-11-22', shownPrivacyVersion: '2026-11-22.1', lastActivityAt: null, deletionDeadline: lifecycleState === 'deletion_pending' ? '2026-12-22T00:00:00Z' : null, consents: [] });
 let checks = 0;
 const parent = { id: '00000000-0000-4000-8000-000000000101', email: 'parent@example.test', aud: 'authenticated', role: 'authenticated', email_confirmed_at: '2026-01-01T00:00:00Z', is_anonymous: false, user_metadata: { full_name: 'Testouder', admin: true, role: 'admin' } };
@@ -21,7 +25,7 @@ const json = (body, status = 200) => Response.json(body, { status });
 const jwt = expiry => `${Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url')}.${Buffer.from(JSON.stringify({ sub: parent.id, exp: expiry, role: 'authenticated', aud: 'authenticated' })).toString('base64url')}.synthetic-signature`;
 const session = (expiry = Math.floor(Date.now() / 1000) + 3600) => ({ access_token: jwt(expiry), token_type: 'bearer', expires_in: Math.max(0, expiry - Math.floor(Date.now() / 1000)), expires_at: expiry, refresh_token: 'synthetic-test-refresh-token', user: parent });
 const request = (body, headers = {}) => new Request('https://fabelpad.example.test/api/auth/test', { method: 'POST', headers: { 'content-type': 'application/json', origin: 'https://fabelpad.example.test', ...headers }, body: JSON.stringify(body) });
-const reset = () => { jar = new Map(); writes = []; requests = []; handler = undefined; };
+const reset = () => { jar = new Map(); writes = []; requests = []; handler = undefined; registrationProofs = new Map(); completionUnavailable = false; };
 try {
   for (const name of Object.keys(process.env)) if (/^(NEXT_PUBLIC_|FABELPAD_|APP_URL$)/u.test(name)) delete process.env[name];
   Object.assign(process.env, {
@@ -41,6 +45,9 @@ try {
   const authURL = await compileSource(new URL('lib/server/auth.ts', root), temp);
   const serverURL = await compileSource(new URL('lib/supabase/server.ts', root), temp);
   const callbackURL = await compileSource(new URL('app/auth/callback/route.ts', root), temp);
+  const registrationURL = await compileSource(new URL('lib/server/registration.ts', root), temp);
+  const completionRouteURL = await compileSource(new URL('app/api/auth/registration/complete/route.ts', root), temp);
+  await writeFile(new URL(registrationURL), (await readFile(new URL(registrationURL), 'utf8')).replace("'next/headers'", JSON.stringify(fakeHeaders.href)));
   const serverCode = (await readFile(new URL(serverURL), 'utf8'))
     .replace("'next/headers'", JSON.stringify(fakeHeaders.href))
     .replace("'@supabase/ssr'", JSON.stringify(import.meta.resolve('@supabase/ssr')));
@@ -48,6 +55,7 @@ try {
   const { authMutation, authSession } = await import(authURL);
   const { createSupabaseServerClient, getVerifiedParent } = await import(serverURL);
   const { GET: callback } = await import(callbackURL);
+  const { POST: completeRegistration } = await import(completionRouteURL);
   globalThis.fetch = async (input, init) => {
     const outgoing = new Request(input, init);
     const url = new URL(outgoing.url);
@@ -56,6 +64,22 @@ try {
     const text = outgoing.method === 'GET' ? '' : await outgoing.text();
     const item = { method: outgoing.method, url, body: text ? JSON.parse(text) : null, authorization: outgoing.headers.get('authorization') };
     requests.push(item);
+    if (url.pathname === '/rest/v1/rpc/begin_parent_registration') {
+      assert.match(item.body.p_nonce_hash, /^[a-f0-9]{64}$/);
+      assert.equal(item.body.p_parent_declaration, true); assert.equal(item.body.p_accept_terms, true);
+      assert.equal(item.body.p_terms_version, '2026-11-22'); assert.equal(item.body.p_privacy_version, '2026-11-22.1');
+      if (item.body.p_channel === 'google') assert.equal(item.body.p_email_hash, null);
+      else assert.match(item.body.p_email_hash, /^[a-f0-9]{64}$/);
+      registrationProofs.set(item.body.p_nonce_hash, { ...item.body });
+      return json({ expiresAt: new Date(Date.now() + 1800000).toISOString() });
+    }
+    if (url.pathname === '/rest/v1/rpc/complete_parent_registration') {
+      if (completionUnavailable) return json({ code: 'XX000', message: 'synthetic-private-registration-diagnostic' }, 500);
+      const stored = registrationProofs.get(item.body.p_nonce_hash);
+      const completed = !!stored && !stored.expired && stored.p_channel === item.body.p_channel && (stored.p_channel === 'google' || stored.p_email_hash === hash(parent.email));
+      if (completed) lifecycleState = 'active';
+      return json({ completed });
+    }
     if (url.pathname === '/rest/v1/rpc/get_account_lifecycle') return json(lifecycle());
     if (url.pathname === '/rest/v1/rpc/record_family_activity') { assert.equal(item.body.p_kind, 'parent_login'); return json({ recorded: true }); }
     assert.ok(handler, 'Every provider request must have an explicit test response');
@@ -82,6 +106,80 @@ try {
   reset(); handler = item => { assert.equal(item.url.pathname, '/auth/v1/otp'); assert.equal(item.body.create_user, true); return json({}); };
   response = await authMutation(request({ email: parent.email, intent: 'register', parentDeclaration: true, acceptTerms: true, termsVersion: '2026-11-22', privacyVersion: '2026-11-22.1' }), 'otp');
   assert.equal(response.status, 200); checks++;
+
+  const declarations = { intent: 'register', parentDeclaration: true, acceptTerms: true, termsVersion: '2026-11-22', privacyVersion: '2026-11-22.1' };
+  const proofCookie = () => [...jar].find(([name]) => name === '__Host-fabelpad-registration')?.[1];
+  const ordinaryAuth = item => {
+    if (item.url.pathname === '/auth/v1/otp') return json({});
+    if (item.url.pathname === '/auth/v1/verify') return json(session());
+    if (item.url.pathname === '/auth/v1/user') return json(parent);
+    if (item.url.pathname === '/auth/v1/token') { assert.equal(item.url.searchParams.get('grant_type'), 'pkce'); assert.ok(item.body.code_verifier); return json(session()); }
+    throw new Error('Unexpected isolated registration provider request');
+  };
+  // The only cookie is an opaque capability; real declarations and exact
+  // versions are stored server-side before Auth creates an identity.
+  reset(); lifecycleState = 'onboarding'; handler = ordinaryAuth;
+  response = await authMutation(request({ email: parent.email, ...declarations }), 'otp');
+  assert.equal(response.status, 200);
+  const originalProof = proofCookie(); assert.match(originalProof, /^otp\.[A-Za-z0-9_-]{43}$/);
+  const nonce = originalProof.split('.')[1], saved = requests.find(item => item.url.pathname.endsWith('/begin_parent_registration'));
+  assert.equal(saved.body.p_nonce_hash, hash(nonce)); assert.equal(saved.body.p_email_hash, hash(parent.email));
+  assert.equal(JSON.stringify(saved.body).includes(nonce), false); assert.equal(JSON.stringify(await response.json()).includes(nonce), false);
+  const protectedCookie = writes.find(item => item.name === '__Host-fabelpad-registration');
+  assert.equal(protectedCookie.options.httpOnly, true); assert.equal(protectedCookie.options.secure, true); assert.equal(protectedCookie.options.sameSite, 'lax'); assert.equal(protectedCookie.options.path, '/'); assert.equal(protectedCookie.options.domain, undefined); assert.ok(protectedCookie.options.maxAge > 0 && protectedCookie.options.maxAge <= 1800); checks++;
+  response = await authMutation(request({ email: parent.email, token: '123456', next: '/gezin' }), 'verify');
+  assert.equal(response.status, 200); let registrationResult = await response.json();
+  assert.equal(registrationResult.next, '/gezin'); assert.equal(registrationResult.lifecycle.state, 'active'); assert.equal(proofCookie(), undefined);
+  assert.equal(requests.filter(item => item.url.pathname.endsWith('/complete_parent_registration')).length, 1); checks++;
+
+  // Failed resends, invalid codes and a canceled OAuth redirect do not discard
+  // a previous valid declaration or force a second set of checkboxes.
+  reset(); lifecycleState = 'onboarding'; handler = ordinaryAuth;
+  await authMutation(request({ email: parent.email, ...declarations }), 'otp'); const oldProof = proofCookie();
+  handler = item => item.url.pathname === '/auth/v1/otp' ? json({ message: 'synthetic-provider-throttle' }, 429) : ordinaryAuth(item);
+  response = await authMutation(request({ email: parent.email, ...declarations }), 'otp'); assert.equal(response.status, 429); assert.equal(proofCookie(), oldProof); checks++;
+  handler = item => item.url.pathname === '/auth/v1/verify' ? json({ code: 'otp_expired', message: 'synthetic-private-invalid-code' }, 401) : ordinaryAuth(item);
+  response = await authMutation(request({ email: parent.email, token: '000000' }), 'verify'); assert.equal(response.status, 401); assert.equal(proofCookie(), oldProof); assert.equal(requests.some(item => item.url.pathname.endsWith('/complete_parent_registration')), false); checks++;
+  handler = ordinaryAuth; response = await authMutation(request({ email: parent.email, token: '123456' }), 'verify'); assert.equal((await response.json()).next, '/gezin'); checks++;
+  reset(); lifecycleState = 'onboarding'; handler = ordinaryAuth;
+  await authMutation(request({ email: parent.email, ...declarations }), 'otp');
+  response = await authMutation(request({ email: parent.email, intent: 'login' }), 'otp'); assert.equal(response.status, 200); assert.equal(proofCookie(), undefined, 'An explicitly successful login start clears an earlier registration intent'); checks++;
+
+  // Stale, foreign-email or missing proof cannot manufacture acceptance.
+  for (const kind of ['expired', 'different-email', 'missing']) {
+    reset(); lifecycleState = 'onboarding'; handler = ordinaryAuth;
+    if (kind !== 'missing') {
+      await authMutation(request({ email: kind === 'different-email' ? 'different@example.test' : parent.email, ...declarations }), 'otp');
+      if (kind === 'expired') for (const stored of registrationProofs.values()) stored.expired = true;
+    }
+    response = await authMutation(request({ email: parent.email, token: '123456' }), 'verify');
+    registrationResult = await response.json(); assert.equal(response.status, 200); assert.match(registrationResult.next, /^\/onboarding\?/); assert.equal(registrationResult.lifecycle.state, 'onboarding'); assert.equal(proofCookie(), undefined); checks++;
+  }
+
+  // Once Auth succeeded, a temporary DB failure can resume from the saved
+  // capability without asking for declarations again or replaying an OTP.
+  reset(); lifecycleState = 'onboarding'; handler = ordinaryAuth;
+  await authMutation(request({ email: parent.email, ...declarations }), 'otp'); const retryProof = proofCookie(); completionUnavailable = true;
+  response = await authMutation(request({ email: parent.email, token: '123456' }), 'verify'); registrationResult = await response.json();
+  assert.equal(response.status, 200); assert.equal(registrationResult.registrationRetryRequired, true); assert.match(registrationResult.next, /^\/onboarding\?/); assert.equal(proofCookie(), retryProof); checks++;
+  response = await completeRegistration(request({}, { 'X-Fabelpad-Parent': parent.id })); assert.equal(response.status, 503); assert.equal(proofCookie(), retryProof); assert.equal(JSON.stringify(await response.json()).includes('synthetic-private-registration-diagnostic'), false); checks++;
+  for (const actor of ['', 'different-parent']) { response = await completeRegistration(request({}, { 'X-Fabelpad-Parent': actor })); assert.equal(response.status, 401); checks++; }
+  completionUnavailable = false;
+  response = await completeRegistration(request({}, { 'X-Fabelpad-Parent': parent.id })); registrationResult = await response.json(); assert.equal(response.status, 200); assert.equal(registrationResult.completed, true); assert.equal(registrationResult.lifecycle.state, 'active'); assert.equal(proofCookie(), undefined); checks++;
+  const completionCount = requests.filter(item => item.url.pathname.endsWith('/complete_parent_registration')).length;
+  response = await completeRegistration(request({}, { 'X-Fabelpad-Parent': parent.id })); assert.equal((await response.json()).completed, true); assert.equal(requests.filter(item => item.url.pathname.endsWith('/complete_parent_registration')).length, completionCount, 'A completed account must not be accepted again'); checks++;
+
+  // Generic completion cannot consume a Google proof using an existing OTP
+  // session. Only a fresh successful PKCE callback applies that declaration.
+  reset(); lifecycleState = 'onboarding'; handler = ordinaryAuth; process.env.FABELPAD_AUTH_GOOGLE_ENABLED = 'true';
+  const preexistingOtp = await createSupabaseServerClient(); await preexistingOtp.auth.verifyOtp({ email: parent.email, token: '123456', type: 'email' });
+  response = await authMutation(request({ ...declarations, next: '/studio' }), 'google'); assert.equal(response.status, 200); const googleProof = proofCookie(); assert.match(googleProof, /^google\./);
+  response = await completeRegistration(request({}, { 'X-Fabelpad-Parent': parent.id })); assert.equal(response.status, 428); assert.equal((await response.json()).error, 'google_registration_required'); assert.equal(proofCookie(), googleProof); assert.equal(requests.some(item => item.url.pathname.endsWith('/complete_parent_registration')), false); checks++;
+  response = await callback(new Request('https://fabelpad.example.test/auth/callback?error=access_denied')); assert.equal(response.status, 303); assert.equal(proofCookie(), googleProof); checks++;
+  const beginCount = requests.filter(item => item.url.pathname.endsWith('/begin_parent_registration')).length;
+  response = await authMutation(request({ intent: 'resume_registration', next: '/studio' }), 'google'); assert.equal(response.status, 200); assert.equal(proofCookie(), googleProof); assert.equal(requests.filter(item => item.url.pathname.endsWith('/begin_parent_registration')).length, beginCount); checks++;
+  response = await callback(new Request('https://fabelpad.example.test/auth/callback?code=synthetic-google-code&next=/studio')); assert.equal(new URL(response.headers.get('location')).pathname, '/studio'); assert.equal(lifecycleState, 'active'); assert.equal(proofCookie(), undefined); checks++;
+  process.env.FABELPAD_AUTH_GOOGLE_ENABLED = 'false'; lifecycleState = 'active';
 
   // Invalid inputs and cross-site requests never reach the mail provider.
   for (const [body, headers, action, status] of [

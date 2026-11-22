@@ -54,7 +54,13 @@ export function isFamilySnapshot(value: unknown): value is FamilySnapshot {
   if (record(value.family) && value.family.version === 1 && Array.isArray(value.family.children) && value.family.children.length === 0)
     return Object.keys(value.family).length === 3 && value.family.activeId === '' && Object.keys(value.data).length === 0;
   const family = normalizeFamily(value.family);
-  if (!family || JSON.stringify(family) !== JSON.stringify(value.family)) return false;
+  // JSONB/PostgREST may return object fields in a different order. Compare the
+  // strict family shape and values, rather than its serialization order.
+  if (!family || !record(value.family) || Object.keys(value.family).length !== 3 ||
+    value.family.version !== family.version || value.family.activeId !== family.activeId ||
+    !Array.isArray(value.family.children) || value.family.children.length !== family.children.length ||
+    value.family.children.some((child, index) => !record(child) || Object.keys(child).length !== 3 ||
+      child.id !== family.children[index].id || child.name !== family.children[index].name || child.avatar !== family.children[index].avatar)) return false;
   const childIds = new Set(family.children.map(child => child.id));
   return Object.entries(value.data).every(([id, fields]) => childIds.has(id) && record(fields) && Object.keys(fields).every(field => (CHILD_FIELDS as readonly string[]).includes(field)));
 }

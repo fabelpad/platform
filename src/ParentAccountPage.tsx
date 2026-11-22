@@ -20,7 +20,34 @@ export function ParentOnboardingPage() {
   const [terms, setTerms] = useState(false);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState('');
-  useEffect(() => { let active = true; void fetch('/api/auth/session', { cache: 'no-store' }).then(readAccountSession).then(async s => { if (!active) return; setSession(s); if (s.parent) { const next = await getStatus(); if (active) setStatus(next); } }).catch(e => { if (active) setNotice(e.message); }); return () => { active = false; }; }, []);
+  const [retryCompletion, setRetryCompletion] = useState(false);
+  const [reauthCompletion, setReauthCompletion] = useState(false);
+  const [attempt, setAttempt] = useState(0);
+  useEffect(() => {
+    let active = true;
+    setRetryCompletion(false); setReauthCompletion(false); setNotice('');
+    void fetch('/api/auth/session', { cache: 'no-store' }).then(readAccountSession).then(async s => {
+      if (!active) return; setSession(s);
+      if (!s.parent) return;
+      let next = await getStatus();
+      if (parentNeedsOnboarding(next)) {
+        // Resume only a server-stored registration declaration. Missing proof
+        // leaves a one-time explicit fallback; it never invents old consent.
+        const response = await fetch('/api/auth/registration/complete', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Fabelpad-Parent': s.parent.id }, body: '{}' });
+        const result = await response.json();
+        if (!response.ok) { if (active) { setRetryCompletion(true); setReauthCompletion(response.status === 428 || response.status === 401); } throw new Error(result.message || 'Je registratie kan nu niet worden afgerond. Je eerdere keuzes worden niet opnieuw gevraagd zolang we die nog kunnen controleren.'); }
+        if (result.lifecycle) next = result.lifecycle;
+      }
+      if (!active) return;
+      if (next.state === 'active' && !parentNeedsOnboarding(next)) {
+        const requested = safeNext(new URLSearchParams(location.search).get('next'));
+        location.replace(requested === '/onboarding' ? '/gezin' : requested);
+        return;
+      }
+      setStatus(next);
+    }).catch(e => { if (active) { setNotice(e.message); setRetryCompletion(true); } });
+    return () => { active = false; };
+  }, [attempt]);
   async function submit(event: FormEvent) {
     event.preventDefault(); if (busy || !adult || !terms || !status) return;
     setBusy(true); setNotice('');
@@ -36,6 +63,8 @@ export function ParentOnboardingPage() {
   return <PageShell><section className="account-form"><h1>Welkom, ouder.</h1>
     <p>Een ouderaccount is voor volwassenen. Lezen zonder online kinderprofiel blijft mogelijk.</p>
     {!session && !notice && <p role="status">Je account openen…</p>}
+    {session?.parent && !status && !notice && <p role="status">Je registratie afronden…</p>}
+    {retryCompletion && <p>{reauthCompletion ? <a className="account-primary" href="/inloggen?next=/onboarding&reauth=1">Bevestig opnieuw met e-mailcode of Google</a> : <button type="button" className="account-primary" onClick={() => setAttempt(value => value + 1)}>Registratie opnieuw afronden</button>}</p>}
     {session && !session.parent && <p><a className="account-primary" href="/inloggen?next=/onboarding">Log eerst veilig in</a></p>}
     {status && ['deletion_pending', 'deleting'].includes(status.state) ? <><p>Je account staat stil. Een gewone login herstelt het account niet.</p><a href="/profiel/account">Bekijk de verwijderstatus</a></> : session?.parent && status && <form onSubmit={submit}>
       {!parentNeedsOnboarding(status) && <p className="notice">Je ouderaccount is al afgerond. <a href="/gezin">Ga naar jullie gezinsomgeving</a>.</p>}

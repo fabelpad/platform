@@ -19,27 +19,23 @@ async function signOut() {
 const INITIAL: SyncState = { phase: 'loading', revision: 0, snapshot: null, dirty: false };
 type CloudContextValue = { parent: ParentIdentity | null; state: SyncState; client: FamilySyncClient | null; guest: boolean };
 const CloudContext = createContext<CloudContextValue>({ parent: null, state: INITIAL, client: null, guest: true });
-type DemoSession = { loggedIn: boolean; login: () => void; logout: () => void };
-const DemoContext = createContext<DemoSession | null>(null);
+const LocalContext = createContext(false);
 
-/** The prototype opens locally, independently of any authenticated parent. */
+/** Local reading opens independently of any authenticated parent. */
 export function DemoBoundary({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
-  const [loggedIn, setLoggedIn] = useState(false);
   useEffect(() => {
     setStorageScope('prototype-demo');
     loadFamily();
     setReady(true);
   }, []);
   if (!ready) return <div className="demo-loading" role="status">De verhalen komen eraan…</div>;
-  const demo = { loggedIn, login: () => setLoggedIn(true), logout: () => setLoggedIn(false) };
-  return <DemoContext.Provider value={demo}><CloudContext.Provider value={{ parent: null, state: INITIAL, client: null, guest: true }}>{children}</CloudContext.Provider></DemoContext.Provider>;
+  return <LocalContext.Provider value={true}><CloudContext.Provider value={{ parent: null, state: INITIAL, client: null, guest: true }}>{children}</CloudContext.Provider></LocalContext.Provider>;
 }
 
 export function DemoLoginButton() {
-  const demo = useContext(DemoContext);
-  if (!demo) return null;
-  return <div className="demo-login-control"><button className="demo-login-button" onClick={demo.loggedIn ? demo.logout : demo.login}>{demo.loggedIn ? <LogOut size={16} /> : <LogIn size={16} />}<span>{demo.loggedIn ? 'Demo uitloggen' : 'Demo inloggen'}</span></button><span className="demo-login-status" role="status">{demo.loggedIn ? 'Ingelogd als Demo-ouder' : ''}</span></div>;
+  if (!useContext(LocalContext)) return null;
+  return <div className="demo-login-control"><a className="demo-login-button" href={SIGN_IN}><LogIn size={16} /><span>Inloggen als ouder</span></a></div>;
 }
 function pendingImportKey(id: string) { return `fabelpad-import-pending-${encodeURIComponent(id)}`; }
 function markImportPending(id: string, pending: boolean) { try { if (pending) localStorage.setItem(pendingImportKey(id), '1'); else localStorage.removeItem(pendingImportKey(id)); } catch { /* Session import remains explicit. */ } }
@@ -132,7 +128,7 @@ export default function CloudBoundary({ parent, children }: { parent: ParentIden
 
   if (phase === 'loading') return <AccountShell><div className="account-loading" role="status"><LoaderCircle className="account-spin" size={25} /><span>We zoeken jullie verhalen erbij…</span></div></AccountShell>;
   if (phase === 'login') return <AccountShell><span className="account-eyebrow"><Sparkles size={16} /> IEDER KIND EEN EIGEN AVONTUUR</span><h1>Jullie verhalen.<br />Overal weer thuis.</h1><p>Log als ouder in. Daarna kiest ieder kind zijn eigen plaatje, vrienden en avonturen — ook op een andere telefoon of tablet.</p><a className="account-primary" href={SIGN_IN} target="_top"><LogIn size={19} />Inloggen als ouder<ArrowRight size={18} /></a><div className="account-login-note"><ShieldCheck size={17} /><span>Je logt als ouder in met een e-mailcode of Google. Kinderen hebben geen eigen e-mailadres nodig.</span></div><button className="account-guest" onClick={enterGuest}>Even rondkijken op dit apparaat <ArrowRight size={16} /></button></AccountShell>;
-  if (phase === 'onboarding') return <AccountShell><span className="account-eyebrow"><Users size={16} /> EEN BEWUSTE KEUZE VOOR OUDERS</span><h1>Een online profiel<br />als jullie dat willen.</h1><p>Een online kinderprofiel is optioneel. We bewaren de bijnaam, standaardavatar en leesgegevens om op een ander apparaat verder te lezen. Gebruik een bijnaam; een geboortedatum of identiteitsdocument is niet nodig.</p><p>Je kunt per profiel toestemming intrekken bij Ons gezin. Dan stopt synchronisatie en wissen we dat profiel. Bewaren stopt ook bij accountverwijdering of na 90 dagen zonder bewuste gezinsactiviteit. <a href="/privacyverklaring">Privacyverklaring</a> · <a href="/privacy-voor-kinderen">Privacy voor kinderen</a>.</p>
+  if (phase === 'onboarding') return <AccountShell><span className="account-eyebrow"><Users size={16} /> EEN BEWUSTE KEUZE VOOR OUDERS</span><h1>Een online profiel<br />als jullie dat willen.</h1><p>Een online kinderprofiel is optioneel. We bewaren de bijnaam, standaardavatar en leesgegevens om op een ander apparaat verder te lezen. Gebruik een bijnaam; een geboortedatum of identiteitsdocument is niet nodig.</p><p>Je kunt per profiel toestemming intrekken bij Ons gezin. Dan stopt synchronisatie en wissen we dat profiel. Bij accountverwijdering worden de online gezinsgegevens volgens de aangegeven termijn gewist. De <a href="/privacyverklaring">privacyverklaring</a> legt ook uit wat geldt bij langdurige inactiviteit. <a href="/privacy-voor-kinderen">Privacy voor kinderen</a>.</p>
     {legacy && <><p>Op dit apparaat staan al profielen. Geef voor ieder profiel afzonderlijk toestemming voordat het wordt geüpload.</p><div className="account-import-preview">{legacy.family.children.map(child => <label className="account-check" key={child.id}><input type="checkbox" checked={!!permissions[child.id]} onChange={e => setPermissions(previous => ({ ...previous, [child.id]: e.target.checked }))} /><span>Ik ben ouder met gezag of voogd en geef toestemming om de bijnaam, avatar en leesgegevens van {child.name} te bewaren voor het kinderprofiel en om verder te lezen waar mijn kind is gebleven.</span></label>)}</div><button className="account-primary" disabled={opening || !legacy.family.children.every(child => permissions[child.id])} onClick={() => void begin(legacy, true)}><Download size={18} />Deze profielen online bewaren</button></>}
     <label className="account-check"><input type="checkbox" checked={!!permissions.new} onChange={e => setPermissions(previous => ({ ...previous, new: e.target.checked }))} /><span>Ik ben ouder met gezag of voogd en geef toestemming om de bijnaam, avatar en leesgegevens van mijn kind te bewaren voor het kinderprofiel en om verder te lezen waar mijn kind is gebleven.</span></label>
     <button className={legacy ? 'account-secondary' : 'account-primary'} disabled={opening || !permissions.new} onClick={() => { newSnapshot.current ??= freshSnapshot(); void begin(newSnapshot.current, false); }}>{opening ? 'Veilig bewaren…' : 'Start met een nieuw profiel Avonturier'}<ArrowRight size={18} /></button>
@@ -149,15 +145,15 @@ export function SyncBadge() {
   const [durable, setDurable] = useState(true);
   useEffect(() => { setDurable(isLocalStorageDurable()); return subscribeStorage(() => setDurable(isLocalStorageDurable())); }, []);
   const { guest, state } = useContext(CloudContext);
-  const demo = useContext(DemoContext);
-  const text = demo ? durable ? 'Demo · op dit apparaat' : 'Alleen in dit venster · bewaren lukt niet' : guest ? 'Op dit apparaat' : state.phase === 'saved' && !state.dirty ? 'Avonturen bewaard' : state.phase === 'saving' || state.phase === 'pending' ? 'Even bewaren…' : state.phase === 'conflict' ? 'Versie kiezen' : state.phase === 'offline' ? state.localDurable === false && state.dirty ? 'Alleen in dit venster' : 'Op dit apparaat bewaard' : 'Nog niet gesynchroniseerd';
+  const local = useContext(LocalContext);
+  const text = local ? durable ? 'Op dit apparaat' : 'Alleen in dit venster · bewaren lukt niet' : guest ? 'Op dit apparaat' : state.phase === 'saved' && !state.dirty ? 'Avonturen bewaard' : state.phase === 'saving' || state.phase === 'pending' ? 'Even bewaren…' : state.phase === 'conflict' ? 'Versie kiezen' : state.phase === 'offline' ? state.localDurable === false && state.dirty ? 'Alleen in dit venster' : 'Op dit apparaat bewaard' : 'Nog niet gesynchroniseerd';
   const Icon = guest || state.phase === 'offline' ? CloudOff : state.phase === 'saving' || state.phase === 'pending' ? LoaderCircle : state.phase === 'saved' ? Check : TriangleAlert;
   return <span className={`sync-badge sync-${guest ? 'guest' : state.phase}`} role="status"><Icon size={13} className={state.phase === 'saving' ? 'account-spin' : undefined} /><span>{text}</span></span>;
 }
 
 export function ParentAccountPanel() {
   const { parent, guest, client, state } = useContext(CloudContext);
-  const demo = useContext(DemoContext);
-  if (demo) return <section className="parent-account-panel" aria-label="Demoaccount"><div className="parent-account-heading"><ShieldCheck size={20} /><div><strong>Demoaccount</strong><small>{demo.loggedIn ? 'Ingelogd als Demo-ouder' : 'Ontdekken zonder account'}</small></div></div><SyncBadge /><p>Dit is de prototypeomgeving. Kindprofielen, keuzes en voortgang blijven op dit apparaat bewaard. Demo inloggen werkt direct, zonder e-mailadres of wachtwoord.</p><button className="account-primary" onClick={demo.loggedIn ? demo.logout : demo.login}>{demo.loggedIn ? <LogOut size={17} /> : <LogIn size={17} />}{demo.loggedIn ? 'Demo uitloggen' : 'Demo inloggen'}</button></section>;
+  const local = useContext(LocalContext);
+  if (local) return <section className="parent-account-panel" aria-label="Lezen op dit apparaat"><div className="parent-account-heading"><ShieldCheck size={20} /><div><strong>Op dit apparaat</strong><small>Lezen zonder ouderaccount</small></div></div><SyncBadge /><p>Kindprofielen, keuzes en voortgang blijven op dit apparaat. Log als ouder in voor jullie online gezinsomgeving. Lokale profielen worden alleen na jouw keuze en toestemming online bewaard.</p><a className="account-primary" href={SIGN_IN}><LogIn size={17} />Inloggen als ouder</a></section>;
   return <section className="parent-account-panel" aria-label="Jouw ouderaccount"><div className="parent-account-heading"><ShieldCheck size={20} /><div><strong>{guest ? 'Rondkijken op dit apparaat' : 'Jouw ouderaccount'}</strong><small>{parent?.displayName || parent?.email || 'Nog niet ingelogd'}</small></div></div><SyncBadge />{guest ? <><p>Inloggen maakt een centrale plek voor jullie kindprofielen, verhaalgeheugen en voortgang.</p><a href={SIGN_IN} target="_top" className="account-primary"><LogIn size={17} />Inloggen als ouder</a></> : <><p>Dezelfde kindprofielen komen terug wanneer je op een ander apparaat met dit ouderaccount inlogt.</p><div className="parent-account-actions"><button onClick={() => { void client?.flush().then(() => client?.refresh()); }} disabled={state.phase === 'saving'}><RefreshCw size={15} />Nu bijwerken</button><button onClick={() => { void signOut(); }}><LogOut size={15} />Uitloggen</button></div>{state.dirty && <small className="parent-account-draft">{state.localDurable === false ? 'Je browser kan de apparaatversie niet bewaren. Houd dit venster open tot alles centraal is opgeslagen.' : 'Nog niet alles is centraal bewaard. Je apparaatversie blijft beschikbaar als je later met dit account terugkomt.'}</small>}</>}</section>;
 }

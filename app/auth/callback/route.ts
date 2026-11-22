@@ -15,7 +15,7 @@ export async function GET(request: Request) {
       try {
         const client = await createSupabaseServerClient();
         const { error } = await client.auth.exchangeCodeForSession(code);
-        if (!error) target = (await finishParentAuthentication(client, safeNext(url.searchParams.get('next')))).next;
+        if (!error) target = (await finishParentAuthentication(client, safeNext(url.searchParams.get('next')), 'google')).next;
       } catch { /* A failed or expired PKCE exchange grants no session rights. */ }
     }
     return new Response(null, { status: 303, headers: { Location: new URL(target, config.appUrl).href, 'Cache-Control': 'private, no-store', Vary: 'Cookie' } });

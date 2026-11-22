@@ -43,6 +43,7 @@ test('onboarding uses current server document versions and leaves family APIs un
   await page.goto('/gezin');
   await expect(page.getByRole('heading', { name: 'Rond je ouderaccount af.' })).toBeVisible();
   expect(uploads).toBe(0);
+  await page.route('**/api/auth/registration/complete', route => route.fulfill({ json: { completed: false, lifecycle: fresh } }));
   await page.goto('/onboarding');
   const finish = page.getByRole('button', { name: 'Ouderaccount afronden' });
   await expect(finish).toBeDisabled();
@@ -61,6 +62,7 @@ test('a document version change clears acceptance and shows the new version befo
   await session(page, fresh);
   await page.unroute('**/api/parent/status');
   await page.route('**/api/parent/status', route => route.fulfill({ json: status }));
+  await page.route('**/api/auth/registration/complete', route => route.fulfill({ json: { completed: false, lifecycle: fresh } }));
   await page.route('**/api/parent/onboarding', route => { status = { ...fresh, termsVersion: '2026-11-23' }; return route.fulfill({ status: 409, json: { error: 'terms_changed', message: 'De versie is bijgewerkt.' } }); });
   await page.goto('/onboarding');
   await page.getByRole('checkbox', { name: /Ik ben 18 jaar/ }).check();

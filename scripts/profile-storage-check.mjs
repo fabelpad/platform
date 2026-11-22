@@ -20,6 +20,28 @@ async function fixture(storage = new MemoryStorage()) {
 }
 function put(storage, key, value) { storage.setItem(key, JSON.stringify(value)); }
 
+// JSON object field order is not part of the snapshot contract. PostgreSQL
+// JSONB reorders both family and child objects before PostgREST returns them.
+{
+  const { api } = await fixture();
+  const snapshot = { data: { 'child-jsonb': {} }, family: { activeId: 'child-jsonb', children: [{ avatar: 2, name: 'Avonturier', id: 'child-jsonb' }], version: 1 }, schemaVersion: 1 };
+  assert.equal(api.isFamilySnapshot(snapshot), true);
+  api.hydrateSnapshot(snapshot);
+  assert.deepEqual(api.loadFamily(), { version: 1, children: [{ id: 'child-jsonb', name: 'Avonturier', avatar: 2 }], activeId: 'child-jsonb' });
+  for (const mutate of [
+    value => { value.family.extra = true; },
+    value => { value.family.children[0].extra = true; },
+    value => { value.family.children[0].name = ' Avonturier '; },
+    value => { value.family.children[0].avatar = 7; },
+    value => { value.family.activeId = 'missing'; },
+    value => { value.family.children.push({ ...value.family.children[0] }); },
+    value => { value.data.foreign = {}; },
+  ]) {
+    const invalid = structuredClone(snapshot); mutate(invalid);
+    assert.equal(api.isFamilySnapshot(invalid), false, 'Accepting reordered keys must not repair or admit an invalid remote family');
+  }
+}
+
 // All data from the original single-child prototype belongs only to its first child.
 {
   const storage = new MemoryStorage();

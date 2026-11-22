@@ -1,2 +1,4 @@
-import LocalExperience from "../../src/LocalExperience";
-export default function Page() { return <LocalExperience surface="review" />; }
+import { redirect } from 'next/navigation';
+
+/** Preserve old bookmarks without exposing simulated app states. */
+export default function Page() { redirect('/lezen'); }

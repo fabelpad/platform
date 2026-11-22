@@ -9,7 +9,16 @@ type Draft = { owner: string; revision: number; snapshot: FamilySnapshot; dirty:
 type Store = { getItem(key: string): string | null; setItem(key: string, value: string): void };
 type Fetcher = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
 const copy = <T,>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
-const equal = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
+// JSON objects are unordered, including snapshots returned by PostgreSQL JSONB.
+// Array order still matters for profiles, story choices and remembered events.
+function equal(a: unknown, b: unknown): boolean {
+  if (a === b) return true;
+  if (a === null || b === null || typeof a !== 'object' || typeof b !== 'object') return false;
+  if (Array.isArray(a) || Array.isArray(b)) return Array.isArray(a) && Array.isArray(b) && a.length === b.length && a.every((item, index) => equal(item, b[index]));
+  const left = a as Record<string, unknown>, right = b as Record<string, unknown>;
+  const keys = Object.keys(left);
+  return keys.length === Object.keys(right).length && keys.every(key => Object.hasOwn(right, key) && equal(left[key], right[key]));
+}
 const sameContent = (a: FamilySnapshot | null, b: FamilySnapshot | null) => a && b ? equal({ ...a, family: { ...a.family, activeId: '' } }, { ...b, family: { ...b.family, activeId: '' } }) : a === b;
 
 export class FamilySyncClient {

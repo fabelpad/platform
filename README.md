@@ -6,7 +6,7 @@ Repository: [fabelpad/platform](https://github.com/fabelpad/platform), integrati
 
 Webstatus 22 november 2026: **[staging.fabelpad.nl](https://staging.fabelpad.nl) is actief voor eigenaaracceptatie**. Beide VPS-apps en databases zijn bijgewerkt; productie draait intern en haar publieke route blijft uit. De afzonderlijke Resend API-key wordt na echte eerste beheerderlogin via **Beheer → E-mail** gekoppeld. Auth blijft Supabase Custom SMTP via Resend gebruiken.
 
-Nederlandstalige interactieve verhalenwereld voor kinderen van 4–8 jaar. Deze checkout bouwt lokaal met native Next.js en bevat een afzonderlijke Expo/React Native-app. Het aangeleverde prototype is behouden in importcommit `a7475c4573d3f125be337eb315c574945c64352c`; de pakketmetadata verwijst naar oorspronkelijke broncommit `97c3881d6bd94f41596ce77fb7a53d55936c6397`.
+Nederlandstalige interactieve verhalenwereld voor kinderen van 4–8 jaar. De webdienst gebruikt Next.js en bevat daarnaast een afzonderlijke Expo/React Native-app.
 
 ## Lokaal starten
 
@@ -19,20 +19,19 @@ bash scripts/local-build.sh
 pnpm start
 ```
 
-Open `http://localhost:3000`. De demo heeft geen externe accounts of secrets nodig. `pnpm dev` start de ontwikkelserver. Een andere poort: `pnpm start --port 3017`. De server bindt aan loopback.
+Open `http://localhost:3000`. De lokale leesapp heeft geen externe accounts of secrets nodig. `pnpm dev` start de ontwikkelserver. Een andere poort: `pnpm start --port 3017`. De server bindt aan loopback. Staging en productie gebruiken hun eigen echte Supabase-project.
 
 | Route | Functie |
 | --- | --- |
 | `/` | Website, verhaalvoorbeelden en uitleg |
 | `/lezen` | Direct bruikbare lokale kinderleesapp |
-| `/ouders` | Lokale ouderdemo: profielen, instellingen, downloads en toegangsmodel testen |
-| `/demo` | Reviewroute met Website/Webapp/Android/Ouders/Verhalenstudio-balk |
+| `/ouders` | Ouderomgeving voor profielen en instellingen; online via de eigen gezinsomgeving |
 | `/inloggen` | Supabase e-mail-OTP/Google op staging; eerste account via **Ouderaccount maken**; lokale modus heeft geen online login |
 | `/gezin` | Gezinsomgeving met geverifieerde ouderidentiteit en synchronisatiecontract |
 | `/studio` | Verhalenstudio met servergecontroleerde beheerdersrechten |
 | `/privacy`, `/support`, `/account-verwijderen` | Privacyversie, ondersteuning en account-/gegevensverwijdering |
 
-De ontwerpschakelaar staat uitsluitend op `/demo`. De primaire leesroute heeft geen ontwikkelmenu of automatische boekopening. De Android-iframe op de reviewroute is alleen een browserpreview.
+De primaire leesroute heeft geen ontwikkelmenu of automatische boekopening. Historische reviewlinks leiden naar de gewone leesomgeving.
 
 ## Wat lokaal beschikbaar is
 
@@ -41,7 +40,7 @@ De ontwerpschakelaar staat uitsluitend op `/demo`. De primaire leesroute heeft g
 - De stationsspeelprent met begrensde acties, bescherming tegen dubbele keuzes en opgeruimde callbacks.
 - Voorlezen met de aanwezige browser-/apparaatstem; stoppen bij verlaten of achtergrond. Offline Nederlandse stemmen zijn niet gegarandeerd.
 - Begin van een webavontuur pinnen aan `storyId`, `contentVersion`, `picks` en revisie. Volledige releases worden lokaal gecachet; ontbrekende oude releases worden niet stilzwijgend vervangen.
-- Een herkenbare lokale ouder-/studiodemo. Demo-login verleent geen rechten op server-API's.
+- Lokale profielinstellingen en de afzonderlijke geauthenticeerde ouder-/beheeromgeving.
 - Native componenten, lokale opslag, eigen profielvoortgang en dezelfde volledige catalogus in `mobile/`, zonder WebView.
 
 Geblokkeerde lokale opslag wordt zichtbaar. Browserdownloads bevatten afbeeldingen en verhaalroutes, maar account-/navigatie-HTML wordt uit privacyoverwegingen niet gecachet. **Koud starten van de webapp zonder internet is nog niet beschikbaar.** De native app bundelt de oorspronkelijke content; werkelijk toestelgedrag wordt afzonderlijk getest.
@@ -79,9 +78,7 @@ Browserregressies staan in `tests/browser/`. Start eerst de gebouwde server op p
 
 ## Android
 
-[Download de Android-demo-APK via GitHub](https://github.com/fabelpad/platform/releases/tag/demo-android-0.1.0-045c863) (arm64, versie 0.1.0; toegang tot deze privérepository vereist).
-
-Zie [mobile/README.md](mobile/README.md) voor installatie, Expo/Gradle-toolchain, de lokale demo-APK en productievariabelen. [mobile/VALIDATIE.md](mobile/VALIDATIE.md) bevat het werkelijk behaalde bewijs en de resterende toestelchecks. Een Metro-export is geen APK; een APK is geen Play-release of prestatiemeting.
+De productie-app is `nl.fabelpad.app`, versie 1.0.0 (1). Het [productiebouwbewijs](docs/ANDROID-PRODUCTIE-VALIDATIE.md) en [Play-releaseproces](docs/GOOGLE-PLAY-RELEASE-RUNBOOK.md) beschrijven het uploadbestand, ondertekening en de afzonderlijke publicatiestappen. [mobile/VALIDATIE.md](mobile/VALIDATIE.md) bevat de toestelcontroles en hun grenzen. De webwijzigingen publiceren geen nieuwe Android-versie.
 
 ## Inrichting en release
 
@@ -91,6 +88,4 @@ Zie [mobile/README.md](mobile/README.md) voor installatie, Expo/Gradle-toolchain
 - [Lokale validatie en verificatiegrenzen](docs/LOKALE-VALIDATIE.md)
 - [Releasegates](.github/RELEASE-GATES.md)
 
-De DG-webroute gebruikt native Next.js, gescheiden self-hosted doelrunners, root-owned projectadapters, systemd en Caddy. Beide doelen op `dg-vps-08` zijn voorbereid met eigen rollen/paden/poorten. Er staan nog geen doelkandidaten of actieve releases. De runners zijn ongeregistreerd totdat de vereiste beperkte organisatiegroep beschikbaar is. De zes handmatige workflows bouwen, activeren of herstellen één eigen doel; zie [het tweedoelenrunbook](docs/DG-VPS-08-TWEE-OMGEVINGEN.md). Gewone web-CI valideert alleen; controleer vóór main-merge ook de bestaande Android-/Play- en eventuele externe integraties.
-
-De oorspronkelijke [prototypeoverdracht](docs/FABELPAD-CODEX-OVERDRACHT.md) blijft historische context; de oude Docker-/SMTP-/Workers-voorstellen zijn niet het huidige releasepad.
+De DG-webroute gebruikt Next.js, gescheiden repositoryrunners, root-owned projectadapters, systemd en Caddy. Beide doelen op `dg-vps-08` hebben actieve releases en hun eigen rollen/paden/poorten. De zes handmatige workflows bouwen, activeren of herstellen één eigen doel; zie [het tweedoelenrunbook](docs/DG-VPS-08-TWEE-OMGEVINGEN.md). Staging is via HTTPS bereikbaar; de actuele productie-openstelling staat in het statusdocument. Gewone web-CI valideert alleen; controleer vóór main-merge ook de bestaande Android-/Play- en eventuele externe integraties.

@@ -94,7 +94,45 @@ try {
     assert.equal(createHash('sha256').update(canonical).digest('hex').slice(0,16), contentVersion);
   }
   await identity(parentA);
-  assert.deepEqual(await save(0, fixture('Mila')), { saved: true, revision: 1, snapshot: fixture('Mila') });
+  // Exercise the complete consented RPC -> real PostgreSQL JSONB -> browser
+  // sync boundary. JS-only HTTP mocks used to hide JSONB's object key order.
+  const { FamilySyncClient } = await import(await compileSource(new URL('../src/cloudSync.ts', import.meta.url), temp));
+  const { isFamilySnapshot } = await import(await compileSource(new URL('../src/profileStorage.ts', import.meta.url), temp));
+  const drafts = new Map();
+  const store = { getItem: key => drafts.get(key) ?? null, setItem: (key, value) => drafts.set(key, value) };
+  const parent = { id: parentA, email: 'synthetic-parent@example.test', displayName: 'Testouder' };
+  let familyPuts = 0, firstFamilySave;
+  const fetchFamily = async (_url, options) => {
+    assert.equal(options.headers['X-Fabelpad-Parent'], parentA);
+    if (options.method === 'PUT') {
+      familyPuts++;
+      const body = JSON.parse(options.body);
+      const result = await save(body.baseRevision, body.snapshot);
+      firstFamilySave ??= result;
+      return result.saved ? Response.json({ parent, revision: result.revision, snapshot: result.snapshot }) : Response.json({ error: 'revision_conflict', revision: result.revision, snapshot: result.snapshot }, { status: 409 });
+    }
+    const row = (await db.query('select revision,snapshot from public.family_documents')).rows[0];
+    return Response.json({ parent, revision: row?.revision ?? 0, snapshot: row?.snapshot ?? null });
+  };
+  const sync = new FamilySyncClient(parentA, { store, fetcher: fetchFamily, debounceMs: 60_000 });
+  await sync.load(); sync.enqueue(fixture('Mila')); await sync.flush();
+  assert.deepEqual(firstFamilySave, { saved: true, revision: 1, snapshot: fixture('Mila') });
+  assert.equal(isFamilySnapshot(firstFamilySave.snapshot), true, 'A successful JSONB RPC response must be usable by the browser');
+  assert.equal(sync.getState().phase, 'saved'); assert.equal(sync.getState().dirty, false);
+  sync.enqueue(fixture('Mila')); await sync.flush();
+  assert.equal(familyPuts, 1, 'Only field-order differences must not cause another save');
+  const cacheKey = sync.cacheKey; sync.dispose();
+  // Recover the exact pre-fix situation: the PUT committed, but its reply was
+  // rejected, leaving a revision-zero dirty draft on the parent's device.
+  drafts.set(cacheKey, JSON.stringify({ owner: parentA, revision: 0, snapshot: fixture('Mila'), dirty: true, baseSnapshot: null }));
+  let reopened;
+  const reloaded = new FamilySyncClient(parentA, { store, fetcher: fetchFamily, debounceMs: 60_000, onRemote: value => { reopened = value; } });
+  await reloaded.load(); await reloaded.flush();
+  assert.equal(reloaded.getState().phase, 'saved'); assert.equal(reloaded.getState().dirty, false);
+  assert.deepEqual(reopened, fixture('Mila')); assert.equal(familyPuts, 1, 'Reloading an already saved profile must not create or re-submit it');
+  assert.equal((await db.query('select count(*)::int n from public.family_documents')).rows[0].n, 1);
+  assert.equal((await db.query('select public.get_account_lifecycle() as state')).rows[0].state.consents.length, 1, 'Recovery preserves the original profile consent');
+  reloaded.dispose();
   await identity(parentB);
   assert.equal((await db.query('select * from public.family_documents')).rows.length, 0, 'B cannot read A even without an explicit owner filter');
   assert.equal((await save(0, fixture('Bo'))).saved, true);
