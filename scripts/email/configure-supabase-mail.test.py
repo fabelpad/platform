@@ -68,7 +68,9 @@ class FakeApi:
                     raise mail.HttpFailure(502)
             result = copy.deepcopy(self.auth)
             if self.bad_readback and self.patch_count == 1:
-                result['mailer_otp_length'] = 6
+                # A valid provider value that differs from the required six
+                # digits must trigger readback recovery, not a false success.
+                result['mailer_otp_length'] = 8
             return result
         if url.endswith('/secrets'):
             if method == 'POST':
@@ -223,18 +225,20 @@ class MailConfigurationTests(unittest.TestCase):
 
     def test_partial_auth_failure_restores_initial_auth_and_keeps_hook_disabled(self):
         for attribute in ('fail_first_patch_after_update', 'bad_readback'):
-            api = FakeApi(); previous = copy.deepcopy(api.auth); setattr(api, attribute, True)
-            with self.subTest(attribute=attribute), self.assertRaises(mail.PreparationError) as caught:
-                self.run_config(api, apply=True)
-            self.assertIn('niet volledig bevestigd', str(caught.exception))
-            self.assertIn('hersteld en gecontroleerd', str(caught.exception))
-            self.assertEqual(api.auth, previous)
-            self.assertEqual(api.auth['hook_send_email_enabled'], False)
-            self.assertEqual(api.auth['rate_limit_email_sent'], 2)
-            self.assertEqual(api.auth['smtp_max_frequency'], 120)
-            self.assertEqual([method for method, *_ in api.writes], ['POST', 'PATCH', 'PATCH'])
-            self.assertNotIn(KEY, str(caught.exception))
-            self.assertNotIn(PAT, str(caught.exception))
+            with self.subTest(attribute=attribute):
+                api = FakeApi(); previous = copy.deepcopy(api.auth); setattr(api, attribute, True)
+                with self.assertRaises(mail.PreparationError) as caught:
+                    self.run_config(api, apply=True)
+                self.assertIn('niet volledig bevestigd', str(caught.exception))
+                self.assertIn('hersteld en gecontroleerd', str(caught.exception))
+                self.assertEqual(api.auth, previous)
+                self.assertEqual(api.auth['hook_send_email_enabled'], False)
+                self.assertEqual(api.auth['mailer_otp_length'], 6)
+                self.assertEqual(api.auth['rate_limit_email_sent'], 2)
+                self.assertEqual(api.auth['smtp_max_frequency'], 120)
+                self.assertEqual([method for method, *_ in api.writes], ['POST', 'PATCH', 'PATCH'])
+                self.assertNotIn(KEY, str(caught.exception))
+                self.assertNotIn(PAT, str(caught.exception))
 
     def test_active_hook_changed_or_missing_edge_secret_refuses_every_write(self):
         for name in sorted(mail.SECRET_NAMES):
@@ -277,19 +281,23 @@ class MailConfigurationTests(unittest.TestCase):
 
     def test_failed_restore_requires_manual_recovery_and_never_exposes_provider_details(self):
         for failure in ('fail_patch', 'fail_recovery'):
-            api = FakeApi(); api.bad_readback = True; setattr(api, failure, True)
-            with self.subTest(failure=failure), self.assertRaises(mail.PreparationError) as caught:
-                self.run_config(api, apply=True)
-            self.assertIn('Handmatig herstel is nodig', str(caught.exception))
-            self.assertNotIn(KEY, str(caught.exception)); self.assertNotIn(PAT, str(caught.exception))
+            with self.subTest(failure=failure):
+                api = FakeApi(); api.bad_readback = True; setattr(api, failure, True)
+                with self.assertRaises(mail.PreparationError) as caught:
+                    self.run_config(api, apply=True)
+                self.assertIn('Handmatig herstel is nodig', str(caught.exception))
+                self.assertEqual(api.patch_count, 2, 'A failed update must still attempt recovery exactly once')
+                self.assertFalse(any('/emails' in url for _, url, *_ in api.calls))
+                self.assertNotIn(KEY, str(caught.exception)); self.assertNotIn(PAT, str(caught.exception))
 
     def test_missing_previous_auth_value_blocks_before_any_change(self):
         for field in ['mailer_otp_exp', 'rate_limit_email_sent', 'smtp_max_frequency']:
-            api = FakeApi(); del api.auth[field]
-            with self.subTest(field=field), self.assertRaises(mail.PreparationError) as caught:
-                self.run_config(api, apply=True)
-            self.assertIn('eerdere instellingen', str(caught.exception))
-            self.assertEqual(api.writes, [])
+            with self.subTest(field=field):
+                api = FakeApi(); del api.auth[field]
+                with self.assertRaises(mail.PreparationError) as caught:
+                    self.run_config(api, apply=True)
+                self.assertIn('eerdere instellingen', str(caught.exception))
+                self.assertEqual(api.writes, [])
 
     def test_terminal_echo_fallback_is_refused_without_api_calls(self):
         with patch.object(mail.sys.stdin, 'isatty', return_value=True), patch.object(mail.getpass, 'getpass', side_effect=mail.getpass.GetPassWarning('synthetic-private-terminal-detail')), patch.object(mail, 'Api', side_effect=AssertionError('No API')):

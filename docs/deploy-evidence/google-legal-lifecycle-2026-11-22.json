@@ -20,12 +20,34 @@
       },
       "usersAfterMigration": 0,
       "emailAdminEdgeVersion": 2,
-      "accountMaintenanceEdgeVersion": 1,
+      "accountMaintenanceEdgeVersion": 2,
       "unauthenticatedMailAdminStatus": 401,
       "unauthenticatedWorkerStatus": 401,
       "authRoute": "owner-configured Supabase Custom SMTP -> Resend; preserved",
       "autoInactivityDeletionEnabled": false,
-      "schedulerState": "not configured; signed-request hardening in progress"
+      "schedulerState": "configured; minute cron and explicit HMAC invocation returned HTTP200 with completed0 deferred0",
+      "schedulerAuthentication": "project-bound HMAC-SHA256 with one-use nonce; no reusable signing key in pg_net",
+      "pgNetExtensionSchema": "extensions",
+      "securityAdvisors": {
+        "warn": 0,
+        "error": 0,
+        "info": 13,
+        "infoReason": "private tables intentionally deny direct application-role access; controlled functions only"
+      },
+      "additionalAppliedMigrations": [
+        {
+          "version": "20261122174433",
+          "sha256": "d01081c5db091f7ec9443fb9ba99e6021a9e3a4b580cb746a0950bc524aa2fbb"
+        },
+        {
+          "version": "20261122175306",
+          "sha256": "33e726bdb6c2d7058fa48521e0e951c3f9164dca76ccb12ca23073ca188a67a2"
+        },
+        {
+          "version": "20261122175654",
+          "sha256": "d39736441cc9efd59da1afc8c0214fc8cec466f3d6c73de3b16029cb01c7ffd9"
+        }
+      ]
     },
     "production": {
       "account": "Duindorpdoet",
@@ -43,12 +65,34 @@
       },
       "usersAfterMigration": 0,
       "emailAdminEdgeVersion": 2,
-      "accountMaintenanceEdgeVersion": 1,
+      "accountMaintenanceEdgeVersion": 2,
       "unauthenticatedMailAdminStatus": 401,
       "unauthenticatedWorkerStatus": 401,
       "authRoute": "owner-configured Supabase Custom SMTP -> Resend; preserved",
       "autoInactivityDeletionEnabled": false,
-      "schedulerState": "not configured; signed-request hardening in progress"
+      "schedulerState": "configured; minute cron and explicit HMAC invocation returned HTTP200 with completed0 deferred0",
+      "schedulerAuthentication": "project-bound HMAC-SHA256 with one-use nonce; no reusable signing key in pg_net",
+      "pgNetExtensionSchema": "extensions",
+      "securityAdvisors": {
+        "warn": 0,
+        "error": 0,
+        "info": 13,
+        "infoReason": "private tables intentionally deny direct application-role access; controlled functions only"
+      },
+      "additionalAppliedMigrations": [
+        {
+          "version": "20261122174433",
+          "sha256": "d01081c5db091f7ec9443fb9ba99e6021a9e3a4b580cb746a0950bc524aa2fbb"
+        },
+        {
+          "version": "20261122175306",
+          "sha256": "33e726bdb6c2d7058fa48521e0e951c3f9164dca76ccb12ca23073ca188a67a2"
+        },
+        {
+          "version": "20261122175654",
+          "sha256": "d39736441cc9efd59da1afc8c0214fc8cec466f3d6c73de3b16029cb01c7ffd9"
+        }
+      ]
     }
   },
   "host": {
@@ -108,5 +152,14 @@
     "accepted processor agreements and transfer safeguards",
     "own environment Resend API key in admin Vault configuration",
     "interactive owner login and real delivery acceptance"
-  ]
+  ],
+  "observations": {
+    "dns": {
+      "fabelpad.nl": "204.168.128.28",
+      "staging.fabelpad.nl": "204.168.128.28",
+      "fabelpad.nl MX": "10 mx.stackmail.com."
+    },
+    "mailboxProviderContractVerified": false,
+    "hostTimers": "No Fabelpad backup timer present; provider snapshots and external backups cannot be inferred from this check"
+  }
 }
