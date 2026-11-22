@@ -1,0 +1,374 @@
+{
+  "schemaVersion": 1,
+  "checkedDate": "2026-11-22",
+  "scope": "Own Fabelpad host preparation only; no candidate or activation",
+  "repository": "fabelpad/platform",
+  "integrationBranch": "main",
+  "githubEnvironments": {
+    "names": [
+      "staging",
+      "production"
+    ],
+    "source": "Root agent read-only GitHub API inspection on 2026-11-22 plus owner confirmation",
+    "publicVariableNames": [
+      "FABELPAD_APP_ORIGIN",
+      "FABELPAD_DATA_MODE",
+      "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY",
+      "NEXT_PUBLIC_SUPABASE_URL"
+    ],
+    "valuesIncluded": false,
+    "planOrRunnerGroupEntitlementVerified": false
+  },
+  "host": {
+    "hostname": "dg-vps-08",
+    "machineId": "05db94b99eca4c3d815f6585ef8ed517"
+  },
+  "operations": {
+    "productionPreparation": "prepared-inactive",
+    "stagingAdapterUpgrade": "adapters-upgraded",
+    "activationPerformed": false,
+    "proxyReloadPerformed": false,
+    "runnerRegistrationPerformed": false,
+    "candidateBuildPerformed": false,
+    "systemdDaemonReloadPerformed": true,
+    "sharedHostSettingsModified": false,
+    "supabaseCliUsedForHostDeployment": false
+  },
+  "toolchain": {
+    "node": "24.18.0",
+    "pnpm": "11.25.0",
+    "filesAndSymlinksVerifiedAgainstOfficialArchives": 5162,
+    "nodeArchiveSha256": "55aa7153f9d88f28d765fcdad5ae6945b5c0f98a36881703817e4c450fa76742",
+    "pnpmArchiveSha512Base64": "XN6SW08HX3Jetx+64YpC/+eEUkeJ8ZthxzHLhyHsKKruFg4BqNWvT+2ypCzb8wDv4j2zVrDUoXtNY+EfirfJVg==",
+    "referenceManifestSha256": "0d872abff9ed8d4de96ebc8c6e0638bd8ccbada27b90eff1f70abcae2abb90ab"
+  },
+  "productionRunnerBinary": {
+    "status": "production-runner-binary-and-unit-prepared-unregistered",
+    "runnerVersion": "2.338.2",
+    "sha256": "baebf204307bac6193480852732f0aba2ae97b6c5597c244f4d5558390147c40",
+    "started": false
+  },
+  "targets": {
+    "staging": {
+      "profile": {
+        "version": 1,
+        "repository": "fabelpad/platform",
+        "branch": "main",
+        "hostname": "dg-vps-08",
+        "machineId": "05db94b99eca4c3d815f6585ef8ed517",
+        "environment": "staging",
+        "siteId": "fabelpad-vps08-staging",
+        "port": 4188,
+        "runner": {
+          "user": "run-fab-v08-stg",
+          "uid": 993,
+          "gid": 983
+        },
+        "build": {
+          "user": "build-fab-v08-stg",
+          "uid": 990,
+          "gid": 982
+        },
+        "app": {
+          "user": "app-fab-v08-stg",
+          "uid": 988,
+          "gid": 981
+        },
+        "siteRoot": "/srv/sites/fabelpad-vps08-staging",
+        "buildRoot": "/var/lib/dg-build/fabelpad-vps08-staging",
+        "sourceWorkspace": "/opt/actions-runner/fabelpad-vps08-staging/_work/platform/platform",
+        "configRoot": "/etc/dg-webservices/fabelpad-vps08-staging",
+        "installRoot": "/usr/local/libexec/fabelpad-vps08-staging",
+        "node": "/opt/dg-toolchains/fabelpad-vps08-staging/node-v24.18.0-linux-x64/bin/node",
+        "pnpm": "/opt/dg-toolchains/fabelpad-vps08-staging/pnpm/11.25.0/lib/node_modules/pnpm/bin/pnpm.mjs",
+        "toolchainPath": "/opt/dg-toolchains/fabelpad-vps08-staging/node-v24.18.0-linux-x64/bin:/opt/dg-toolchains/fabelpad-vps08-staging/pnpm/11.25.0/bin:/usr/bin:/bin",
+        "buildHome": "/var/lib/dg-build/fabelpad-vps08-staging/home",
+        "sharedBuildLock": "/run/lock/dg-build.lock",
+        "activationLock": "/etc/dg-webservices/fabelpad-vps08-staging/activation.lock",
+        "service": "fabelpad-vps08-staging.service",
+        "nodeVersion": "24.18.0",
+        "pnpmVersion": "11.25.0",
+        "minimumFreeBytes": 4294967296,
+        "minimumFreeInodes": 50000
+      },
+      "verification": {
+        "profileVerified": {
+          "siteId": "fabelpad-vps08-staging",
+          "environment": "staging",
+          "port": 4188
+        },
+        "runnerRegistered": false,
+        "units": {
+          "fabelpad-vps08-staging.service": "MainPID=0\nLoadState=loaded\nActiveState=inactive\nSubState=dead\nUnitFileState=disabled",
+          "fabelpad-vps08-staging-runner.service": "MainPID=0\nLoadState=loaded\nActiveState=inactive\nSubState=dead\nUnitFileState=disabled"
+        },
+        "isolation": {
+          "runner": {
+            "cannotWritePrivilegedCode": "passed",
+            "runtimeDirectoryAccess": "passed",
+            "buildDirectoryAccess": "passed"
+          },
+          "build": {
+            "cannotWritePrivilegedCode": "passed",
+            "runtimeDirectoryAccess": "passed",
+            "buildDirectoryAccess": "passed"
+          },
+          "app": {
+            "cannotWritePrivilegedCode": "passed",
+            "runtimeDirectoryAccess": "passed",
+            "buildDirectoryAccess": "passed"
+          }
+        },
+        "runnerSudoersCommands": [
+          "(root) NOSETENV: NOPASSWD: sha256:759f9c91ec50025b518e1387752624940c27744e78369407771284e8d8e0cd5a /usr/local/libexec/fabelpad-vps08-staging/candidate-build.sh ^--sha [a-f0-9]{40} --config-id [a-z0-9][a-z0-9-]{0\\,62} --run-id [1-9][0-9]{0\\,19} --run-attempt [1-9][0-9]{0\\,5} --ci-run-id [1-9][0-9]{0\\,19} --ci-run-attempt [1-9][0-9]{0\\,5} --ci-job-id [1-9][0-9]{0\\,19}$",
+          "(root) NOSETENV: NOPASSWD: sha256:65527067c8d62f0f5640bcdc8cf73e584df1f9f00a0029757b66f406672a75d6 /usr/local/libexec/fabelpad-vps08-staging/activate.mjs ^--candidate [a-f0-9]{40}-[1-9][0-9]{0\\,19}-[1-9][0-9]{0\\,5} --config-id [a-z0-9][a-z0-9-]{0\\,62} --run-id [1-9][0-9]{0\\,19} --run-attempt [1-9][0-9]{0\\,5}$",
+          "(root) NOSETENV: NOPASSWD: sha256:3260d64a2154c0984f4338e6bbcf26242ea936540d1076f6cd61e363dcb77727 /usr/local/libexec/fabelpad-vps08-staging/rollback.mjs ^--sha [a-f0-9]{40} --run-id [1-9][0-9]{0\\,19} --run-attempt [1-9][0-9]{0\\,5}$"
+        ],
+        "port": "free-bind-verified",
+        "candidateCount": 0,
+        "releaseCount": 0,
+        "currentExists": false,
+        "activeProxyFileExists": false,
+        "emailReadinessPresent": false
+      },
+      "installedCodeSha256": {
+        "release-contract.mjs": "3588199de840989c57f81801016339c433599a34766eb4b9758d3d701788e80d",
+        "host-runtime.mjs": "4a630be16ebe64efeb0cb9783172a3b4af24e231b8e0880d933980502e564f27",
+        "candidate-build.sh": "759f9c91ec50025b518e1387752624940c27744e78369407771284e8d8e0cd5a",
+        "candidate-build.mjs": "50a2fb928546e7bad70e4186b41288ee58caae7182cd3cc423531e008fb1c27a",
+        "candidate-worker.mjs": "9cb08898901cae898973fa34338f80fed09fc82e7afd917f0c39b6821bf905ca",
+        "locked-operation.mjs": "bb2428476d6645ae578550ae27ba9b6047d7a129648e02a2f7cec58420757974",
+        "activate.mjs": "65527067c8d62f0f5640bcdc8cf73e584df1f9f00a0029757b66f406672a75d6",
+        "rollback.mjs": "3260d64a2154c0984f4338e6bbcf26242ea936540d1076f6cd61e363dcb77727",
+        "release-actions.mjs": "eac0dc9f1d9f3931bdcb61b459484f7776be7e6793c6bd2f930338e8787e31b7",
+        "verify-release-sha.mjs": "e39adc29eed587a4fb4efc85037bf74154fe7102e09a9cd606aafe8fe376600a",
+        "seal-artifact.py": "ddd91b0f977a97cfeed2eacbe0249e3896e1273d09ce519ff559509eb97a2c57",
+        "bounded-operation.py": "5a716e20173a8a6d82b45ff1a414bd1ddef7fd7ee925d57279298eec4b0153d1"
+      },
+      "configurationValuesIncluded": false,
+      "runnerRegistered": false,
+      "emailReadinessVerified": false,
+      "candidatePresent": false,
+      "releasePresent": false
+    },
+    "production": {
+      "profile": {
+        "version": 1,
+        "repository": "fabelpad/platform",
+        "branch": "main",
+        "hostname": "dg-vps-08",
+        "machineId": "05db94b99eca4c3d815f6585ef8ed517",
+        "environment": "production",
+        "siteId": "fabelpad-vps08-production",
+        "port": 4189,
+        "runner": {
+          "user": "run-fab-v08-prd",
+          "uid": 987,
+          "gid": 980
+        },
+        "build": {
+          "user": "build-fab-v08-prd",
+          "uid": 986,
+          "gid": 979
+        },
+        "app": {
+          "user": "app-fab-v08-prd",
+          "uid": 985,
+          "gid": 978
+        },
+        "siteRoot": "/srv/sites/fabelpad-vps08-production",
+        "buildRoot": "/var/lib/dg-build/fabelpad-vps08-production",
+        "sourceWorkspace": "/opt/actions-runner/fabelpad-vps08-production/_work/platform/platform",
+        "configRoot": "/etc/dg-webservices/fabelpad-vps08-production",
+        "installRoot": "/usr/local/libexec/fabelpad-vps08-production",
+        "node": "/opt/dg-toolchains/fabelpad-vps08-production/node-v24.18.0-linux-x64/bin/node",
+        "pnpm": "/opt/dg-toolchains/fabelpad-vps08-production/pnpm/11.25.0/lib/node_modules/pnpm/bin/pnpm.mjs",
+        "toolchainPath": "/opt/dg-toolchains/fabelpad-vps08-production/node-v24.18.0-linux-x64/bin:/opt/dg-toolchains/fabelpad-vps08-production/pnpm/11.25.0/bin:/usr/bin:/bin",
+        "buildHome": "/var/lib/dg-build/fabelpad-vps08-production/home",
+        "sharedBuildLock": "/run/lock/dg-build.lock",
+        "activationLock": "/etc/dg-webservices/fabelpad-vps08-production/activation.lock",
+        "service": "fabelpad-vps08-production.service",
+        "nodeVersion": "24.18.0",
+        "pnpmVersion": "11.25.0",
+        "minimumFreeBytes": 4294967296,
+        "minimumFreeInodes": 50000
+      },
+      "verification": {
+        "profileVerified": {
+          "siteId": "fabelpad-vps08-production",
+          "environment": "production",
+          "port": 4189
+        },
+        "runnerRegistered": false,
+        "units": {
+          "fabelpad-vps08-production.service": "MainPID=0\nLoadState=loaded\nActiveState=inactive\nSubState=dead\nUnitFileState=disabled",
+          "fabelpad-vps08-production-runner.service": "MainPID=0\nLoadState=loaded\nActiveState=inactive\nSubState=dead\nUnitFileState=disabled"
+        },
+        "isolation": {
+          "runner": {
+            "cannotWritePrivilegedCode": "passed",
+            "runtimeDirectoryAccess": "passed",
+            "buildDirectoryAccess": "passed"
+          },
+          "build": {
+            "cannotWritePrivilegedCode": "passed",
+            "runtimeDirectoryAccess": "passed",
+            "buildDirectoryAccess": "passed"
+          },
+          "app": {
+            "cannotWritePrivilegedCode": "passed",
+            "runtimeDirectoryAccess": "passed",
+            "buildDirectoryAccess": "passed"
+          }
+        },
+        "runnerSudoersCommands": [
+          "(root) NOSETENV: NOPASSWD: sha256:f689a9f115ced0febc24f60e91b5acf32fac7ff3dd7f7229610a21fbe6239506 /usr/local/libexec/fabelpad-vps08-production/candidate-build.sh ^--sha [a-f0-9]{40} --config-id [a-z0-9][a-z0-9-]{0\\,62} --run-id [1-9][0-9]{0\\,19} --run-attempt [1-9][0-9]{0\\,5} --ci-run-id [1-9][0-9]{0\\,19} --ci-run-attempt [1-9][0-9]{0\\,5} --ci-job-id [1-9][0-9]{0\\,19}$",
+          "(root) NOSETENV: NOPASSWD: sha256:0cc01f470165c10f06cff00020bc442931ae49670efd033fab0fea3d9b738ccb /usr/local/libexec/fabelpad-vps08-production/activate.mjs ^--candidate [a-f0-9]{40}-[1-9][0-9]{0\\,19}-[1-9][0-9]{0\\,5} --config-id [a-z0-9][a-z0-9-]{0\\,62} --run-id [1-9][0-9]{0\\,19} --run-attempt [1-9][0-9]{0\\,5}$",
+          "(root) NOSETENV: NOPASSWD: sha256:08fa16f89f816d648c99f02638637f610b7f12dbd23d756ce2a99fe79d153b08 /usr/local/libexec/fabelpad-vps08-production/rollback.mjs ^--sha [a-f0-9]{40} --run-id [1-9][0-9]{0\\,19} --run-attempt [1-9][0-9]{0\\,5}$"
+        ],
+        "port": "free-bind-verified",
+        "candidateCount": 0,
+        "releaseCount": 0,
+        "currentExists": false,
+        "activeProxyFileExists": false,
+        "emailReadinessPresent": false
+      },
+      "installedCodeSha256": {
+        "release-contract.mjs": "3588199de840989c57f81801016339c433599a34766eb4b9758d3d701788e80d",
+        "host-runtime.mjs": "4a630be16ebe64efeb0cb9783172a3b4af24e231b8e0880d933980502e564f27",
+        "candidate-build.sh": "f689a9f115ced0febc24f60e91b5acf32fac7ff3dd7f7229610a21fbe6239506",
+        "candidate-build.mjs": "50a2fb928546e7bad70e4186b41288ee58caae7182cd3cc423531e008fb1c27a",
+        "candidate-worker.mjs": "9cb08898901cae898973fa34338f80fed09fc82e7afd917f0c39b6821bf905ca",
+        "locked-operation.mjs": "bb2428476d6645ae578550ae27ba9b6047d7a129648e02a2f7cec58420757974",
+        "activate.mjs": "0cc01f470165c10f06cff00020bc442931ae49670efd033fab0fea3d9b738ccb",
+        "rollback.mjs": "08fa16f89f816d648c99f02638637f610b7f12dbd23d756ce2a99fe79d153b08",
+        "release-actions.mjs": "eac0dc9f1d9f3931bdcb61b459484f7776be7e6793c6bd2f930338e8787e31b7",
+        "verify-release-sha.mjs": "e39adc29eed587a4fb4efc85037bf74154fe7102e09a9cd606aafe8fe376600a",
+        "seal-artifact.py": "ddd91b0f977a97cfeed2eacbe0249e3896e1273d09ce519ff559509eb97a2c57",
+        "bounded-operation.py": "5a716e20173a8a6d82b45ff1a414bd1ddef7fd7ee925d57279298eec4b0153d1"
+      },
+      "configurationValuesIncluded": false,
+      "runnerRegistered": false,
+      "emailReadinessVerified": false,
+      "candidatePresent": false,
+      "releasePresent": false
+    }
+  },
+  "checks": {
+    "releaseTests": {
+      "passed": 86,
+      "failed": 0
+    },
+    "installerTests": {
+      "passed": 19,
+      "failed": 0
+    },
+    "existingEnvironments": {
+      "existingEnvironmentChanges": {},
+      "checkedBefore": "2026-11-22T14:04:34.498326+00:00",
+      "checkedAfter": "2026-11-22T14:08:00.434613+00:00"
+    }
+  },
+  "existingEnvironmentBaseline": {
+    "before": {
+      "at": "2026-11-22T14:04:34.498326+00:00",
+      "hostname": "dg-vps-08",
+      "machineId": "05db94b99eca4c3d815f6585ef8ed517",
+      "existingServices": {
+        "caddy": {
+          "exit": 0,
+          "stdout": "MainPID=4564\nActiveState=active\nSubState=running\nFragmentPath=/usr/lib/systemd/system/caddy.service\nActiveEnterTimestamp=Fri 2026-11-20 18:03:07 CET"
+        },
+        "ssh": {
+          "exit": 0,
+          "stdout": "MainPID=1016\nActiveState=active\nSubState=running\nFragmentPath=/usr/lib/systemd/system/ssh.service\nActiveEnterTimestamp=Fri 2026-11-20 16:31:24 CET"
+        },
+        "tailscaled": {
+          "exit": 0,
+          "stdout": "MainPID=1876\nActiveState=active\nSubState=running\nFragmentPath=/usr/lib/systemd/system/tailscaled.service\nActiveEnterTimestamp=Fri 2026-11-20 16:50:13 CET"
+        },
+        "castiq-staging-runner": {
+          "exit": 0,
+          "stdout": "MainPID=29204\nActiveState=active\nSubState=running\nFragmentPath=/etc/systemd/system/castiq-staging-runner.service\nActiveEnterTimestamp=Fri 2026-11-20 19:37:42 CET"
+        },
+        "castiq-staging": {
+          "exit": 0,
+          "stdout": "MainPID=0\nActiveState=inactive\nSubState=dead\nFragmentPath=/etc/systemd/system/castiq-staging.service\nActiveEnterTimestamp="
+        },
+        "castiq-staging-worker": {
+          "exit": 0,
+          "stdout": "MainPID=0\nActiveState=inactive\nSubState=dead\nFragmentPath=/etc/systemd/system/castiq-staging-worker.service\nActiveEnterTimestamp="
+        }
+      },
+      "configurationHashes": {
+        "/etc/caddy/Caddyfile": "3acfe7107fb2f3ec21e3c0292daf2725be21b79c707a41394c848b1ee3aeefab",
+        "/etc/ssh/sshd_config": "64325541513d33ea1d2ccd19c77750d458e67e7967fd2e7ef81d92f0aa2ffe21",
+        "/etc/systemd/system/castiq-staging-runner.service": "891f77c9d835118ad9825bd64c9e11d79a1256cffaac7702a20a2c5e80965df1",
+        "/etc/systemd/system/castiq-staging-worker.service": "b1bfc083595033f5683969fb7ea1ce38feec3a4b9e2505228ca19b6216a9b181",
+        "/etc/systemd/system/castiq-staging.service": "a16d927eb7f9c765d4fda52b0e6de8869613a71f1589ec44adf87411adb00dca",
+        "/etc/tmpfiles.d/castiq-staging-build-lock.conf": "fab97967efd29ab9828124b84c648a757911bc602d6420289f81ea88196057cb"
+      },
+      "http": {
+        "defaultHttp": {
+          "status": 200,
+          "bodySha256": "cceac34b8028aaf370ad368ce255280b3e14981c523a8459a51822fc795bba47"
+        },
+        "proxyActiveConfig": {
+          "status": 200,
+          "bodySha256": "dbced33862d6b3a07531fd7b3ef37ff49e958f2e9f0dc90cb1aab016e2429e37"
+        }
+      },
+      "currentLinks": {}
+    },
+    "after": {
+      "at": "2026-11-22T14:08:00.434613+00:00",
+      "hostname": "dg-vps-08",
+      "machineId": "05db94b99eca4c3d815f6585ef8ed517",
+      "existingServices": {
+        "caddy": {
+          "exit": 0,
+          "stdout": "MainPID=4564\nActiveState=active\nSubState=running\nFragmentPath=/usr/lib/systemd/system/caddy.service\nActiveEnterTimestamp=Fri 2026-11-20 18:03:07 CET"
+        },
+        "ssh": {
+          "exit": 0,
+          "stdout": "MainPID=1016\nActiveState=active\nSubState=running\nFragmentPath=/usr/lib/systemd/system/ssh.service\nActiveEnterTimestamp=Fri 2026-11-20 16:31:24 CET"
+        },
+        "tailscaled": {
+          "exit": 0,
+          "stdout": "MainPID=1876\nActiveState=active\nSubState=running\nFragmentPath=/usr/lib/systemd/system/tailscaled.service\nActiveEnterTimestamp=Fri 2026-11-20 16:50:13 CET"
+        },
+        "castiq-staging-runner": {
+          "exit": 0,
+          "stdout": "MainPID=29204\nActiveState=active\nSubState=running\nFragmentPath=/etc/systemd/system/castiq-staging-runner.service\nActiveEnterTimestamp=Fri 2026-11-20 19:37:42 CET"
+        },
+        "castiq-staging": {
+          "exit": 0,
+          "stdout": "MainPID=0\nActiveState=inactive\nSubState=dead\nFragmentPath=/etc/systemd/system/castiq-staging.service\nActiveEnterTimestamp="
+        },
+        "castiq-staging-worker": {
+          "exit": 0,
+          "stdout": "MainPID=0\nActiveState=inactive\nSubState=dead\nFragmentPath=/etc/systemd/system/castiq-staging-worker.service\nActiveEnterTimestamp="
+        }
+      },
+      "configurationHashes": {
+        "/etc/caddy/Caddyfile": "3acfe7107fb2f3ec21e3c0292daf2725be21b79c707a41394c848b1ee3aeefab",
+        "/etc/ssh/sshd_config": "64325541513d33ea1d2ccd19c77750d458e67e7967fd2e7ef81d92f0aa2ffe21",
+        "/etc/systemd/system/castiq-staging-runner.service": "891f77c9d835118ad9825bd64c9e11d79a1256cffaac7702a20a2c5e80965df1",
+        "/etc/systemd/system/castiq-staging-worker.service": "b1bfc083595033f5683969fb7ea1ce38feec3a4b9e2505228ca19b6216a9b181",
+        "/etc/systemd/system/castiq-staging.service": "a16d927eb7f9c765d4fda52b0e6de8869613a71f1589ec44adf87411adb00dca",
+        "/etc/tmpfiles.d/castiq-staging-build-lock.conf": "fab97967efd29ab9828124b84c648a757911bc602d6420289f81ea88196057cb"
+      },
+      "http": {
+        "defaultHttp": {
+          "status": 200,
+          "bodySha256": "cceac34b8028aaf370ad368ce255280b3e14981c523a8459a51822fc795bba47"
+        },
+        "proxyActiveConfig": {
+          "status": 200,
+          "bodySha256": "dbced33862d6b3a07531fd7b3ef37ff49e958f2e9f0dc90cb1aab016e2429e37"
+        }
+      },
+      "currentLinks": {}
+    }
+  }
+}

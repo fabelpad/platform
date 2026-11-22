@@ -43,13 +43,13 @@ jobs:
         run: |
           set -euo pipefail
           node scripts/deploy/verify-release-sha.mjs --sha "$RELEASE_SHA"
-      - name: Vereis de reeds ingerichte eigen main-only activatie-environment
+      - name: Controleer de bestaande staging-environment
         env:
           GH_TOKEN: ${{ github.token }}
         run: >-
           node --input-type=module -e
           'import { githubApi, verifyActivationEnvironment } from "./scripts/deploy/verify-release-sha.mjs";
-          console.log(JSON.stringify(await verifyActivationEnvironment(githubApi(process.env.GH_TOKEN))));'
+          console.log(JSON.stringify(await verifyActivationEnvironment(githubApi(process.env.GH_TOKEN), "staging")));'
 
   rollback:
     needs: preflight
@@ -57,7 +57,7 @@ jobs:
     runs-on: [self-hosted, Linux, X64, dg-vps-08, fabelpad-vps08-staging]
     # The hosted preflight refuses a missing or insufficiently protected
     # environment before this job can reference it. Never auto-create it here.
-    environment: fabelpad-vps08-staging
+    environment: staging
     timeout-minutes: 50
     steps:
       - name: Controleer host en afzonderlijk runneraccount
@@ -82,7 +82,7 @@ jobs:
           set -euo pipefail
           /opt/dg-toolchains/fabelpad-vps08-staging/node-v24.18.0-linux-x64/bin/node scripts/deploy/verify-release-sha.mjs --sha "$RELEASE_SHA"
           /opt/dg-toolchains/fabelpad-vps08-staging/node-v24.18.0-linux-x64/bin/node --input-type=module -e \
-            'import {githubApi, verifyActivationEnvironment} from "./scripts/deploy/verify-release-sha.mjs"; await verifyActivationEnvironment(githubApi(process.env.GH_TOKEN));'
+            'import {githubApi, verifyActivationEnvironment} from "./scripts/deploy/verify-release-sha.mjs"; await verifyActivationEnvironment(githubApi(process.env.GH_TOKEN), "staging");'
           /opt/dg-toolchains/fabelpad-vps08-staging/node-v24.18.0-linux-x64/bin/node -e 'process.stdout.write(JSON.stringify({githubToken:process.env.GH_TOKEN}))' |
             sudo -n /usr/local/libexec/fabelpad-vps08-staging/rollback.mjs --sha "$RELEASE_SHA" --run-id "$GITHUB_RUN_ID" --run-attempt "$GITHUB_RUN_ATTEMPT"
 

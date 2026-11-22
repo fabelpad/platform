@@ -1,6 +1,8 @@
 #!/usr/bin/python3 -I
-"""Additive, fixed-target preparation; no activation, registration or proxy reload."""
+"""Fixed staging/production preparation or own-adapter upgrade; no activation or proxy reload."""
 import argparse
+import fcntl
+from datetime import datetime, timezone
 import hashlib
 import json
 import os
@@ -13,6 +15,8 @@ import stat
 import subprocess
 import sys
 
+ENVIRONMENT = 'staging'
+PORT = 4188
 SITE = 'fabelpad-vps08-staging'
 HOSTNAME = 'dg-vps-08'
 MACHINE_ID = '05db94b99eca4c3d815f6585ef8ed517'
@@ -45,6 +49,26 @@ LOCK_PERSISTENCE_SOURCES = (LOCK_TMPFILES, LOCK_REFERENCE_TMPFILES)
 LOCK_PERSISTENCE_BODIES = (LOCK_TMPFILES_BODY, b'f /run/lock/dg-build.lock 0660 root dg-build -\n')
 
 
+def configure_environment(environment):
+    """CLI target is one of two reviewed identities; no caller-supplied paths."""
+    global ENVIRONMENT, PORT, SITE, NODE, PNPM, CONFIG_ROOT, SITE_ROOT, BUILD_ROOT
+    global INSTALL_ROOT, RUNNER_ROOT, USERS, APP_UNIT, SUDOERS, TEMPLATES
+    if environment not in ('staging', 'production'):
+        raise ValueError('Onbekende Fabelpad-doelomgeving.')
+    ENVIRONMENT = environment
+    PORT = 4188 if environment == 'staging' else 4189
+    SITE = f'fabelpad-vps08-{environment}'
+    suffix = 'stg' if environment == 'staging' else 'prd'
+    NODE = f'/opt/dg-toolchains/{SITE}/node-v24.18.0-linux-x64/bin/node'
+    PNPM = f'/opt/dg-toolchains/{SITE}/pnpm/11.25.0/lib/node_modules/pnpm/bin/pnpm.mjs'
+    CONFIG_ROOT, SITE_ROOT = f'/etc/dg-webservices/{SITE}', f'/srv/sites/{SITE}'
+    BUILD_ROOT, INSTALL_ROOT = f'/var/lib/dg-build/{SITE}', f'/usr/local/libexec/{SITE}'
+    RUNNER_ROOT = f'/opt/actions-runner/{SITE}'
+    USERS = {'runner': f'run-fab-v08-{suffix}', 'build': f'build-fab-v08-{suffix}', 'app': f'app-fab-v08-{suffix}'}
+    APP_UNIT, SUDOERS = f'/etc/systemd/system/{SITE}.service', f'/etc/sudoers.d/{SITE}'
+    TEMPLATES = (f'{SITE}.service', f'{SITE}-runner.service', f'{SITE}.caddy.disabled')
+
+
 def require(condition, message):
     if not condition:
         raise ValueError(message)
@@ -58,7 +82,7 @@ def render_proxy(domain):
             and not domain.endswith(('.invalid', '.example', '.test', '.localhost')),
             'Proxy vereist een expliciet geverifieerde DNS-naam.')
     return (f'{domain} {{\n    encode zstd gzip\n'
-            '    reverse_proxy 127.0.0.1:4188\n}\n')
+            f'    reverse_proxy 127.0.0.1:{PORT}\n}}\n')
 
 
 class SystemHost:
@@ -123,7 +147,7 @@ class SystemHost:
     def port_available(self):
         connection = socket.socket()
         try:
-            connection.bind(('127.0.0.1', 4188))
+            connection.bind(('127.0.0.1', PORT))
             return True
         except OSError:
             return False
@@ -144,6 +168,15 @@ class SystemHost:
         os.mkdir(path, mode)
         os.chown(path, uid, gid)
         os.chmod(path, mode)
+
+    def replace(self, path, body, mode, uid=0, gid=0):
+        temporary = path + '.fabelpad-upgrade-' + str(os.getpid())
+        try:
+            self.write(temporary, body, mode, uid, gid)
+            os.replace(temporary, path)
+        finally:
+            if os.path.lexists(temporary):
+                os.unlink(temporary)
 
     def write(self, path, body, mode, uid=0, gid=0):
         descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW | os.O_CLOEXEC, mode)
@@ -198,13 +231,13 @@ class Preparation:
                 require(stat.S_ISREG(item.st_mode) and item.st_nlink == 1
                         and host.read(source) in LOCK_PERSISTENCE_BODIES,
                         'Bestaande lockpersistentie wijkt af; niet aanpassen.')
-        require(host.port_available(), 'Loopbackpoort 4188 is niet vrij.')
+        require(host.port_available(), f'Loopbackpoort {PORT} is niet vrij.')
         for tool in (NODE, PNPM, '/usr/sbin/useradd', '/usr/sbin/visudo', '/usr/bin/systemd-analyze',
                      '/usr/bin/uname', '/usr/bin/python3', '/usr/sbin/runuser', '/usr/bin/flock',
                      '/usr/bin/systemctl', '/usr/bin/tar', '/usr/sbin/groupadd'):
             host.trusted(tool, executable=True)
         require(host.command(['/usr/bin/uname', '-m']) == 'x86_64', 'Doelarchitectuur wijkt af van Linux x64.')
-        tool_env = {**CLEAN_ENV, 'PATH': '/opt/dg-toolchains/fabelpad-vps08-staging/node-v24.18.0-linux-x64/bin:/opt/dg-toolchains/fabelpad-vps08-staging/pnpm/11.25.0/bin:/usr/bin:/bin', 'HOME': '/nonexistent'}
+        tool_env = {**CLEAN_ENV, 'PATH': f'/opt/dg-toolchains/{SITE}/node-v24.18.0-linux-x64/bin:/opt/dg-toolchains/{SITE}/pnpm/11.25.0/bin:/usr/bin:/bin', 'HOME': '/nonexistent'}
         require(host.command([NODE, '--version'], env=tool_env) == 'v24.18.0'
                 and host.command([NODE, PNPM, '--version'], env=tool_env) == '11.25.0', 'Gepinde native toolchain wijkt af.')
         require(set(self.bundle) == {*MODULES, *TEMPLATES}, 'Onvolledige beoordeelde installatiebundel.')
@@ -215,7 +248,7 @@ class Preparation:
         sudoers = self.sudoers()
         # visudo reads stdin. There is no temporary file and no installation here.
         host.command(['/usr/sbin/visudo', '-cf', '/dev/stdin'], body=sudoers)
-        return {'siteId': SITE, 'hostname': HOSTNAME, 'port': 4188,
+        return {'siteId': SITE, 'hostname': HOSTNAME, 'port': PORT,
                 'accounts': USERS, 'appService': APP_UNIT, 'runnerRegistration': 'not performed',
                 'routing': 'disabled template only', 'configuration': 'not provisioned',
                 'activation': 'not performed', 'sharedBuildLock': LOCK_FILE,
@@ -247,11 +280,11 @@ class Preparation:
         roles = {role: self.host.user(name) for role, name in USERS.items()}
         require(all(roles.values()) and len({v['uid'] for v in roles.values()}) == 3, 'Nieuwe accounts zijn niet gescheiden.')
         return {'version': 1, 'repository': 'fabelpad/platform', 'branch': 'main',
-                'hostname': HOSTNAME, 'machineId': MACHINE_ID, 'environment': 'staging',
-                'siteId': SITE, 'port': 4188, **roles, 'siteRoot': SITE_ROOT,
+                'hostname': HOSTNAME, 'machineId': MACHINE_ID, 'environment': ENVIRONMENT,
+                'siteId': SITE, 'port': PORT, **roles, 'siteRoot': SITE_ROOT,
                 'buildRoot': BUILD_ROOT, 'sourceWorkspace': f'{RUNNER_ROOT}/_work/platform/platform',
                 'configRoot': CONFIG_ROOT, 'installRoot': INSTALL_ROOT, 'node': NODE, 'pnpm': PNPM,
-                'toolchainPath': '/opt/dg-toolchains/fabelpad-vps08-staging/node-v24.18.0-linux-x64/bin:/opt/dg-toolchains/fabelpad-vps08-staging/pnpm/11.25.0/bin:/usr/bin:/bin',
+                'toolchainPath': f'/opt/dg-toolchains/{SITE}/node-v24.18.0-linux-x64/bin:/opt/dg-toolchains/{SITE}/pnpm/11.25.0/bin:/usr/bin:/bin',
                 'buildHome': f'{BUILD_ROOT}/home', 'sharedBuildLock': '/run/lock/dg-build.lock',
                 'activationLock': f'{CONFIG_ROOT}/activation.lock', 'service': f'{SITE}.service',
                 'nodeVersion': '24.18.0', 'pnpmVersion': '11.25.0',
@@ -305,6 +338,85 @@ class Preparation:
         return receipt
 
 
+class AdapterUpgrade(Preparation):
+    """Upgrade only previously receipted own code, with no app/proxy mutation."""
+    def preflight(self):
+        host = self.host
+        require(host.identity() == (0, HOSTNAME, MACHINE_ID), 'Onjuiste beheerder of doelhost.')
+        receipt_file = f'{CONFIG_ROOT}/installation.json'
+        for filename in (receipt_file, f'{CONFIG_ROOT}/host.json', SUDOERS):
+            item = host.trusted(filename)
+            require(stat.S_ISREG(item.st_mode) and item.st_nlink == 1, 'Ongeldig eigen configuratiebestand.')
+        receipt = json.loads(host.read(receipt_file))
+        expected = self.profile()
+        actual = json.loads(host.read(f'{CONFIG_ROOT}/host.json'))
+        require(actual == expected and receipt.get('siteId') == SITE
+                and receipt.get('hostname') == HOSTNAME and receipt.get('profile') == actual,
+                'Bestaande eigen installatie-identiteit wijkt af.')
+        previous = receipt.get('installedCodeSha256')
+        require(isinstance(previous, dict) and set(previous) == set(MODULES), 'Eerdere codeontvangst ontbreekt.')
+        for filename in MODULES:
+            item = host.trusted(f'{INSTALL_ROOT}/{filename}')
+            require(stat.S_ISREG(item.st_mode) and item.st_nlink == 1
+                    and hashlib.sha256(host.read(f'{INSTALL_ROOT}/{filename}')).hexdigest() == previous[filename],
+                    'Geïnstalleerde eigen adapter wijkt af van de eerdere codeontvangst.')
+        require(set(self.bundle) == {*MODULES, *TEMPLATES}, 'Onvolledige nieuwe installatiebundel.')
+        for entry in ('activate.mjs', 'rollback.mjs'):
+            require(self.bundle[entry].startswith(('#!' + NODE + '\n').encode()), 'Onjuiste vaste Node-shebang.')
+        require(self.bundle['candidate-build.sh'].startswith(b'#!/usr/bin/bash\n'), 'Onjuiste vaste Bash-shebang.')
+        host.trusted(NODE, executable=True)
+        host.trusted(PNPM, executable=True)
+        host.command(['/usr/sbin/visudo', '-cf', '/dev/stdin'], body=self.sudoers())
+        state = host.command(['/usr/bin/systemctl', 'show', f'{SITE}-runner.service', '--property=ActiveState', '--value'])
+        require(state in ('inactive', 'failed'), 'Stop eerst uitsluitend de eigen runner tijdens de adapterupgrade.')
+        return {'status': 'upgrade-dry-run', 'siteId': SITE, 'profile': actual,
+                'installedCodeSha256': {name: hashlib.sha256(self.bundle[name]).hexdigest() for name in MODULES},
+                'previous': receipt}
+
+    def run(self, apply=False):
+        plan = self.preflight()
+        if not apply:
+            return {key: value for key, value in plan.items() if key != 'previous'}
+        # Hold both existing locks while replacing code. Existing app processes,
+        # runtime snapshots, current/previous and public routing stay untouched.
+        descriptors = []
+        try:
+            for file in (LOCK_FILE, f'{CONFIG_ROOT}/activation.lock'):
+                item = self.host.metadata(file) if file == LOCK_FILE else self.host.trusted(file)
+                require(item is not None and stat.S_ISREG(item.st_mode) and item.st_nlink == 1
+                        and item.st_uid == 0
+                        and (file != LOCK_FILE or (item.st_gid == self.host.group('dg-build')
+                             and stat.S_IMODE(item.st_mode) == 0o660)), 'Ongeldig upgradelock.')
+                descriptor = os.open(file, os.O_RDWR | os.O_NOFOLLOW | os.O_CLOEXEC)
+                descriptors.append(descriptor)
+                fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            self.preflight()
+            changes = [(f'{INSTALL_ROOT}/{name}', self.bundle[name],
+                        0o755 if name in ('candidate-build.sh', 'activate.mjs', 'rollback.mjs') else 0o644)
+                       for name in MODULES]
+            changes.append((SUDOERS, self.sudoers(), 0o440))
+            receipt = {**plan['previous'], 'installedCodeSha256': plan['installedCodeSha256'],
+                       'lastAdapterUpgradeAt': datetime.now(timezone.utc).isoformat(),
+                       'lastAdapterUpgradeScope': 'root-owned adapters only; no activation'}
+            changes.append((f'{CONFIG_ROOT}/installation.json', (json.dumps(receipt, indent=2) + '\n').encode(), 0o644))
+            original, completed = {}, []
+            try:
+                for file, body, mode in changes:
+                    original[file] = self.host.read(file)
+                    self.host.replace(file, body, mode)
+                    completed.append((file, mode))
+                self.host.command(['/usr/sbin/visudo', '-cf', SUDOERS])
+            except Exception:
+                for file, mode in reversed(completed):
+                    self.host.replace(file, original[file], mode)
+                raise
+            return {'status': 'adapters-upgraded', 'siteId': SITE,
+                    'installedCodeSha256': plan['installedCodeSha256'], 'activation': 'not performed'}
+        finally:
+            for descriptor in descriptors:
+                os.close(descriptor)
+
+
 def load_bundle(source_root):
     root = Path(source_root).resolve()
     result = {}
@@ -315,16 +427,23 @@ def load_bundle(source_root):
                     'Installatiebron ontbreekt of verwijst buiten de beoordeelde bundel: ' + name)
             item = path.stat()
             require(item.st_nlink == 1 and item.st_size <= 1024 * 1024, 'Ongeldige installatiebron: ' + name)
-            result[name] = path.read_bytes()
+            body = path.read_bytes()
+            if ENVIRONMENT == 'production' and name in ('candidate-build.sh', 'activate.mjs', 'rollback.mjs'):
+                body = body.replace(b'fabelpad-vps08-staging', b'fabelpad-vps08-production')
+            result[name] = body
     return result
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--environment', choices=('staging', 'production'), required=True)
+    parser.add_argument('--upgrade-adapters', action='store_true', help='Werk uitsluitend eerder geïnstalleerde en geverifieerde eigen adapters bij.')
     parser.add_argument('--apply', action='store_true', help='Maak uitsluitend nieuwe vaste doelresources; standaard alleen controles.')
     parser.add_argument('--source-root', default=str(Path(__file__).resolve().parents[2]))
     args = parser.parse_args()
-    result = Preparation(SystemHost(), load_bundle(args.source_root)).run(apply=args.apply)
+    configure_environment(args.environment)
+    operation = AdapterUpgrade if args.upgrade_adapters else Preparation
+    result = operation(SystemHost(), load_bundle(args.source_root)).run(apply=args.apply)
     print(json.dumps(result, indent=2))
 
 

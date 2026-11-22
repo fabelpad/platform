@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { spawnSync } from 'node:child_process';
 import { compileSource } from './source-test-loader.mjs';
+await import('./auth-contract-check.mjs');
 const temp = await mkdtemp(join(tmpdir(), 'fabelpad-supabase-contract-'));
 const original = { ...process.env };
 try {

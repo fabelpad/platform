@@ -3,10 +3,13 @@ import { chmodSync, chownSync, existsSync, lstatSync, mkdirSync, readFileSync, r
 import { hostname } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { assertRootPath, assertSharedLock, below, invariant, loadProfile, MACHINE_ID, validateCurrentTarget } from './release-contract.mjs';
+import { assertRootPath, assertSharedLock, below, invariant, installedTarget, loadProfile, MACHINE_ID, validateCurrentTarget } from './release-contract.mjs';
 
 export function hostProfile({ privileged = true } = {}) {
-  const profile = loadProfile();
+  const installRoot = path.dirname(fileURLToPath(import.meta.url));
+  const target = installedTarget(installRoot);
+  const profile = loadProfile(`/etc/dg-webservices/${target.siteId}/host.json`);
+  invariant(profile.environment === target.environment, 'Geïnstalleerde adapter en profiel horen bij verschillende omgevingen.');
   invariant(hostname() === profile.hostname && readFileSync('/etc/machine-id', 'utf8').trim() === MACHINE_ID, 'Deze adapter hoort bij een andere host.');
   invariant(process.getuid() === (privileged ? 0 : profile.build.uid), 'Verkeerd uitvoeringsaccount.');
   if (privileged) invariant(!process.env.SUDO_USER || process.env.SUDO_USER === profile.runner.user, 'Alleen de eigen runner of een rechtstreekse rootbeheerder mag deze adapter starten.');
@@ -126,7 +129,7 @@ export async function health(profile, manifest) {
   invariant(response.status === 200, 'Loopbackhealth heeft geen status 200.');
   const data = await response.json();
   invariant(data.ok === true && data.service === 'fabelpad' && data.runtime === 'nextjs-node'
-    && data.environment === 'staging' && data.revision === manifest.sha, 'Loopbackhealth past niet bij de release-SHA en doelomgeving.');
+    && data.environment === profile.environment && data.revision === manifest.sha, 'Loopbackhealth past niet bij de release-SHA en doelomgeving.');
 }
 
 export async function waitForHealth(profile, manifest) {

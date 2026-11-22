@@ -1,0 +1,145 @@
+{
+  "checkedAt": "2026-11-22T14:16:38Z",
+  "scope": "Owner-authorized initialization of the two empty Fabelpad projects; no unrelated projects changed.",
+  "before": {
+    "applicationTables": 0,
+    "migrations": 0,
+    "authUsers": 0
+  },
+  "migrationFiles": [
+    {
+      "version": "20261104095714",
+      "name": "family_content_contract",
+      "sqlSha256": "6ff5a5ca218c60edeb3bd5c046cd350b8300904a6ffdfcce97f5ebbc9e0f3cb0"
+    },
+    {
+      "version": "20261122140451",
+      "name": "verified_bootstrap_admin",
+      "sqlSha256": "26336b12af62fac8a78bb47b48d40cf91d455a8383586bce2393b95df1fe1725"
+    }
+  ],
+  "migrationHistoryRepair": "Tool-generated execution timestamps normalized only after full stored-SQL SHA256 equality checks; names/statements preserved. Histories now match the repository files.",
+  "contentSeed": {
+    "stories": 13,
+    "sourceScenes": 403,
+    "sourceEndings": 416,
+    "exportSha256": "1f50fe43a2f7e30189c3e60ddc7243ac0e412052343ac2d2e79a0a78dddba1cd",
+    "idempotentOn": [
+      "story_id",
+      "content_version"
+    ]
+  },
+  "function": {
+    "name": "auth-email",
+    "version": 1,
+    "platformStatus": "ACTIVE",
+    "verifyJwt": false,
+    "authentication": "Mandatory Standard Webhooks HMAC-SHA256; 300-second tolerance; exact site URL; 20KiB body cap",
+    "credentialsConfigured": false,
+    "authHookActivated": false,
+    "anonymousPostStatus": 503,
+    "emailSent": false,
+    "sourceSha256": {
+      "lib/email/auth-hook.ts": "26d192502112bae7eddf1b30eeb11d48276bacd5e6b50ee8b879dd1c4d987872",
+      "lib/email/resend.ts": "accc95a90830b94f84e6c8e63127eb4e2ae64897d66a9520b39f43085f79af2a",
+      "lib/email/templates.ts": "ad7d4367dcbd7d12d81afccc903f6bd321b637d6616e60b6c6813fb9a4e976e5",
+      "supabase/functions/auth-email/index.ts": "7c2f9a68d957264b54bbf735155b6dfa5ea5bc84e4e24e77502db56c941aa62a",
+      "supabase/functions/auth-email/deno.json": "1fbdc16e52b7507041f9086453e85b9dd88285d590fe6bfb3e58e3b86458aa2e"
+    }
+  },
+  "environments": [
+    {
+      "name": "staging",
+      "workspaceAccount": "fabelpad",
+      "projectRef": "tlwfpivafcokcjyjwgmq",
+      "appOrigin": "https://staging.fabelpad.nl",
+      "functionId": "65b2a980-210c-408a-aa51-b5b8d5bdcf77",
+      "originalToolMigrationVersions": [
+        "20261122140432",
+        "20261122140715"
+      ],
+      "region": "eu-west-1",
+      "after": {
+        "authUsers": 0,
+        "admins": 0,
+        "familyDocuments": 0,
+        "storyReleases": 13,
+        "catalogStories": 13,
+        "rowSecurity": {
+          "family_documents": true,
+          "content_admins": true,
+          "content_drafts": true,
+          "content_releases": true
+        },
+        "publicCatalogHttpStatus": 200,
+        "anonymousTableHttpStatus": {
+          "family_documents": 401,
+          "content_admins": 401,
+          "content_drafts": 401
+        },
+        "securityAdvisors": [],
+        "publicAutoRlsHelperClientExecute": false,
+        "privateBootstrapFunctionClientExecute": false
+      },
+      "githubEnvironmentVariables": [
+        "FABELPAD_APP_ORIGIN",
+        "FABELPAD_DATA_MODE",
+        "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY",
+        "NEXT_PUBLIC_SUPABASE_URL"
+      ],
+      "dataMode": "supabase",
+      "supabaseBranches": []
+    },
+    {
+      "name": "production",
+      "workspaceAccount": "Duindorpdoet",
+      "projectRef": "aptprpkosqctwrzeetgs",
+      "appOrigin": "https://fabelpad.nl",
+      "functionId": "6ed76b14-e0cf-482b-846e-40f2fd515e3d",
+      "originalToolMigrationVersions": [
+        "20261122140447",
+        "20261122140716"
+      ],
+      "region": "eu-west-1",
+      "after": {
+        "authUsers": 0,
+        "admins": 0,
+        "familyDocuments": 0,
+        "storyReleases": 13,
+        "catalogStories": 13,
+        "rowSecurity": {
+          "family_documents": true,
+          "content_admins": true,
+          "content_drafts": true,
+          "content_releases": true
+        },
+        "publicCatalogHttpStatus": 200,
+        "anonymousTableHttpStatus": {
+          "family_documents": 401,
+          "content_admins": 401,
+          "content_drafts": 401
+        },
+        "securityAdvisors": [],
+        "publicAutoRlsHelperClientExecute": false,
+        "privateBootstrapFunctionClientExecute": false
+      },
+      "githubEnvironmentVariables": [
+        "FABELPAD_APP_ORIGIN",
+        "FABELPAD_DATA_MODE",
+        "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY",
+        "NEXT_PUBLIC_SUPABASE_URL"
+      ],
+      "dataMode": "supabase",
+      "supabaseBranches": []
+    }
+  ],
+  "firstAdmin": "Owner-approved mailbox receives database role only after trusted Auth email confirmation; no user fabricated or auto-confirmed.",
+  "remaining": [
+    "Supabase Auth configuration/secrets management access",
+    "Verified Resend sender and sending key",
+    "Real OTP delivery and authenticated role verification",
+    "Own restricted runner registration",
+    "Exact approved main SHA with required CI",
+    "Separate target candidates and public release validation"
+  ]
+}

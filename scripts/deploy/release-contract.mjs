@@ -7,6 +7,21 @@ export const BRANCH = 'main';
 export const HOSTNAME = 'dg-vps-08';
 export const MACHINE_ID = '05db94b99eca4c3d815f6585ef8ed517';
 export const DEFAULT_PROFILE = '/etc/dg-webservices/fabelpad-vps08-staging/host.json';
+export const TARGETS = Object.freeze({
+  staging: Object.freeze({siteId: 'fabelpad-vps08-staging', port: 4188, suffix: 'stg'}),
+  production: Object.freeze({siteId: 'fabelpad-vps08-production', port: 4189, suffix: 'prd'}),
+});
+
+export function targetFor(environment) {
+  invariant(Object.hasOwn(TARGETS, environment), 'Onbekende Fabelpad-doelomgeving.');
+  return TARGETS[environment];
+}
+
+export function installedTarget(installRoot) {
+  const entry = Object.entries(TARGETS).find(([, target]) => installRoot === `/usr/local/libexec/${target.siteId}`);
+  invariant(entry, 'Adapter staat buiten een vastgelegd root-owned Fabelpad-installpad.');
+  return {environment: entry[0], ...entry[1]};
+}
 export const SHA = /^[a-f0-9]{40}$/;
 export const ID = /^[a-z0-9][a-z0-9-]{0,62}$/;
 export const PUBLIC_CONFIG_NAMES = new Set([
@@ -46,12 +61,13 @@ export function below(parent, child) {
 
 export function validateProfile(profile) {
   invariant(profile.version === 1 && profile.repository === REPOSITORY && profile.branch === BRANCH, 'Profiel: verkeerde versie, repository of integratiebranch.');
-  invariant(profile.hostname === HOSTNAME && profile.machineId === MACHINE_ID && profile.environment === 'staging', 'Profiel: verkeerde hostidentiteit of doelomgeving.');
-  invariant(profile.siteId === 'fabelpad-vps08-staging', 'Profiel: uitsluitend de nieuwe doelidentiteit fabelpad-vps08-staging is toegestaan.');
-  invariant(profile.port === 4188, 'Profiel: de geverifieerde eigen loopbackpoort is 4188.');
+  const target = targetFor(profile.environment);
+  invariant(profile.hostname === HOSTNAME && profile.machineId === MACHINE_ID, 'Profiel: verkeerde hostidentiteit.');
+  invariant(profile.siteId === target.siteId && profile.port === target.port, 'Profiel: doelidentiteit of loopbackpoort hoort niet bij de omgeving.');
   for (const role of ['runner', 'build', 'app']) {
     const account = profile[role];
-    invariant(account && /^[a-z][a-z0-9-]*$/.test(account.user)
+    const expectedUser = `${{runner:'run',build:'build',app:'app'}[role]}-fab-v08-${target.suffix}`;
+    invariant(account && account.user === expectedUser
       && Number.isInteger(account.uid) && account.uid > 0 && Number.isInteger(account.gid) && account.gid > 0, `Profiel: account ${role} ontbreekt.`);
   }
   invariant(new Set(['runner', 'build', 'app'].map(role => profile[role].uid)).size === 3, 'Profiel: runner, build en app moeten aparte UID’s hebben.');
@@ -61,7 +77,11 @@ export function validateProfile(profile) {
   invariant(profile.siteRoot === `/srv/sites/${profile.siteId}`
     && profile.configRoot === `/etc/dg-webservices/${profile.siteId}`
     && profile.installRoot === `/usr/local/libexec/${profile.siteId}`
-    && below('/var/lib/dg-build', profile.buildRoot), 'Profiel: paden vallen buiten de nieuwe doelidentiteit.');
+    && profile.buildRoot === `/var/lib/dg-build/${profile.siteId}`
+    && profile.buildHome === `${profile.buildRoot}/home`
+    && profile.sourceWorkspace === `/opt/actions-runner/${profile.siteId}/_work/platform/platform`
+    && profile.node === `/opt/dg-toolchains/${profile.siteId}/node-v24.18.0-linux-x64/bin/node`
+    && profile.pnpm === `/opt/dg-toolchains/${profile.siteId}/pnpm/11.25.0/lib/node_modules/pnpm/bin/pnpm.mjs`, 'Profiel: paden vallen buiten de nieuwe doelidentiteit.');
   invariant(profile.sharedBuildLock === '/var/lock/dg-build.lock' || profile.sharedBuildLock === '/run/lock/dg-build.lock', 'Profiel: afwijkend gedeeld build-lock.');
   invariant(profile.activationLock === `${profile.configRoot}/activation.lock`, 'Profiel: activatielock hoort bij dit doel.');
   invariant(profile.service === `${profile.siteId}.service`, 'Profiel: afwijkende systemd-service.');
@@ -140,7 +160,7 @@ export function validateRuntimePair(profile, manifest, text) {
   const publicConfig = Object.fromEntries([...PUBLIC_CONFIG_NAMES].map(name => [name, config[name]]));
   validatePublicConfig(publicConfig);
   invariant(configurationDigest(publicConfig) === manifest.buildConfigDigest, 'Runtimeconfiguratie past niet bij de ingebakken buildconfiguratie.');
-  invariant(config.FABELPAD_DEPLOY_ENV === 'staging' && config.FABELPAD_RELEASE_SHA === manifest.sha
+  invariant(config.FABELPAD_DEPLOY_ENV === profile.environment && config.FABELPAD_RELEASE_SHA === manifest.sha
     && config.PORT === String(profile.port), 'Runtimeconfiguratie: omgeving, SHA of poort wijkt af.');
   for (const name of ['FABELPAD_AUTH_EMAIL_ENABLED', 'FABELPAD_AUTH_GOOGLE_ENABLED']) invariant(config[name] === undefined || ['true', 'false'].includes(config[name]), 'Ongeldige host-authinstelling.');
   return config;
@@ -185,7 +205,7 @@ export function treeDigest(root) {
 
 export function validateManifest(profile, manifest, id) {
   invariant(manifest.version === 1 && manifest.siteId === profile.siteId && manifest.repository === REPOSITORY
-    && manifest.branch === BRANCH && manifest.environment === 'staging' && manifest.hostname === HOSTNAME
+    && manifest.branch === BRANCH && manifest.environment === profile.environment && manifest.hostname === HOSTNAME
     && manifest.machineId === MACHINE_ID, 'Kandidaatmanifest: verkeerde identiteit.');
   invariant(candidateId(manifest.sha, manifest.runId, manifest.runAttempt) === id && manifest.id === id, 'Kandidaatmanifest: release-identificatie wijkt af.');
   invariant(ID.test(manifest.configId) && /^[a-f0-9]{64}$/.test(manifest.buildConfigDigest)
@@ -290,3 +310,17 @@ export function assertSharedLock(file) {
 }
 
 export const ROOT_NOFOLLOW = constants.O_NOFOLLOW;
+
+// An operator writes this receipt only after verifying Supabase email OTP and
+// the Resend Send Email Hook for this exact environment/project/origin. No provider credentials
+// or mail content enter the build, runner, receipt or immutable release.
+export function validateEmailReadiness(profile, config, receipt) {
+  invariant(receipt && receipt.version === 1 && receipt.environment === profile.environment
+    && receipt.siteId === profile.siteId && receipt.provider === 'resend'
+    && receipt.emailOtpVerified === true && receipt.sendEmailHookVerified === true && config.FABELPAD_DATA_MODE === 'supabase'
+    && receipt.appOrigin === config.FABELPAD_APP_ORIGIN
+    && receipt.supabaseUrl === config.NEXT_PUBLIC_SUPABASE_URL
+    && typeof receipt.verifiedAt === 'string' && Number.isFinite(Date.parse(receipt.verifiedAt)),
+    'E-mail-OTP is voor deze omgeving, Supabase-project en origin nog niet geverifieerd.');
+  return receipt;
+}

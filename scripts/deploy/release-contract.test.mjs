@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import test from 'node:test';
-import { candidateId, configurationDigest, downloadSourceArchive, MACHINE_ID, parseArgs, parseEnv, switchWithRecovery, treeDigest, validateArchiveEntries, validateCurrentTarget, validateManifest, validateProfile, validatePublicConfig, validateRuntimePair } from './release-contract.mjs';
+import { candidateId, configurationDigest, downloadSourceArchive, MACHINE_ID, parseArgs, parseEnv, switchWithRecovery, treeDigest, validateArchiveEntries, validateCurrentTarget, validateManifest, validateProfile, validatePublicConfig, validateRuntimePair, validateEmailReadiness, installedTarget } from './release-contract.mjs';
 import { cleanEnvironment, readCredential } from './host-runtime.mjs';
 
 const sha = 'a'.repeat(40);
@@ -233,4 +233,26 @@ test('local mode explicitly has no Supabase values; partial cloud configuration 
   assert.equal(validatePublicConfig(local),local);
   for (const change of [{FABELPAD_DATA_MODE:'unknown'},{NEXT_PUBLIC_SUPABASE_URL:config.NEXT_PUBLIC_SUPABASE_URL},{NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY:config.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY},{EXTRA:'value'}]) assert.throws(()=>validatePublicConfig({...local,...change}));
   assert.throws(()=>validatePublicConfig({...config,NEXT_PUBLIC_SUPABASE_URL:''}));
+});
+
+
+test('production identity is separate and staging paths, accounts or manifests cannot cross it', () => {
+  const production = JSON.parse(JSON.stringify(profile).replaceAll('staging','production').replaceAll('-v08-stg','-v08-prd'));
+  production.port = 4189;
+  assert.equal(validateProfile(production), production);
+  assert.deepEqual(installedTarget(production.installRoot), {environment:'production',siteId:'fabelpad-vps08-production',port:4189,suffix:'prd'});
+  for (const change of [{port:4188},{runner:profile.runner},{configRoot:profile.configRoot},{buildRoot:profile.buildRoot},{sourceWorkspace:profile.sourceWorkspace},{node:profile.node}]) {
+    assert.throws(() => validateProfile({...production,...change}));
+  }
+  assert.throws(() => installedTarget('/tmp/fabelpad-vps08-production'));
+  assert.throws(() => validateManifest(production, manifest, manifest.id));
+});
+
+test('OTP is enabled only after a receipt for the same environment, project and origin with a verified Resend hook', () => {
+  const receipt = {version:1,environment:'staging',siteId:profile.siteId,provider:'resend',emailOtpVerified:true,sendEmailHookVerified:true,
+    appOrigin:config.FABELPAD_APP_ORIGIN,supabaseUrl:config.NEXT_PUBLIC_SUPABASE_URL,verifiedAt:'2026-11-22T12:00:00Z'};
+  assert.equal(validateEmailReadiness(profile,config,receipt),receipt);
+  for (const change of [{environment:'production'},{siteId:'fabelpad-vps08-production'},{provider:'smtp'},{emailOtpVerified:false},{sendEmailHookVerified:false},
+    {appOrigin:'https://other.example.test'},{supabaseUrl:'https://other.example.test'},{verifiedAt:''}]) assert.throws(() => validateEmailReadiness(profile,config,{...receipt,...change}));
+  assert.throws(() => validateEmailReadiness(profile,{...config,FABELPAD_DATA_MODE:'local'},receipt));
 });

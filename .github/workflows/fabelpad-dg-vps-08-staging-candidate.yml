@@ -23,6 +23,7 @@ concurrency:
 
 jobs:
   preflight:
+    environment: staging
     if: >-
       github.repository == 'fabelpad/platform' &&
       github.event_name == 'workflow_dispatch' &&
@@ -59,10 +60,10 @@ jobs:
             console.log("De vier publieke buildvariabelen zijn geldig; waarden worden niet getoond.");'
 
   candidate:
+    environment: staging
     needs: preflight
     if: github.repository == 'fabelpad/platform' && github.ref == 'refs/heads/main'
-    # Register this dedicated runner only after enforcing the selected-workflow
-    # restriction for these exact manual workflow files at refs/heads/main.
+    # Dedicated repository runner; root-owned adapter repeats main/SHA/CI checks.
     runs-on: [self-hosted, Linux, X64, dg-vps-08, fabelpad-vps08-staging]
     timeout-minutes: 50
     steps:
@@ -104,6 +105,6 @@ jobs:
             process.exit(result.status ?? 1);'
           printf 'Kandidaat-ID: %s-%s-%s\n' "$RELEASE_SHA" "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT"
 
-# No environment, runtime secrets, migration, current switch, service start or
+# No runtime secrets, migration, current switch, service start or
 # proxy change belongs to this build route. The installed root-owned dispatcher
 # repeats GitHub ancestry/CI verification and scrubs the build worker environment.

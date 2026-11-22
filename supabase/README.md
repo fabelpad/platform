@@ -1,62 +1,59 @@
-# Lokale backendvoorbereiding
+# Fabelpad — Supabase, beheerrechten en mail
 
-De migratie bouwt het databasecontract voor Supabase. Er is geen project aangemaakt, gekoppeld of gewijzigd. Er wordt geen Docker-stack geïntroduceerd. De webapp blijft zonder configuratie als lokale demo bruikbaar.
+Gecontroleerd op **22 november 2026**. Deze inrichting betreft uitsluitend onderstaande twee Fabelpad-projecten. Beide waren nieuw/leeg: nul applicatietabellen, nul migraties en nul Auth-gebruikers.
 
-## Configuratie
+| Omgeving | Workspace-account | Project / regio | Site URL |
+| --- | --- | --- | --- |
+| staging | **fabelpad** | `tlwfpivafcokcjyjwgmq` / eu-west-1 | `https://staging.fabelpad.nl` |
+| production | **Duindorpdoet** | `aptprpkosqctwrzeetgs` / eu-west-1 | `https://fabelpad.nl` |
 
-- `NEXT_PUBLIC_SUPABASE_URL`: publieke project-URL van de betreffende omgeving.
-- `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`: alleen een `sb_publishable_` key. Een serversecret wordt geweigerd.
-- `APP_URL`: de exacte eigen origin voor callbacks en mutatiecontrole; HTTPS buiten localhost.
-- `FABELPAD_AUTH_EMAIL_ENABLED=true`: pas instellen na inrichting en acceptatie van de bestaande DG mailgateway.
-- `FABELPAD_AUTH_GOOGLE_ENABLED=true`: pas instellen na configuratie van de Google-provider en callbacks.
+De vier publieke GitHub-variabelen staan per bestaande environment; zie [INRICHTING.md](../docs/INRICHTING.md). De webserver heeft geen service-role key nodig.
 
-De webserver gebruikt geen service-role/secret key. De server verifieert de cookie bij Supabase Auth met `getUser()`. De database krijgt de betreffende ouderidentiteit en begrenst die met RLS. Cookies zijn HttpOnly, SameSite=Lax en Secure op HTTPS. De route handlers vernieuwen cookies; de huidige app voert geen sessieautorisatie uit in Server Components. Een toekomstige SSR-authenticatielaag moet de cookievernieuwing volgens het actuele Next.js/Supabase proxycontract verzorgen.
+## Toegepaste migraties
 
-OTP's worden uitsluitend door Supabase gegenereerd en geverifieerd. Het Auth-template moet een code met `{{ .Token }}` leveren; de standaard magic-linktekst past niet bij het invoerscherm. Google redirect via Supabase: `https://<werkelijke-projectref>.supabase.co/auth/v1/callback`; appcallback: `<APP_URL>/auth/callback`, opgenomen in de Supabase allowlist. Projectref, callback-origin en Google-credentials blijven nog in te vullen.
+1. `20261104095714_family_content_contract.sql`: eigen gezinsdocumenten, CAS-revisies, expliciete beheerders, afgeschermde contentconcepten en onveranderlijke verhaalreleases.
+2. `20261122140451_verified_bootstrap_admin.sql`: bevestigde eigenaar-mailbox als eerste beheerder en beperkte uitvoerrechten van de platformhelper.
 
-## Tabellen en rechten
+Beide migraties zijn via de verbonden Supabase-beheertool toegepast en daarna gecontroleerd. Die tool gaf uitvoertijdstempels; na vergelijking van de **volledige SQL-SHA256** is uitsluitend de migratieversie-administratie gelijkgetrokken met de bestandsnamen. SQL, naam en inhoud zijn behouden. Beide projecthistories matchen nu de twee bestanden. Gebruik geen tweede ongecontroleerde `db push` om deze migraties opnieuw uit te voeren. [Officieel migratiecontract](https://supabase.com/docs/guides/deployment/database-migrations).
 
-`family_documents` bewaart het bestaande schemaVersion=1 snapshot per ouder. Kind-ID's zijn alleen binnen dat gezin betekenisvol. Alleen de eigen ouder kan het document lezen. De schrijf-RPC accepteert geen ouder-ID en voert een atomaire revisievergelijking uit. Rechtstreeks schrijven is niet toegestaan. De Next.js-grens hergebruikt de volledige domeinvalidatie; de database controleert bovendien de profiel- en recordstructuur, herinneringsvelden, eigendom, revisies en maximale grootte. Ook directe RPC-verzoeken met ongeldige nullvelden of beschadigde herinneringen worden geweigerd. Oude `{picks,updatedAt}` records en nieuwe records met `storyId`, `contentVersion` en `revision` blijven geldig.
+De tweede migratie is met de officiële, checksum-gecontroleerde **Supabase CLI 3.2.0** en `supabase migration new verified_bootstrap_admin` aangemaakt. Versie 3 heeft andere standaardtargetkeuzes; controleer de actuele help en selecteer een hosted project expliciet. CLI-installatie is geen runtimevoorwaarde.
 
-`content_admins` wordt uitsluitend door vertrouwde SQL beheerd. Een bevoegde beheerder moet een bestaand `auth.users.id` expliciet toevoegen; niemand krijgt automatisch rechten, ook de eerste registratie niet. User-editable metadata speelt geen rol in autorisatie. `content_drafts` zijn alleen zichtbaar voor toegewezen beheerders. Schrijven heeft revisiecontrole. `content_releases` bevatten de volledige 31 scènes en 32 eindes per verhaal. Lezers mogen uitsluitend releases lezen; wijzigen en verwijderen wordt ook door een trigger geblokkeerd. Publicaties zijn idempotent op de hash van canoniek JSON en oude publicaties blijven behouden.
+## Databasecontract
 
-De invoker-RPC `get_content_catalog` kiest in de database één laatste release per verhaal en levert alleen metadata. Bewaarde releases kunnen daardoor geen andere verhalen buiten de Data API-rijlimiet duwen. Verwijdering van een contentauteur maakt de auteurverwijzingen leeg en bewaart concepten en releases.
+- `family_documents`: ouder-UUID als eigenaar, RLS SELECT op eigen rij. Alleen gevalideerde CAS-RPC schrijft een volledig document. Andere gezinnen en anonieme sessies krijgen geen toegang.
+- `content_admins`: alleen eigen rol lezen; geen client-write. Beheerrechten komen uit deze tabel.
+- `content_drafts`: alleen beheerder, met revisiecontrole en gevalideerde RPC.
+- `content_releases`: publiek leesbaar, versiehash en immutable trigger. Publicatie bewaart eerdere verhaalversies; accountverwijdering verwijdert geen publieke verhaalrelease.
+- Privileged functies staan in `private`, met lege search_path, expliciete grants en servercontroles. Public wrappers zijn invokerfuncties.
 
-De private `SECURITY DEFINER`-functies zijn beperkt tot deze handelingen, hebben een lege search_path, controleren `auth.uid()` en expliciete beheerrechten, en staan buiten het blootgestelde API-schema. Publieke RPC-wrappers draaien als invoker. Anonieme sign-ins mogen geen gezin opslaan.
+Alle vier tabellen hebben RLS. Publieke REST-controles geven 13 catalogusverhalen en HTTP401 voor anonieme toegang tot gezinnen, beheerderrollen en concepten. Security advisors geven na hardening **nul meldingen** in beide projecten.
 
-Er is nog geen beleidskeuze voor betaalde profielgrenzen of servergestuurde abonnementstoegang geïmplementeerd. Het bestaande maximum van vijf profielen is het compatibiliteitscontract van het prototype, geen betaalpakket. De content-API levert in deze lokale fase de volledige publieke catalogus. Productiebetalingen mogen hier niet op worden aangesloten voordat entitlementcontrole is gebouwd.
-
-## Reële inrichting en gegevensbehoud
-
-Volg het projectrunbook, de bestaande DG build-lock en versleutelde backup met herstelbewijs voordat migraties naar een echte omgeving gaan. Inspecteer eerst bestaande schema's, grants en migratiegeschiedenis. Deze additieve migratie importeert en verwijdert geen D1-data. Een eventuele bestaande D1-omgeving vraagt een expliciete, gevalideerde export/import en mapping van oude ouderidentiteiten naar Supabase-UUID's; koppel geen gezinnen op basis van een door de client gekozen ID.
-
-Supabase CLI 3.0.0 is gecontroleerd; het migratiebestand is met `supabase migration new family_content_contract` aangemaakt. Gebruik de vastgelegde CLI-versie en ontdek de actuele target-/dry-runopties met `--help`. Er is geen remote target in deze checkout opgeslagen.
-
-Archiveer ook de originele bronrelease vóór latere wijzigingen in verhaalbronnen:
+De 13 bestaande bronverhalen zijn per project geïmporteerd als immutable releases, met dezelfde hashes als web/native. De export is idempotent: bestaande story/version-rijen blijven behouden. Nieuwe content uit de studio gaat via de bestaande validatie/publicatieroute. De export kan opnieuw ter beoordeling worden gemaakt met:
 
 ```bash
-node scripts/supabase-export-content.mjs --output /tmp/fabelpad-broncontent.sql
+node scripts/supabase-export-content.mjs --output /ABSOLUUT/NIEUW/PAD/content.sql
 ```
 
-Dit genereert alleen reviewbare SQL, weigert een bestaand bestand te overschrijven en voert niets uit. Pas de SQL na migratie via het gecontroleerde databasepad toe; opnieuw uitvoeren overschrijft geen release. Zet alle bronreleaseversies die bestaande avonturen gebruiken duurzaam in `content_releases`. De browser bewaart ook de gekozen volledige release lokaal. Bij een ontbrekende expliciete versie retourneert de API een fout en vervangt geen avontuur stilzwijgend.
+Dit commando schrijft alleen een bestand; het voert geen SQL of mail uit. Splits grote imports in begrensde statements, omdat de beheer-API een querylimiet heeft.
 
-Accountinzage loopt via het eigen family-endpoint. Geautomatiseerde accountverwijdering is nog niet aangesloten: verwijdering en sessierevocatie moeten samen met de bestaande DG account-/auditprocedure worden ingericht. Het verwijderen van een Supabase-user maakt bestaande JWT's niet automatisch onmiddellijk ongeldig. Maak geen verborgen beheerdersbypass voor reviewers.
+## Eerste beheerder
 
-## Mailgateway en opslag
+**info@dgwebservices.nl** is de expliciete bootstrapmailbox. De trigger vertrouwt uitsluitend `auth.users.email`, `email_confirmed_at` en `is_anonymous`. Na daadwerkelijke adresbevestiging ontstaat automatisch een `content_admins`-rij met `grant_source=bootstrap_email`.
 
-Het actuele DG gateway-/outboxrunbook ontbreekt. Gateway-URL, handtekeningalgoritme, signed headers/body, signingsecret-namen, toegestane afzender/ontvangers, durable-outboxschema, worker, idempotentie/reconciliatie en providerwebhooks zijn daarom expliciet niet geïmplementeerd. Er is geen alternatieve SMTP-opzet toegevoegd en er zijn geen testmails verzonden. Email-login blijft standaard uit. Resendcredentials horen uitsluitend in die bestaande gateway/worker, niet in de app of browserbundle.
+Een onbevestigde gebruiker, anonieme sessie of gemanipuleerde user_metadata krijgt geen rol. Verlies van het bevestigde adres trekt uitsluitend die automatische rol in. Afzonderlijk handmatig toegekende beheerders blijven behouden. Het verwijderen van de Auth-gebruiker verwijdert diens gezinsdocument en rol via bestaande foreign keys.
 
-De bestaande illustraties blijven lokale, meegebouwde assets. Supabase Storage-buckets, uploadregels, MIME-/groottecontrole en eventuele signed URLs worden pas ingericht met het echte project en mediabeleid. Geen publieke uploadbucket of fictieve Edge Functions is aangemaakt.
+Er zijn nog **nul Auth-gebruikers**. Er is geen fictieve gebruiker aangemaakt en geen mailbox als bevestigd gemarkeerd zonder bewijs van bezit. De eerste geslaagde OTP-aanmelding van het aangewezen adres maakt het account en de beheerrol aan. Geef geen OTP in chat/logs. Controleer daarna servermatig `getUser`, de eigen rol en de studio.
 
-## Verificatie
+## E-mail-OTP via Resend API
 
-```bash
-node scripts/supabase-db-check.mjs
-node scripts/supabase-contract-check.mjs
-```
+`auth-email` Edge Function versie 1 staat in beide projecten. `verify_jwt=false` is bewust: Auth verstuurt vóór een gebruikerssessie. De handler vereist een geldige **Standard Webhooks HMAC-SHA256-handtekening**, tijdvenster, begrensde body en juiste Site URL. Niet-ondertekende verzoeken kunnen niet mailen. Zolang de zes Edge-instellingen ontbreken, retourneert POST een generieke HTTP503.
 
-De eerste voert de echte migratie uit in lokale PostgreSQL WASM (PGlite), met beperkte Auth-stubs. Hij test twee ouders met dezelfde kind-ID, RLS zonder ownerfilter, verboden directe writes/zelfpromotie, CAS en replay, expliciete adminrechten, conceptisolatie en onveranderlijke/idempotente releases. Alle dertien releases krijgen exact dezelfde canonieke bytes/hash in PostgreSQL en JavaScript. Extra regressies controleren corrupte directe RPC-verzoeken, echte gegenereerde herinneringen, de UTF-16 naamlimiet, een catalogus met meer dan duizend bewaarde releases en auteurverwijdering zonder releaseverlies. De wachtrij test twee gelijktijdig ingediende writes, maar PGlite bewijst geen echte multi-connection-lockcontention.
+[functions.auth-email] staat in `config.toml`; imports verwijzen naar de gedeelde `lib/email/`-bron. Dezelfde renderer levert 26 plakklare HTML-bestanden en alle ondersteunde applicatieserviceberichten. Er wordt geen advertentie- of trackingmail toegevoegd.
 
-De tweede test configuratie zonder secrets, weigering van een serverkey als publieke key, retourpaden, origin-/bodygrenzen, browser/servercontentgelijkheid en oude/nieuwe snapshotrecords. Hosted Supabase Auth, OTP-bezorging, OAuth/cookies in een echte providerflow, hosted RLS/advisors, Storage, Edge Functions en DG gateway/outbox zijn niet getest.
+Volg [mailconfiguratie](../docs/EMAIL-CONFIGURATIE.md) en [templatehandleiding](../docs/EMAIL-TEMPLATES.md). De workspaceconnector kan geen Auth-instellingen of Edge secrets instellen. Daarvoor is de bedoelde Management PAT plus Resend-key via een afgeschermde bron of de verborgen terminaltool nodig. Geen beheerkeys in GitHub-variabelen.
 
-Actuele primaire referenties gecontroleerd op 4 november 2026: [SSR-client/cookies](https://supabase.com/docs/guides/auth/server-side/creating-a-client), [OTP/template](https://supabase.com/docs/guides/auth/auth-email-passwordless), [Google](https://supabase.com/docs/guides/auth/social-sign-in/auth-google), [RLS](https://supabase.com/docs/guides/database/postgres/row-level-security), [changelog](https://supabase.com/changelog). De aangekondigde uitschakeling van verouderde TLS 1.2-ciphers op 10 november raakt de moderne Node/Supabase-client niet als aangepaste oude TLS-configuratie wordt vermeden.
+## Verificatie en herstel
+
+`pnpm check:backend` draait echte PostgreSQL/RLS/RPC-logica in PGlite met beperkte Auth-stubs, plus 25 scenario's met de geïnstalleerde Supabase Auth/SSR-SDK en een synthetische provider. `pnpm check:email` controleert exports, handtekeningen, ontvangers, timeout/idempotentie en de configuratietool. Dit vervangt geen echte mailbox/OTP-aanmelding.
+
+De live controles en migratiehashes staan in [supabase-2026-11-22.json](../docs/deploy-evidence/supabase-2026-11-22.json). Een volgende migratie bij gebruikersdata vereist projectcontrole, passende versleutelde backup, hersteltest en voor-/achterwaartse compatibiliteit. Approllback draait geen database/Auth/Edge/provider terug. De nu toegevoegde schema's worden niet automatisch gedropt bij appfalen; behoud data en onderzoek de eigen wijziging.

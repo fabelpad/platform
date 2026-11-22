@@ -9,6 +9,7 @@ straight to the trusted child; credentials never enter argv or environment.
 import ctypes
 import fcntl
 import os
+from pathlib import Path
 import signal
 import stat
 import subprocess
@@ -104,9 +105,13 @@ def main():
     if os.getuid() != 0 or len(sys.argv) < 6:
         raise ValueError("Private root supervisor")
     lock, seconds, parent, *command = sys.argv[1:]
-    if not (os.path.isabs(lock) and seconds == '2700'
-            and command[0] == '/opt/dg-toolchains/fabelpad-vps08-staging/node-v24.18.0-linux-x64/bin/node'
-            and command[1] == '/usr/local/libexec/fabelpad-vps08-staging/locked-operation.mjs'):
+    install_root = str(Path(__file__).parent)
+    site = Path(install_root).name
+    if not (site in ('fabelpad-vps08-staging', 'fabelpad-vps08-production')
+            and install_root == '/usr/local/libexec/' + site
+            and os.path.isabs(lock) and seconds == '2700'
+            and command[0] == '/opt/dg-toolchains/' + site + '/node-v24.18.0-linux-x64/bin/node'
+            and command[1] == install_root + '/locked-operation.mjs'):
         raise ValueError("Unexpected operation")
     return run_locked(lock, 2700, command, expected_parent=int(parent))
 

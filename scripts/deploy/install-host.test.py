@@ -10,6 +10,7 @@ import subprocess
 import sys
 from types import SimpleNamespace
 import unittest
+from unittest.mock import patch
 
 sys.dont_write_bytecode = True
 spec = importlib.util.spec_from_file_location('install_host', Path(__file__).with_name('install-host.py'))
@@ -33,6 +34,8 @@ class FakeHost:
         self.writes[installer.LOCK_TMPFILES] = installer.LOCK_TMPFILES_BODY
         self.port = True
         self.node_version, self.pnpm_version = 'v24.18.0', '11.25.0'
+        self.runner_state = 'inactive'
+        self.fail_replacement = None
 
     def identity(self): return self.ident
     def user(self, name): return self.users.get(name)
@@ -54,6 +57,7 @@ class FakeHost:
         if argv == [installer.NODE, '--version']: return self.node_version
         if argv == [installer.NODE, installer.PNPM, '--version']: return self.pnpm_version
         if argv == ['/usr/bin/uname', '-m']: return 'x86_64'
+        if argv[:3] == ['/usr/bin/systemctl', 'show', f'{installer.SITE}-runner.service']: return self.runner_state
         if argv == ['/usr/sbin/groupadd', '--system', 'dg-build']:
             self.groups['dg-build'] = 42
             self.mutations.append(('group','dg-build'))
@@ -72,6 +76,15 @@ class FakeHost:
         self.paths[path] = item(mode, uid, gid)
         self.mutations.append(('directory', path))
 
+    def replace(self, path, body, mode, uid=0, gid=0):
+        if self.fail_replacement == path:
+            self.fail_replacement = None
+            raise OSError('Synthetic atomic replacement failure')
+        assert path in self.paths
+        self.paths[path] = item(mode, uid, gid, stat.S_IFREG)
+        self.writes[path] = body
+        self.mutations.append(('replace',path))
+
     def write(self, path, body, mode, uid=0, gid=0):
         assert path not in self.paths, 'Would overwrite existing fixture file'
         self.paths[path] = item(mode, uid, gid, stat.S_IFREG)
@@ -81,6 +94,7 @@ class FakeHost:
 
 class HostPreparationTest(unittest.TestCase):
     def setUp(self):
+        installer.configure_environment('staging')
         self.host = FakeHost()
         self.bundle = {name: b'// reviewed fixture\n' for name in installer.MODULES}
         for name in ('activate.mjs', 'rollback.mjs'):
@@ -231,6 +245,75 @@ class HostPreparationTest(unittest.TestCase):
             with self.subTest(value=value):
                 with self.assertRaises(ValueError): installer.render_proxy(value)
         self.assertIn('reverse_proxy 127.0.0.1:4188', installer.render_proxy('staging.fabelpad.nl'))
+
+
+class AdapterUpgradeTests(unittest.TestCase):
+    def setUp(self):
+        installer.configure_environment('staging')
+        self.host = FakeHost()
+        self.bundle = installer.load_bundle(Path(__file__).resolve().parents[2])
+        installer.Preparation(self.host,self.bundle).run(apply=True)
+        self.host.mutations.clear()
+        self.new_bundle = {**self.bundle,'release-contract.mjs':self.bundle['release-contract.mjs']+b'\n// reviewed upgrade fixture\n'}
+        self.upgrade = installer.AdapterUpgrade(self.host,self.new_bundle)
+
+    def test_upgrade_dry_run_is_read_only_and_requires_previous_receipt(self):
+        self.assertEqual(self.upgrade.run()['status'],'upgrade-dry-run')
+        self.assertEqual(self.host.mutations,[])
+        self.host.writes[f'{installer.INSTALL_ROOT}/release-contract.mjs'] += b'// unknown change'
+        with self.assertRaises(ValueError): self.upgrade.run()
+        self.assertEqual(self.host.mutations,[])
+
+    def test_running_runner_or_cross_environment_profile_is_rejected(self):
+        self.host.runner_state = 'active'
+        with self.assertRaises(ValueError): self.upgrade.run()
+        self.host.runner_state = 'inactive'
+        profile = json.loads(self.host.writes[f'{installer.CONFIG_ROOT}/host.json'])
+        profile['environment'] = 'production'
+        self.host.writes[f'{installer.CONFIG_ROOT}/host.json'] = json.dumps(profile).encode()
+        with self.assertRaises(ValueError): self.upgrade.run()
+        self.assertEqual(self.host.mutations,[])
+
+    def test_upgrade_changes_only_receipted_adapters_and_sudoers_under_both_locks(self):
+        with patch.object(installer.os,'open',side_effect=[501,502]), patch.object(installer.os,'close') as close, patch.object(installer.fcntl,'flock') as lock:
+            self.assertEqual(self.upgrade.run(apply=True)['status'],'adapters-upgraded')
+        self.assertEqual(lock.call_count,2)
+        self.assertEqual(close.call_count,2)
+        for mutation,path in self.host.mutations:
+            self.assertEqual(mutation,'replace')
+            self.assertTrue(path.startswith(installer.INSTALL_ROOT+'/') or path in (installer.SUDOERS,f'{installer.CONFIG_ROOT}/installation.json'))
+        self.assertEqual(self.host.writes[f'{installer.INSTALL_ROOT}/release-contract.mjs'],self.new_bundle['release-contract.mjs'])
+        self.assertEqual(self.upgrade.run()['status'],'upgrade-dry-run')
+
+    def test_failed_adapter_replacement_restores_every_completed_own_change(self):
+        before = dict(self.host.writes)
+        self.host.fail_replacement = f'{installer.INSTALL_ROOT}/candidate-build.sh'
+        with patch.object(installer.os,'open',side_effect=[501,502]), patch.object(installer.os,'close'), patch.object(installer.fcntl,'flock'):
+            with self.assertRaises(OSError): self.upgrade.run(apply=True)
+        self.assertEqual(self.host.writes,before)
+
+
+class ProductionTargetTests(unittest.TestCase):
+    def tearDown(self):
+        installer.configure_environment('staging')
+
+    def test_production_is_fixed_separate_target_with_rendered_entrypoints(self):
+        installer.configure_environment('production')
+        self.assertEqual(installer.PORT, 4189)
+        self.assertEqual(installer.USERS, {'runner':'run-fab-v08-prd','build':'build-fab-v08-prd','app':'app-fab-v08-prd'})
+        host = FakeHost()
+        bundle = installer.load_bundle(Path(__file__).resolve().parents[2])
+        result = installer.Preparation(host,bundle).run(apply=True)
+        self.assertEqual(result['profile']['environment'],'production')
+        self.assertEqual(result['profile']['sourceWorkspace'],'/opt/actions-runner/fabelpad-vps08-production/_work/platform/platform')
+        self.assertIn(b'/usr/local/libexec/fabelpad-vps08-production/candidate-build.mjs',bundle['candidate-build.sh'])
+        self.assertTrue(bundle['activate.mjs'].startswith(('#!'+installer.NODE+'\n').encode()))
+        self.assertIn('127.0.0.1:4189',installer.render_proxy('app.fabelpad.nl'))
+        self.assertFalse(any('staging' in path for path in host.mutations if isinstance(path,str)))
+
+    def test_unknown_environment_is_rejected(self):
+        for value in ('prod','../../production','',None):
+            with self.assertRaises(ValueError): installer.configure_environment(value)
 
 
 if __name__ == '__main__':

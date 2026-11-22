@@ -1,4 +1,5 @@
 import { BackendConfigurationError, getSupabaseConfig } from '../supabase/config';
+export { safeNext } from '../authNavigation';
 
 export function privateJson(body: unknown, status = 200, extra: Record<string, string> = {}): Response {
   return Response.json(body, { status, headers: { 'Cache-Control': 'private, no-store', Vary: 'Cookie', 'X-Content-Type-Options': 'nosniff', ...extra } });
@@ -11,10 +12,6 @@ export function checkMutationOrigin(request: Request): void {
   if (!config) throw new BackendConfigurationError();
   const origin = request.headers.get('origin');
   if ((origin && origin !== config.appUrl) || request.headers.get('sec-fetch-site') === 'cross-site') throw new RequestError(403, 'invalid_origin', 'Dit verzoek komt niet van de eigen website.');
-}
-export function safeNext(value: unknown, fallback = '/gezin'): string {
-  if (typeof value !== 'string' || !value.startsWith('/') || value.startsWith('//') || /[\\\u0000-\u0020\u007f]/u.test(value)) return fallback;
-  try { const url = new URL(value, 'https://fabelpad.invalid'); return url.origin === 'https://fabelpad.invalid' && !url.pathname.startsWith('/api/') && !url.pathname.startsWith('/auth/') ? `${url.pathname}${url.search}${url.hash}` : fallback; } catch { return fallback; }
 }
 export async function readJson(request: Request, limit = 8 * 1024): Promise<unknown> {
   if (request.headers.get('content-type')?.split(';')[0].trim().toLowerCase() !== 'application/json') throw new RequestError(415, 'unsupported_media_type');

@@ -30,7 +30,7 @@ try {
   const { config, digest } = readBuildConfig(profile, args['config-id']);
   const env = {
     ...cleanEnvironment(profile, { build: true }), ...config,
-    FABELPAD_DEPLOY_ENV: 'staging', FABELPAD_RELEASE_SHA: args.sha,
+    FABELPAD_DEPLOY_ENV: profile.environment, FABELPAD_RELEASE_SHA: args.sha,
   };
   const pnpmVersion = run(profile.node, [profile.pnpm, '--version'], { profile, env, capture: true }).toString().trim();
   invariant(pnpmVersion === profile.pnpmVersion, 'De actieve pnpm-versie wijkt af van het hostprofiel.');
@@ -38,7 +38,7 @@ try {
   // immutable candidate must remain independent of mutable package caches.
   run(profile.node, [profile.pnpm, 'install', '--frozen-lockfile', '--prod=false', '--package-import-method=copy'], { profile, env, cwd: artifact, timeout: 15 * 60 * 1000 });
   run(profile.node, ['scripts/local-preflight.mjs'], { profile, env, cwd: artifact });
-  run(profile.node, ['scripts/config-check.mjs', '--target=staging', '--no-env-files'], { profile, env, cwd: artifact });
+  run(profile.node, ['scripts/config-check.mjs', `--target=${profile.environment}`, '--no-env-files'], { profile, env, cwd: artifact });
   for (const script of ['typecheck', 'check:content', 'check:backend', 'check:native', 'check:deploy', 'build']) {
     run(profile.node, [profile.pnpm, script], { profile, env, cwd: artifact, timeout: 20 * 60 * 1000 });
   }
@@ -46,7 +46,7 @@ try {
   const artifactDigest = treeDigest(artifact);
   const manifest = {
     version: 1, id, siteId: profile.siteId, repository: profile.repository, branch: profile.branch,
-    hostname: profile.hostname, machineId: profile.machineId, environment: 'staging', sha: args.sha,
+    hostname: profile.hostname, machineId: profile.machineId, environment: profile.environment, sha: args.sha,
     configId: args['config-id'], buildConfigDigest: digest, artifactDigest,
     runId: args['run-id'], runAttempt: args['run-attempt'],
     ciRunId: args['ci-run-id'], ciRunAttempt: args['ci-run-attempt'], ciJobId: args['ci-job-id'],

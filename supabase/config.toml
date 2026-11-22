@@ -1,0 +1,8 @@
+# Shared local project label; hosted targets are always selected by verified ref.
+project_id = "fabelpad"
+
+[functions.auth-email]
+enabled = true
+verify_jwt = false # Auth calls before login; mandatory Standard Webhooks HMAC in handler.
+entrypoint = "./functions/auth-email/index.ts"
+import_map = "./functions/auth-email/deno.json"

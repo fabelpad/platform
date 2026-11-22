@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { existsSync, lstatSync, readFileSync, renameSync, rmSync, writeFileSync, chownSync, chmodSync } from 'node:fs';
 import path from 'node:path';
-import { assertRootPath, candidateId, downloadSourceArchive, ID, invariant, parseArgs, readBuildConfig, switchWithRecovery, treeDigest, validateManifest, validateRuntimePair, validatePublicConfig } from './release-contract.mjs';
+import { assertRootPath, candidateId, downloadSourceArchive, ID, invariant, parseArgs, readBuildConfig, switchWithRecovery, treeDigest, validateManifest, validateRuntimePair, validatePublicConfig, validateEmailReadiness } from './release-contract.mjs';
 import { atomicLink, assertSiteDirectory, checkCapacity, cleanEnvironment, health, hostProfile, makeDirectory, readLink, removeLink, run, sealTree, waitForHealth, writeJson } from './host-runtime.mjs';
 import { githubApi, verifyActivationEnvironment, verifyGitHubRelease, verifyManualDispatch, verifyUnchangedManualDispatch } from './verify-release-sha.mjs';
 
@@ -53,9 +53,9 @@ function healthyReceipt(profile, directory, manifest) {
     && receipt.runtimeConfigDigest === manifest.runtimeConfigDigest, 'Vorige release heeft geen passend bewijs van gezonde app/configuratie.');
 }
 
-async function verifyRelease(token, sha, { activation = false } = {}) {
+async function verifyRelease(token, sha, { activation = false, environment = 'staging' } = {}) {
   const api = githubApi(token);
-  if (activation) await verifyActivationEnvironment(api);
+  if (activation) await verifyActivationEnvironment(api, environment);
   return verifyGitHubRelease({ sha, api });
 }
 
@@ -63,6 +63,9 @@ async function verifyRelease(token, sha, { activation = false } = {}) {
 // No .env source or runtime secret is ever inherited by the build account.
 function provisionPublicConfiguration(profile, configId, sha, rawConfig) {
   const config = validatePublicConfig(rawConfig);
+  const readinessFile = `${profile.configRoot}/email-readiness.json`;
+  assertRootPath(readinessFile, {privateFile:true});
+  validateEmailReadiness(profile, config, JSON.parse(readFileSync(readinessFile, 'utf8')));
   const text = [...Object.keys(config).sort().map(name => `${name}=${config[name]}`), ''].join('\n');
   const writeImmutable = (file, content, gid) => {
     if (existsSync(file)) {
@@ -82,7 +85,7 @@ function provisionPublicConfiguration(profile, configId, sha, rawConfig) {
   const runtimeDirectory = `${profile.configRoot}/runtime-configs/${configId}`;
   if (!existsSync(runtimeDirectory)) makeDirectory(runtimeDirectory, 0, profile.app.gid);
   assertRootPath(runtimeDirectory, {directory: true});
-  const runtimeText = `${text}FABELPAD_DEPLOY_ENV=staging\nFABELPAD_RELEASE_SHA=${sha}\nPORT=${profile.port}\n`;
+  const runtimeText = `${text}FABELPAD_DEPLOY_ENV=${profile.environment}\nFABELPAD_RELEASE_SHA=${sha}\nPORT=${profile.port}\nFABELPAD_AUTH_EMAIL_ENABLED=true\nFABELPAD_AUTH_GOOGLE_ENABLED=false\n`;
   writeImmutable(`${runtimeDirectory}/${sha}.env`, runtimeText, profile.app.gid);
 }
 
@@ -91,7 +94,7 @@ export async function buildCandidate(argv, token, publicConfig) {
   const profile = hostProfile();
   const id = candidateId(args.sha, args['run-id'], args['run-attempt']);
   invariant(ID.test(args['config-id']), 'Ongeldige configuratie-identificatie.');
-  const dispatch = await verifyManualDispatch({api: githubApi(token), operation: 'build', runId: args['run-id'], runAttempt: args['run-attempt']});
+  const dispatch = await verifyManualDispatch({api: githubApi(token), operation: 'build', runId: args['run-id'], runAttempt: args['run-attempt'],environment:profile.environment});
   const proof = await verifyRelease(token, args.sha);
   for (const [flag, field] of [['ci-run-id', 'ciRunId'], ['ci-run-attempt', 'ciRunAttempt'], ['ci-job-id', 'ciJobId']]) {
     invariant(args[flag] === String(proof[field]), 'De aangeleverde CI-identificatie is niet de actuele geslaagde controle.');
@@ -129,7 +132,7 @@ export async function buildCandidate(argv, token, publicConfig) {
   invariant(treeDigest(`${pending}/artifact`) === manifest.artifactDigest, 'Artefact is tijdens het kopiëren gewijzigd; kandidaat is niet verzegeld.');
   invariant(readBuildConfig(profile, manifest.configId).digest === manifest.buildConfigDigest, 'Buildconfiguratie is tijdens het bouwen gewijzigd.');
   invariant(JSON.stringify((await verifyRelease(token, manifest.sha)).ciChecks) === JSON.stringify(proof.ciChecks), 'CI-pogingen wijzigden tijdens de build; kandidaat niet verzegeld.');
-  await verifyUnchangedManualDispatch({api:githubApi(token),operation:'build',proof:dispatch});
+  await verifyUnchangedManualDispatch({api:githubApi(token),operation:'build',proof:dispatch,environment:profile.environment});
   writeJson(`${pending}/manifest.json`, { ...manifest, sealedAt: new Date().toISOString() }, profile.app.gid);
   sealTree(pending, profile.app.gid);
   renameSync(pending, destination);
@@ -140,12 +143,12 @@ export async function buildCandidate(argv, token, publicConfig) {
 export async function activate(argv, token) {
   const args = parseArgs(argv, ['candidate', 'config-id', 'run-id', 'run-attempt']);
   const profile = hostProfile();
-  const dispatch = await verifyManualDispatch({api:githubApi(token),operation:'activate',runId:args['run-id'],runAttempt:args['run-attempt']});
+  const dispatch = await verifyManualDispatch({api:githubApi(token),operation:'activate',runId:args['run-id'],runAttempt:args['run-attempt'],environment:profile.environment});
   invariant(/^[a-f0-9]{40}-[1-9][0-9]{0,19}-[1-9][0-9]{0,5}$/.test(args.candidate) && ID.test(args['config-id']), 'Ongeldige kandidaat of configuratie-identificatie.');
   const candidate = `${profile.siteRoot}/candidates/${args.candidate}`;
   const manifest = readManifest(profile, candidate, args.candidate);
   invariant(manifest.configId === args['config-id'], 'Kandidaat hoort bij een andere configuratie-identificatie.');
-  await verifyRelease(token, manifest.sha, { activation: true });
+  await verifyRelease(token, manifest.sha, { activation: true, environment: profile.environment });
   assertArtifact(candidate, manifest);
   invariant(readBuildConfig(profile, manifest.configId).digest === manifest.buildConfigDigest, 'De buildconfiguratie is gewijzigd; een nieuwe kandidaatbuild is vereist.');
   const runtime = runtimeFile(profile, manifest);
@@ -178,8 +181,8 @@ export async function activate(argv, token) {
   renameSync(pending, release);
   // Re-read external approval and CI immediately before the first mutation of
   // current. Build config and runtime snapshot are now an immutable bundle.
-  await verifyRelease(token, manifest.sha, { activation: true });
-  await verifyUnchangedManualDispatch({api:githubApi(token),operation:'activate',proof:dispatch});
+  await verifyRelease(token, manifest.sha, { activation: true, environment: profile.environment });
+  await verifyUnchangedManualDispatch({api:githubApi(token),operation:'activate',proof:dispatch,environment:profile.environment});
   await switchWithRecovery({
     current: old, next: release,
     switchTo: target => atomicLink(profile, 'current', target),
@@ -203,19 +206,19 @@ export async function activate(argv, token) {
 export async function rollback(argv, token) {
   const args = parseArgs(argv, ['sha', 'run-id', 'run-attempt']);
   const profile = hostProfile();
-  const dispatch = await verifyManualDispatch({api:githubApi(token),operation:'rollback',runId:args['run-id'],runAttempt:args['run-attempt']});
+  const dispatch = await verifyManualDispatch({api:githubApi(token),operation:'rollback',runId:args['run-id'],runAttempt:args['run-attempt'],environment:profile.environment});
   const current = readLink(profile, 'current');
   const previous = readLink(profile, 'previous');
   invariant(current && previous && current !== previous, 'Er is geen afzonderlijke vorige gezonde release beschikbaar.');
   const currentManifest = readManifest(profile, current, path.basename(current));
   const previousManifest = readManifest(profile, previous, path.basename(previous));
   invariant(args.sha === previousManifest.sha, 'Rollback-SHA is niet de vorige gezonde release.');
-  await verifyRelease(token, previousManifest.sha, { activation: true });
+  await verifyRelease(token, previousManifest.sha, { activation: true, environment: profile.environment });
   assertArtifact(previous, previousManifest);
   verifySealedRuntime(profile, previous, previousManifest);
   healthyReceipt(profile, previous, previousManifest);
   serviceState(profile);
-  await verifyUnchangedManualDispatch({api:githubApi(token),operation:'rollback',proof:dispatch});
+  await verifyUnchangedManualDispatch({api:githubApi(token),operation:'rollback',proof:dispatch,environment:profile.environment});
   await switchWithRecovery({
     current, next: previous,
     switchTo: target => atomicLink(profile, 'current', target),

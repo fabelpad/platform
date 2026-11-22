@@ -1,59 +1,60 @@
-# Fabelpad — benodigde inrichting en gegevens
+# Fabelpad — inrichting en configuratie
 
-Bijgewerkt: **20 november 2026**. De huidige opdracht bereidt een nieuw stagingdoel op `dg-vps-08` voor. De eigenaar koppelt deze workspace en Supabase later en vult de resterende gegevens in. Een eerste activatie, een verhuizing en publieke ingebruikname vereisen een aparte opdracht.
+Bijgewerkt: **22 november 2026**. De eigenaar heeft beide Fabelpad-omgevingen en de twee bedoelde Supabase-projecten vrijgegeven voor inrichting. Zie de [actuele status](STAGING-PRODUCTION-STATUS.md) voor uitgevoerd werk en resterende acceptatie.
 
-## Alleen deze vier GitHub-variabelen
+## Vier GitHub-variabelen per environment
 
-Ga later naar **fabelpad/platform → Settings → Secrets and variables → Actions → Variables**. Gebruik uitsluitend onderstaande namen voor de webdeploy. Er worden nu geen bestaande GitHub-variabelen, environments of secrets gewijzigd.
+Ga naar **fabelpad/platform → Settings → Environments → staging / production → Environment variables**. Beide environments bestaan en bevatten exact deze vier variabelen.
 
-| Naam | Waarde komt uit | Gebruik en wijzigingsgevolg |
+| Naam | Staging | Production | Fase |
+| --- | --- | --- | --- |
+| `FABELPAD_APP_ORIGIN` | `https://staging.fabelpad.nl` | `https://fabelpad.nl` | Publieke build- en runtimeconfiguratie |
+| `FABELPAD_DATA_MODE` | `supabase` | `supabase` | Build/runtime, zonder stille lokale fallback |
+| `NEXT_PUBLIC_SUPABASE_URL` | `https://tlwfpivafcokcjyjwgmq.supabase.co` | `https://aptprpkosqctwrzeetgs.supabase.co` | Publiek, buildtijd |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Key van **fabelpad / fabelpad-staging** | Key van **Duindorpdoet / fabelpad-production** | Publiek, buildtijd; eigen environment |
+
+Dit zijn geen secrets. Geen secret/service-role/databasekey in NEXT_PUBLIC-velden. RLS en beperkte RPC's begrenzen clientrechten. Publieke waarden worden ingebakken: gewijzigde origin, modus of Supabase-configuratie vereist een nieuwe kandidaat/configuratie-ID.
+
+## Afgeschermde configuratie buiten GitHub
+
+| Naam / gegeven | Bron en opslag | Gebruik |
 | --- | --- | --- |
-| `FABELPAD_APP_ORIGIN` | Door eigenaar bevestigde canonieke origin van het nieuwe doel | Publiek; build en runtime moeten dezelfde origin hebben. Geen domein afleiden uit de VPS-naam. |
-| `FABELPAD_DATA_MODE` | Expliciete keuze: `local` of `supabase` | Publiek; `local` vereist beide Supabase-waarden leeg en gebruikt geen externe accounts/data. `supabase` vereist de volgende twee waarden en afzonderlijke backendacceptatie. |
-| `NEXT_PUBLIC_SUPABASE_URL` | Supabase **Connect** van het bedoelde Fabelpad-project | Publiek, buildtijd; HTTPS-projectorigin zonder credentials. Verandering vereist nieuwe build. |
-| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | De publishable key van precies datzelfde project | Publiek, buildtijd; `sb_publishable_…`. Geen secret-, service-role- of databasekey. RLS begrenst gegevensrechten. |
+| `RESEND_API_KEY` | Eigen Resend-key; Supabase **Edge Functions → Secrets**, per project | Alleen Edge-mailfunctie; nooit build, browser of GitHub-variable |
+| `SEND_EMAIL_HOOK_SECRET` | Cryptografisch gegenereerd per project; Auth Hook en Edge Secrets moeten overeenkomen | Auth/HMAC-verificatie; verschillende secrets per omgeving |
+| `FABELPAD_EMAIL_FROM` | Geverifieerde Fabelpad-afzender; Edge-configuratie | `Fabelpad <...>` of `Fabelpad Staging <...>` |
+| `FABELPAD_EMAIL_REPLY_TO` | `support@fabelpad.nl`, door eigenaar bevestigd; Edge-configuratie | Antwoorden naar de support-inbox |
+| `FABELPAD_APP_ORIGIN` | Eigen canonieke origin hierboven; ook Edge-configuratie | Bindt ondertekende mail aan de juiste omgeving |
+| `FABELPAD_ENVIRONMENT` | `staging` of `production`, Edge-configuratie | Zichtbaar testkenmerk en gescheiden idempotentie |
+| Supabase Management PAT | Afgeschermde toegang van het account dat het bedoelde project beheert | Alleen tijdelijk in geheugen van configuratietool |
+| `GITHUB_TOKEN` | Kortlevend, automatisch binnen Actions | Bron-/CI-/workflowcontroles; nooit in app of buildproces |
 
-De validator accepteert uitsluitend deze spellingen. De oude naam `APP_URL` is vervallen; neem een bestaande eigen lokale waarde bewust over naar `FABELPAD_APP_ORIGIN` en verwijder alleen die vervallen naam uit het eigen lokale bestand. Behoud overige gebruikerswijzigingen. Gebruik voor een latere echte Supabase-build geen testproject of credentials van een bestaande omgeving als tijdelijke invulling.
+De Edge-configuratienamen zijn **geen extra GitHub-variabelen**. Supabase bewaart functieconfiguratie onder Secrets. De configuratietool vraagt keys verborgen in een eigen terminal; geen keys, PAT's, OTP's of wachtwoorden in chat, argumenten of documenten.
 
-Deze variabelen zijn geen secrets. Zet alleen publieke waarden in deze velden. Andere configuratie staat hieronder beschreven; daarvoor zijn geen aanvullende GitHub-variabelen nodig. Deze webopdracht configureert of activeert de bestaande Android/Play-route niet.
+De webserver gebruikt gebruikerssessies en RLS. Next-build en normale runtime vereisen geen service-role key, databasewachtwoord of Resend-key.
 
-## Hostmetadata, build en runtime
+## Hostmetadata en OTP-gate
 
-| Gegeven | Bron / opslag | Wie mag erbij |
-| --- | --- | --- |
-| Repository, integratiebranch, doel-ID, hostfingerprint, users, paden, loopbackpoort, runtimepaden, vereiste CI | Beoordeeld projectspecifiek hostprofiel en root-owned hostconfiguratie | Lezen waar nodig; runner/build/app kunnen privileged configuratie niet aanpassen |
-| Volledige release-SHA, workflowrun, poging, kandidaat-ID | Door workflow en adapter gegenereerd | Niet-geheime releasegegevens; geen extra GitHub-variabelen |
-| Onveranderlijke publieke buildconfiguratie | Eigen configuratie-ID; gecontroleerd snapshot van de vier toegestane waarden | Buildaccount mag uitsluitend deze publieke invoer lezen |
-| Runtimeconfiguratie bij dezelfde release | Afgeschermde bron, root-beheerd en alleen eigen app leesbaar | Buildaccount en runner krijgen geen runtimegeheimen |
-| `FABELPAD_DEPLOY_ENV`, `FABELPAD_RELEASE_SHA`, `PORT` en interne compatibiliteitsmetadata | Adapter/geverifieerd hostprofiel; geen handmatige GitHub-invoer | Alleen toegestane metadata; gelijktijdig met dezelfde release vastleggen |
-| `GITHUB_TOKEN` | Automatisch kortlevend token binnen Actions, alleen bron/CI lezen | Workflow/adapter; nooit in app, artefact of log |
+Paden, service, Node/pnpm, poorten en runnerlabels staan in het beoordeelde root-owned hostprofiel. SHA, workflowrun/poging en configuratie-ID komen uit de releaseprocedure. De vorige gezonde app/configuratie blijft beschikbaar voor herstel.
 
-NEXT_PUBLIC-waarden worden tijdens `next build` ingebakken. Een later aangepast runtimebestand wijzigt de browserbundel niet. Build, publieke configuratie en runtimeconfiguratie krijgen één gecontroleerde release-identiteit. De vorige gezonde combinatie blijft beschikbaar voor rollback. Releasegegevens bevatten uitsluitend identificaties en niet-geheime hashes/metadata.
+De adapter zet `FABELPAD_AUTH_EMAIL_ENABLED=true` na een root-owned `email-readiness.json` voor dezelfde omgeving, origin en Supabase-URL. Dit is geen extra GitHub-variable. Google blijft uit. Leg de ontvangst pas aan na echte OTP-aanvraag, bezorgcontrole, sessiecontrole en beheerderacceptatie. De zelfstandige terminalproef kan dit vóór een eerste kandidaat bewijzen; de app-/studioflow volgt na kandidaatbouw. Alleen een HTTP-sendresultaat is onvoldoende.
 
-De web-runtime gebruikt gebruikerssessies en RLS/RPC. Er is geen Supabase service-role key, databasewachtwoord, Resend-key, uploadkeystore of algemeen SSH/PAT-secret nodig voor `next build` of de normale web-runtime. OAuth-/mailprovidersecrets horen uitsluitend bij de bedoelde Supabase-provider of bestaande gateway/worker, nadat hun contract is bevestigd.
+## Mail afronden
 
-## Wat de eigenaar later nog levert
+Volg [EMAIL-CONFIGURATIE.md](EMAIL-CONFIGURATIE.md) voor de veilige tool en [EMAIL-TEMPLATES.md](EMAIL-TEMPLATES.md) voor de plakbestanden. De actieve route is **Supabase Auth → ondertekende Edge Function → Resend API**; er is geen parallel ingestelde SMTP-route.
 
-| Stap | Wat staat klaar | Concreet nog nodig |
-| --- | --- | --- |
-| Nieuw doel / hostvoorbereiding | Gescheiden releasecontract en hostvalidatie; feitelijke toevoegingen staan in het [doelverslag](DG-VPS-08-VOORBEREIDING.md) | Alleen de daar genoemde ontbrekende toegang; geen rechten van andere projectaccounts overnemen |
-| Nieuwe staging-origin | Validator, release-/configuratiebinding, voorbereide proxyroute | Bevestigde HTTPS-origin en later de juiste DNS-/hostingbevoegdheid |
-| Gegevensmodus | Fail-closed selectie tussen lokale werking en echte backend | Eigenaar bevestigt de bedoelde modus; geen impliciete fallback van Supabase naar lokale accounts |
-| Supabase | Bestaande migratiebestanden en lokale PostgreSQL/RLS/RPC-tests | Workspacekoppeling, nieuw project/ref/regio, beide publieke waarden en bestaande migratiehistorie |
-| Runner | Eigen account/pad/labels, pakket/unit en niet-activerende route voor zover uitgevoerd | Organisatiebeheer voor runnergroepen; huidige API-toegang geeft 403/mist `admin:org`. Eigen groep met alleen deze repo én geselecteerde main-workflows eerst bewijzen, dan pas registreren/starten. |
-| GitHub-omgeving | Afzonderlijke handmatige workflow en environmentcontrole | Organisatie `fabelpad` gebruikt Free; private environments/branchbeleid vereisen minimaal Team of Enterprise. Daarna nieuwe doel-environment met uitsluitend main; reviewers zijn optioneel. Geen betaling of bestaande wijziging uitgevoerd. |
-| Backendmigratie | Procedure en compatibiliteitsgate | Afzonderlijke autorisatie, versleutelde backup, sleutelbeheer, retentie en aantoonbare hersteltest op geïsoleerde data |
-| Auth en mail, indien gebruikt | Servergrens en lokale contracttests | Veilige testaccounts, exacte callbacks, bevestigde providerinstellingen en DG-mailgateway-/outboxcontract |
-| Publieke activatie | Systemd-/proxyvoorbereiding en health-/herstelvolgorde | Aparte eerste-releaseopdracht, bevestigd publiek adres/DNS/TLS en readinessacceptatie |
+Voorstel: `noreply@fabelpad.nl`. Dit adres is pas inzetbaar na controle van Resend-verzenddomein, DNS en verzendrechten. Controleer DKIM/SPF/DMARC. Laat open-/kliktracking voor OTP uit. API-acceptatie bewijst geen aflevering in de mailbox.
 
-Controleer na de aangekondigde Supabase-GitHubkoppeling eerst welke repository/branch is gekoppeld en of push/merge automatisch schema, Edge Functions of configuratie uitrolt. Een koppeling is geen toestemming om een bestaande database te wijzigen. De officiële [Supabase-branchingdocumentatie](https://supabase.com/docs/guides/deployment/branching) beschrijft automatische deployments; gecontroleerd op 20 november 2026. De [publieke-keydocumentatie](https://supabase.com/docs/guides/getting-started/api-keys) bevestigt dat publishable keys voor clients zijn en gegevensbeveiliging RLS vereist.
+## Resterende toegang en acceptatie
 
-## Migraties en providergeheimen
+1. Afgeschermde Resend API-key en Supabase-beheertoegang voor Auth/mailinstellingen, of de eigenaar voert de verborgen terminalconfiguratie uit. De workspaceconnector biedt SQL/Edge, maar geen Authconfiguratie/secretbeheer.
+2. Geverifieerd eigen verzenddomein, DNS-toegang als verificatie ontbreekt, en bereikbare support-inbox.
+3. GitHub-organisatiebeheer voor een runnergroep met alleen deze repo en geselecteerde main-workflows. De huidige API geeft 403 en mist `admin:org`; geen onbegrensde runner als omweg registreren.
+4. Daarna echte OTP-/beheerder-/gezins-/studioacceptatie, main-CI en aparte kandidaatbouw per doel. Vervolgens eigen service, DNS/proxy/TLS en publieke acceptatie volgens [hostrunbook](DG-VPS-08-TWEE-OMGEVINGEN.md).
 
-Migraties zijn geen onderdeel van kandidaatbouw of appactivatie. Leg vóór een aparte migratie het juiste Supabase-project, de actuele migratiehistorie en alle betrokken versies vast. Maak een versleutelde backup en verifieer herstel op een geïsoleerd doel. Beoordeel compatibiliteit met actieve/vorige webreleases en de lokale native app. Gebruik eerst uitbreidende wijzigingen; een approllback herstelt geen database, Auth-provider, Edge Function of outbox.
+Er wordt geen betaald abonnement aangegaan. De environments bestaan; eerdere opmerkingen dat ze nog aangemaakt moeten worden zijn historisch.
 
-Bewaar databasebeheer, OAuth-clientsecret, Auth-mailhooksecret, Resend-/gateway-/worker-/webhooksecrets uitsluitend in hun projectspecifieke afgeschermde bron. De precieze namen worden pas toegevoegd wanneer de bestaande dienst en het contract geverifieerd zijn. Geen fictieve envnamen of werkende secrets in voorbeelden, commits, buildlogs of procesargumenten.
+## Database en Android
 
-## Android blijft de bevestigde lokale productie-app
+Beide Supabase-projecten waren leeg. Nu zijn de twee schemawijzigingen toegepast, met 13 bronreleases per project en migratie-identiteiten gelijk aan de bestanden. Zie [Supabase-contract](../supabase/README.md) en [bewijs](deploy-evidence/supabase-2026-11-22.json). Latere wijzigingen bij echte gebruikers vereisen een passende backup-, herstel- en compatibiliteitscontrole; approllback herstelt geen database/provider.
 
-`nl.fabelpad.app` 1.0.0 (1) is gebouwd en gesigneerd. Supabase, betaalproducten en accounts zijn geen voorwaarde voor deze eerste native release. Ondertekening en Play-onboarding staan in het [Play-runbook](GOOGLE-PLAY-RELEASE-RUNBOOK.md); het bestaande uploadbestand en certificaat zijn gedocumenteerd in [ANDROID-PRODUCTIE-VALIDATIE.md](ANDROID-PRODUCTIE-VALIDATIE.md). Publieke privacyhosting, echte Store-beelden, apparaatacceptatie en Play-account-/beleidstaken blijven afzonderlijke acceptatiepunten. De nieuwe webhostvoorbereiding publiceert geen Android-versie en verplaatst geen signingmateriaal.
+De lokale native productie-app `nl.fabelpad.app` gebruikt geen Supabase/Resend; zie het [afzonderlijke Play-proces](GOOGLE-PLAY-RELEASE-RUNBOOK.md).

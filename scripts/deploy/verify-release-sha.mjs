@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { execFileSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
+import {targetFor} from './release-contract.mjs';
 
 export const repository = 'fabelpad/platform';
 export const integrationBranch = 'main';
@@ -36,11 +37,8 @@ export function validateWorkflowContext(env) {
   if (env.GITHUB_ACTIONS !== 'true') return;
   insist(env.GITHUB_REPOSITORY === repository, 'Deze releaseroute hoort uitsluitend bij fabelpad/platform.');
   insist(env.GITHUB_EVENT_NAME === 'workflow_dispatch' && env.GITHUB_REF === 'refs/heads/main', 'Alleen een handmatige releaseroute vanaf main is toegestaan.');
-  const allowed = [
-    `${repository}/.github/workflows/fabelpad-dg-vps-08-staging-candidate.yml@refs/heads/main`,
-    `${repository}/.github/workflows/fabelpad-dg-vps-08-staging-activate.yml@refs/heads/main`,
-    `${repository}/.github/workflows/fabelpad-dg-vps-08-staging-rollback.yml@refs/heads/main`,
-  ];
+  const allowed = ['staging', 'production'].flatMap(environment => ['candidate', 'activate', 'rollback'].map(operation =>
+    `${repository}/.github/workflows/fabelpad-dg-vps-08-${environment}-${operation}.yml@refs/heads/main`));
   insist(allowed.includes(env.GITHUB_WORKFLOW_REF), 'De releaseroute moet het vastgelegde workflowbestand vanaf main gebruiken.');
 }
 
@@ -87,26 +85,32 @@ async function collection(api, path, key) {
   throw new Error('CI-resultaten konden niet volledig worden gecontroleerd.');
 }
 
-export async function verifyActivationEnvironment(api) {
+export async function verifyActivationEnvironment(api, environmentName = 'staging') {
+  targetFor(environmentName);
   // Referencing a missing environment in a job can create it without protection.
   // This hosted preflight must pass before that job is eligible to be scheduled.
-  const path = `/repos/${repository}/environments/fabelpad-vps08-staging`;
+  const path = `/repos/${repository}/environments/${environmentName}`;
   const environment = await api(path);
-  insist(environment.name === 'fabelpad-vps08-staging', 'De afzonderlijke activatie-environment ontbreekt.');
+  insist(environment.name === environmentName, 'De afzonderlijke activatie-environment ontbreekt.');
   insist(Array.isArray(environment.protection_rules), 'Environmentbescherming ontbreekt.');
-  insist(environment.deployment_branch_policy?.protected_branches === false
-    && environment.deployment_branch_policy?.custom_branch_policies === true,
-  'De activatie-environment moet alleen de expliciete main-branch toestaan.');
-  const policies = await collection(api, `${path}/deployment-branch-policies`, 'branch_policies');
-  insist(policies.length === 1 && policies[0].name === 'main' && policies[0].type === 'branch',
-    'De activatie-environment mag uitsluitend de exacte branch main toestaan.');
+  // The workflow and privileged dispatcher independently require exact main.
+  // Preserve existing environment protection; do not invent a paid-plan gate.
+  const policy = environment.deployment_branch_policy;
+  if (policy !== null && policy !== undefined) {
+    insist(policy.protected_branches === false && policy.custom_branch_policies === true,
+      'Bestaande environment-branchbescherming moet main expliciet toestaan.');
+    const policies = await collection(api, `${path}/deployment-branch-policies`, 'branch_policies');
+    insist(policies.length === 1 && policies[0].name === 'main' && policies[0].type === 'branch',
+      'Bestaande environment-branchbescherming moet uitsluitend de exacte branch main toestaan.');
+  }
   return { environment: environment.name, branch: 'main', configuredProtectionRules: environment.protection_rules.map(rule => rule.type) };
 }
 
-export async function verifyManualDispatch({ api, operation, runId, runAttempt }) {
+export async function verifyManualDispatch({ api, operation, runId, runAttempt, environment = 'staging' }) {
+  const target = targetFor(environment);
   const suffix = { build: 'candidate', activate: 'activate', rollback: 'rollback' }[operation];
   insist(suffix && /^[1-9][0-9]{0,19}$/.test(String(runId)) && /^[1-9][0-9]{0,5}$/.test(String(runAttempt)), 'Een geldige handmatige workflowrun en poging zijn verplicht.');
-  const file = `fabelpad-dg-vps-08-staging-${suffix}.yml`;
+  const file = `fabelpad-dg-vps-08-${environment}-${suffix}.yml`;
   const workflow = await api(`/repos/${repository}/actions/workflows/${file}`);
   insist(positiveInteger(workflow.id) && workflow.path === `.github/workflows/${file}` && workflow.state === 'active', 'De eigen handmatige workflow ontbreekt of is uitgeschakeld.');
   const run = await api(`/repos/${repository}/actions/runs/${runId}`);
@@ -132,14 +136,14 @@ export async function verifyManualDispatch({ api, operation, runId, runAttempt }
   const job = active[0];
   for (const value of [preflight, job]) insist(positiveInteger(value.id) && String(value.run_id) === String(runId)
     && String(value.run_attempt) === String(runAttempt) && value.head_sha === workflowSha, 'Een workflowjob heeft een andere bron of poging.');
-  insist(job.status === 'in_progress' && job.conclusion === null && job.runner_name === 'fabelpad-vps08-staging'
-    && Array.isArray(job.labels) && ['self-hosted', 'dg-vps-08', 'fabelpad-vps08-staging'].every(label => job.labels.includes(label)),
+  insist(job.status === 'in_progress' && job.conclusion === null && job.runner_name === target.siteId
+    && Array.isArray(job.labels) && ['self-hosted', 'dg-vps-08', target.siteId].every(label => job.labels.includes(label)),
     'De hostbewerking draait niet in de eigen actieve job op de afzonderlijke doelrunner.');
   return { runId: String(runId), runAttempt: String(runAttempt), workflowSha, jobId: job.id, workflow: file };
 }
 
-export async function verifyUnchangedManualDispatch({ api, operation, proof }) {
-  const current = await verifyManualDispatch({api, operation, runId: proof.runId, runAttempt: proof.runAttempt});
+export async function verifyUnchangedManualDispatch({ api, operation, proof, environment = 'staging' }) {
+  const current = await verifyManualDispatch({api, operation, runId: proof.runId, runAttempt: proof.runAttempt, environment});
   insist(JSON.stringify(current) === JSON.stringify(proof), 'De handmatige workflowrun of uitvoerende job veranderde vóór de hostwijziging.');
   return current;
 }

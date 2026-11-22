@@ -1,0 +1,192 @@
+{
+  "templateVersion": "fabelpad-2026-11-22",
+  "generatedBy": "node scripts/email/export-templates.mjs",
+  "environments": {
+    "staging": {
+      "signup": {
+        "screen": "Confirm sign up",
+        "subject": "[TEST] Bevestig je Fabelpad-account",
+        "subjectKey": "mailer_subjects_confirmation",
+        "contentKey": "mailer_templates_confirmation_content",
+        "file": "staging/signup.html"
+      },
+      "invite": {
+        "screen": "Invite user",
+        "subject": "[TEST] Je bent uitgenodigd voor Fabelpad",
+        "subjectKey": "mailer_subjects_invite",
+        "contentKey": "mailer_templates_invite_content",
+        "file": "staging/invite.html"
+      },
+      "magiclink": {
+        "screen": "Magic link or OTP",
+        "subject": "[TEST] Je inlogcode voor Fabelpad",
+        "subjectKey": "mailer_subjects_magic_link",
+        "contentKey": "mailer_templates_magic_link_content",
+        "file": "staging/magiclink.html"
+      },
+      "recovery": {
+        "screen": "Reset password",
+        "subject": "[TEST] Herstel de toegang tot Fabelpad",
+        "subjectKey": "mailer_subjects_recovery",
+        "contentKey": "mailer_templates_recovery_content",
+        "file": "staging/recovery.html"
+      },
+      "email_change": {
+        "screen": "Change email address",
+        "subject": "[TEST] Bevestig je e-mailadres voor Fabelpad",
+        "subjectKey": "mailer_subjects_email_change",
+        "contentKey": "mailer_templates_email_change_content",
+        "file": "staging/email_change.html"
+      },
+      "reauthentication": {
+        "screen": "Reauthentication",
+        "subject": "[TEST] Bevestig dat jij het bent bij Fabelpad",
+        "subjectKey": "mailer_subjects_reauthentication",
+        "contentKey": "mailer_templates_reauthentication_content",
+        "file": "staging/reauthentication.html"
+      },
+      "password_changed_notification": {
+        "screen": "Password changed",
+        "subject": "[TEST] Je Fabelpad-wachtwoord is gewijzigd",
+        "subjectKey": "mailer_subjects_password_changed_notification",
+        "contentKey": "mailer_templates_password_changed_notification_content",
+        "file": "staging/password_changed_notification.html"
+      },
+      "email_changed_notification": {
+        "screen": "Email address changed",
+        "subject": "[TEST] Je Fabelpad-e-mailadres is gewijzigd",
+        "subjectKey": "mailer_subjects_email_changed_notification",
+        "contentKey": "mailer_templates_email_changed_notification_content",
+        "file": "staging/email_changed_notification.html"
+      },
+      "phone_changed_notification": {
+        "screen": "Phone number changed",
+        "subject": "[TEST] Je Fabelpad-telefoonnummer is gewijzigd",
+        "subjectKey": "mailer_subjects_phone_changed_notification",
+        "contentKey": "mailer_templates_phone_changed_notification_content",
+        "file": "staging/phone_changed_notification.html"
+      },
+      "identity_linked_notification": {
+        "screen": "Sign-in method linked",
+        "subject": "[TEST] Een inlogmethode is gekoppeld aan Fabelpad",
+        "subjectKey": "mailer_subjects_identity_linked_notification",
+        "contentKey": "mailer_templates_identity_linked_notification_content",
+        "file": "staging/identity_linked_notification.html"
+      },
+      "identity_unlinked_notification": {
+        "screen": "Sign-in method removed",
+        "subject": "[TEST] Een inlogmethode is verwijderd uit Fabelpad",
+        "subjectKey": "mailer_subjects_identity_unlinked_notification",
+        "contentKey": "mailer_templates_identity_unlinked_notification_content",
+        "file": "staging/identity_unlinked_notification.html"
+      },
+      "mfa_factor_enrolled_notification": {
+        "screen": "Verification method added",
+        "subject": "[TEST] Een verificatiemethode is toegevoegd aan Fabelpad",
+        "subjectKey": "mailer_subjects_mfa_factor_enrolled_notification",
+        "contentKey": "mailer_templates_mfa_factor_enrolled_notification_content",
+        "file": "staging/mfa_factor_enrolled_notification.html"
+      },
+      "mfa_factor_unenrolled_notification": {
+        "screen": "Verification method removed",
+        "subject": "[TEST] Een verificatiemethode is verwijderd uit Fabelpad",
+        "subjectKey": "mailer_subjects_mfa_factor_unenrolled_notification",
+        "contentKey": "mailer_templates_mfa_factor_unenrolled_notification_content",
+        "file": "staging/mfa_factor_unenrolled_notification.html"
+      }
+    },
+    "production": {
+      "signup": {
+        "screen": "Confirm sign up",
+        "subject": "Bevestig je Fabelpad-account",
+        "subjectKey": "mailer_subjects_confirmation",
+        "contentKey": "mailer_templates_confirmation_content",
+        "file": "production/signup.html"
+      },
+      "invite": {
+        "screen": "Invite user",
+        "subject": "Je bent uitgenodigd voor Fabelpad",
+        "subjectKey": "mailer_subjects_invite",
+        "contentKey": "mailer_templates_invite_content",
+        "file": "production/invite.html"
+      },
+      "magiclink": {
+        "screen": "Magic link or OTP",
+        "subject": "Je inlogcode voor Fabelpad",
+        "subjectKey": "mailer_subjects_magic_link",
+        "contentKey": "mailer_templates_magic_link_content",
+        "file": "production/magiclink.html"
+      },
+      "recovery": {
+        "screen": "Reset password",
+        "subject": "Herstel de toegang tot Fabelpad",
+        "subjectKey": "mailer_subjects_recovery",
+        "contentKey": "mailer_templates_recovery_content",
+        "file": "production/recovery.html"
+      },
+      "email_change": {
+        "screen": "Change email address",
+        "subject": "Bevestig je e-mailadres voor Fabelpad",
+        "subjectKey": "mailer_subjects_email_change",
+        "contentKey": "mailer_templates_email_change_content",
+        "file": "production/email_change.html"
+      },
+      "reauthentication": {
+        "screen": "Reauthentication",
+        "subject": "Bevestig dat jij het bent bij Fabelpad",
+        "subjectKey": "mailer_subjects_reauthentication",
+        "contentKey": "mailer_templates_reauthentication_content",
+        "file": "production/reauthentication.html"
+      },
+      "password_changed_notification": {
+        "screen": "Password changed",
+        "subject": "Je Fabelpad-wachtwoord is gewijzigd",
+        "subjectKey": "mailer_subjects_password_changed_notification",
+        "contentKey": "mailer_templates_password_changed_notification_content",
+        "file": "production/password_changed_notification.html"
+      },
+      "email_changed_notification": {
+        "screen": "Email address changed",
+        "subject": "Je Fabelpad-e-mailadres is gewijzigd",
+        "subjectKey": "mailer_subjects_email_changed_notification",
+        "contentKey": "mailer_templates_email_changed_notification_content",
+        "file": "production/email_changed_notification.html"
+      },
+      "phone_changed_notification": {
+        "screen": "Phone number changed",
+        "subject": "Je Fabelpad-telefoonnummer is gewijzigd",
+        "subjectKey": "mailer_subjects_phone_changed_notification",
+        "contentKey": "mailer_templates_phone_changed_notification_content",
+        "file": "production/phone_changed_notification.html"
+      },
+      "identity_linked_notification": {
+        "screen": "Sign-in method linked",
+        "subject": "Een inlogmethode is gekoppeld aan Fabelpad",
+        "subjectKey": "mailer_subjects_identity_linked_notification",
+        "contentKey": "mailer_templates_identity_linked_notification_content",
+        "file": "production/identity_linked_notification.html"
+      },
+      "identity_unlinked_notification": {
+        "screen": "Sign-in method removed",
+        "subject": "Een inlogmethode is verwijderd uit Fabelpad",
+        "subjectKey": "mailer_subjects_identity_unlinked_notification",
+        "contentKey": "mailer_templates_identity_unlinked_notification_content",
+        "file": "production/identity_unlinked_notification.html"
+      },
+      "mfa_factor_enrolled_notification": {
+        "screen": "Verification method added",
+        "subject": "Een verificatiemethode is toegevoegd aan Fabelpad",
+        "subjectKey": "mailer_subjects_mfa_factor_enrolled_notification",
+        "contentKey": "mailer_templates_mfa_factor_enrolled_notification_content",
+        "file": "production/mfa_factor_enrolled_notification.html"
+      },
+      "mfa_factor_unenrolled_notification": {
+        "screen": "Verification method removed",
+        "subject": "Een verificatiemethode is verwijderd uit Fabelpad",
+        "subjectKey": "mailer_subjects_mfa_factor_unenrolled_notification",
+        "contentKey": "mailer_templates_mfa_factor_unenrolled_notification_content",
+        "file": "production/mfa_factor_unenrolled_notification.html"
+      }
+    }
+  }
+}

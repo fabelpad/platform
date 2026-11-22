@@ -136,3 +136,52 @@ test('studio prevents edits while saving a server concept (mocked admin session)
   await expect(page.getByText('Concept op de server bewaard. Lezers zien de huidige publicatie.')).toBeVisible();
   await expect(title).toHaveValue('Een nieuwe stationseditie');
 });
+
+test('email login asks for a code and preserves a safe studio return (mocked provider)', async ({ page }) => {
+  let verified = false;
+  let verification: Record<string, unknown> | undefined;
+  await page.route('**/api/auth/session', route => route.fulfill({json:{configured:true,parent:verified?{id:'test-parent',email:'parent@example.test',displayName:'Testouder'}:null,admin:false,providers:{email:true,google:false}}}));
+  await page.route('**/api/auth/otp', route => route.fulfill({json:{ok:true,message:'Je Fabelpad-inlogcode is aangevraagd.'}}));
+  await page.route('**/api/auth/verify', route => {
+    verification = route.request().postDataJSON(); verified = true;
+    return route.fulfill({json:{ok:true,next:'/studio'}});
+  });
+  await page.goto('/inloggen?next=%2Fstudio');
+  await page.getByRole('textbox', {name:'Jouw e-mailadres'}).fill('parent@example.test');
+  await page.getByRole('button', {name:'Stuur mij een inlogcode'}).click();
+  await expect(page.getByRole('textbox', {name:'Jouw e-mailadres'})).toBeDisabled();
+  await expect(page.getByText('Je Fabelpad-inlogcode is aangevraagd.')).toBeVisible();
+  await page.getByRole('textbox', {name:'Code uit je e-mail'}).fill('123456');
+  await page.getByRole('button', {name:'Veilig inloggen'}).click();
+  await expect(page).toHaveURL(/\/studio$/);
+  expect(verification).toEqual({email:'parent@example.test',token:'123456',next:'/studio'});
+  await expect(page.getByText('Dit ouderaccount heeft geen toegang tot de verhalenstudio.')).toBeVisible();
+});
+
+test('an auth link needs an explicit action and removes its credential from the URL', async ({ page }) => {
+  let confirmations = 0;
+  let confirmation: Record<string, unknown> | undefined;
+  await page.route('**/api/auth/confirm', route => {
+    confirmations++; confirmation = route.request().postDataJSON();
+    return route.fulfill({json:{ok:true,next:'/inloggen',message:'Bevestiging ontvangen voor deze test.'}});
+  });
+  const response = await page.goto('/auth/confirm?type=invite&token_hash=synthetic-token-hash-for-browser-test&next=https%3A%2F%2Fattacker.example.test');
+  expect(response?.headers()['referrer-policy']).toBe('no-referrer');
+  await expect(page).toHaveURL(/\/auth\/confirm$/);
+  await expect(page.getByRole('button', {name:'Bevestig en ga verder'})).toBeVisible();
+  expect(confirmations).toBe(0);
+  await expect(page.locator('body')).not.toContainText('synthetic-token-hash-for-browser-test');
+  await page.getByRole('button', {name:'Bevestig en ga verder'}).click();
+  await expect(page.getByText('Bevestiging ontvangen voor deze test.')).toBeVisible();
+  expect(confirmations).toBe(1);
+  expect(confirmation).toEqual({type:'invite',tokenHash:'synthetic-token-hash-for-browser-test',next:'/gezin'});
+  await expect(page.getByRole('button', {name:'Bevestig en ga verder'})).toHaveCount(0);
+});
+
+test('a failed session request remains an availability error without a false local-mode claim', async ({ page }) => {
+  await page.route('**/api/auth/session', route => route.fulfill({status:503,json:{error:'backend_unavailable',message:'De backend is tijdelijk niet bereikbaar.'}}));
+  await page.goto('/inloggen');
+  await expect(page.getByText('De accountverbinding is nu niet bereikbaar. Je kunt wel zonder account verder lezen.')).toBeVisible();
+  await expect(page.getByText('Ouderaccounts zijn nog niet aangesloten.')).toHaveCount(0);
+  await expect(page.getByRole('textbox')).toHaveCount(0);
+});

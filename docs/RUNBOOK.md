@@ -1,6 +1,6 @@
 # Fabelpad — lokaal controleren en releases voorbereiden
 
-Bijgewerkt: **20 november 2026**. Repository: `https://github.com/fabelpad/platform.git`; integratiebranch: `main`. De actuele opdracht bereidt een nieuw stagingdoel op **dg-vps-08** voor. Het concrete hostcontract, latere build-/activatie-/herstelopdrachten en de werkelijk uitgevoerde controles staan in [DG-VPS-08-VOORBEREIDING.md](DG-VPS-08-VOORBEREIDING.md). Eerste activatie en publieke ingebruikname zijn niet inbegrepen.
+Bijgewerkt: **22 november 2026**. Repository: `https://github.com/fabelpad/platform.git`; integratiebranch: `main`. De actuele inrichting betreft **staging én production op dg-vps-08**, met afzonderlijke Supabase-projecten. Het hostcontract, build-/activatie-/herstelopdrachten en controles staan in [DG-VPS-08-TWEE-OMGEVINGEN.md](DG-VPS-08-TWEE-OMGEVINGEN.md). De [actuele status](STAGING-PRODUCTION-STATUS.md) benoemt de nog ontbrekende provider- en runneracceptatie.
 
 ## Lokale installatie en veilige configuratie
 
@@ -24,7 +24,7 @@ bash scripts/local-build.sh
 pnpm start --port 3017
 ```
 
-De lokale build gebruikt `flock` en voert configuratie-, TypeScript-, content-, PostgreSQL-/backend- en native runtimecontractcontroles uit, gevolgd door `pnpm build`. Het lokale standaardlock serialiseert de eigen checkout. Een doelbuild gebruikt het geverifieerde hostlock en een aparte werkmap; installeer niet gelijktijdig dependencies in dezelfde checkout.
+De lokale build gebruikt `flock` en voert configuratie-, TypeScript-, content-, PostgreSQL-/Auth-, e-mail-, deploy- en native runtimecontractcontroles uit, gevolgd door `pnpm build`. Het lokale standaardlock serialiseert de eigen checkout. Een doelbuild gebruikt het geverifieerde hostlock en een aparte werkmap; installeer niet gelijktijdig dependencies in dezelfde checkout.
 
 `pnpm start` bindt de bestaande Next.js-server aan loopback. Controleer op een vrije eigen lokale poort:
 
@@ -42,7 +42,13 @@ curl --fail --silent --show-error --output /dev/null http://127.0.0.1:3017/priva
 
 `pnpm check:content` controleert profielen, synchronisatiecontracten, verhaalkeuzes/geheugen, catalogus, tekstgroei, speelacties, modals, cache en gedeelde content. Native content wordt met de vastgelegde content/assets gecontroleerd. Bij een bedoelde broncontentwijziging: voer `pnpm content:export` uit en beoordeel alle gegenereerde wijzigingen; bestaande verhaalreleasebestanden blijven onveranderlijk.
 
-`pnpm check:backend` gebruikt synthetische PostgreSQL/RLS/RPC-tests in PGlite en servercontractcontroles. Het lokale Auth-schema is een stub. Een geslaagde test bewijst geen gehoste Supabase Auth, externe data, mail of echte synchronisatie. De oude D1/SQLite-code onder `legacy/` is historische referentie, geen actief migratiepad.
+`pnpm check:backend` gebruikt PostgreSQL/RLS/RPC-tests in PGlite, servercontracten en 25 scenario's met de geïnstalleerde Auth/SSR-SDK en een synthetische provider. `pnpm check:email` controleert de HTML-exports, hookhandtekeningen, Resend-transport en de configuratietool. Deze controles bewijzen geen gehoste OTP-bezorging of echte synchronisatie. De oude D1/SQLite-code onder `legacy/` is historische referentie.
+
+## Supabase en Resend afronden
+
+Controleer eerst de mapping in [PROJECTPROFIEL.md](PROJECTPROFIEL.md). De schemawijzigingen en content zijn al in beide projecten toegepast; voer ze niet blind opnieuw uit. Volg [EMAIL-CONFIGURATIE.md](EMAIL-CONFIGURATIE.md) voor de veilige terminaltool en [EMAIL-TEMPLATES.md](EMAIL-TEMPLATES.md) voor de 13 HTML-velden per omgeving. Keys worden verborgen gevraagd en blijven uit GitHub, bestanden en uitvoer.
+
+Test staging eerst: OTP aanvragen, bezorging controleren, code bevestigen, sessie opvragen, aangewezen beheerder en studio controleren, tweede synthetische ouder en gegevensisolatie testen, uitloggen. Herhaal afzonderlijk in production met minimale testdata. Leg geen OTP/token of echte gezinsgegevens vast. Pas daarna de eigen host-readinessontvangst aanleggen. Een account bestaat pas na de echte Auth-aanvraag; de eerste beheerder wordt pas na geverifieerd bezit toegekend.
 
 ## Schone verificatie vóór oplevering
 
@@ -76,6 +82,6 @@ Metro-export is een JavaScript-/assetbundel. Het gesigneerde AAB-/APK-pad vereis
 
 `.github/workflows/verify.yml` controleert de gepinde web-/nativetoolchain op een GitHub-runner. De bestaande Android-CI voert de afzonderlijke native controles uit. Een workflowbestand is geen geslaagde run; controleer de werkelijke uitslag op de volledige commit. Op pull requests kan `github.sha` een testmerge zijn: een release vereist de vastgelegde main-push-SHA en de daarvoor verplichte CI.
 
-Volg de [releasegates](../.github/RELEASE-GATES.md) en het [doelrunbook](DG-VPS-08-VOORBEREIDING.md). Alle nieuwe deployroutes zijn handmatig, project-/doelspecifiek en gescheiden in kandidaatbouw en activering. Bestaande workflows, environments en diensten worden tijdens voorbereiding niet aangepast. Controleer vóór toekomstige merges bovendien een eventuele Supabase-GitHubkoppeling op automatische migraties of Edge-deployment.
+Volg de [releasegates](../.github/RELEASE-GATES.md) en het [doelrunbook](DG-VPS-08-TWEE-OMGEVINGEN.md). Alle nieuwe webdeployroutes zijn handmatig, projectspecifiek en gescheiden in kandidaatbouw en activering, met exact GitHub environment `staging` of `production`. Controleer vóór main-merge ook organisatieflags voor de bestaande Play-workflow en eventuele Supabase-GitHubkoppeling op automatische migraties/Edge-deployment.
 
-Migraties, Auth-provider- en mailgatewaywijzigingen hebben een aparte backup-/herstel- en compatibiliteitsgate. Een approllback herstelt alleen de eigen vorige gezonde app/configuratiecombinatie; geen database, provider of proxy. Bij een onderbroken eerste installatie inspecteert een beheerder eerst de eigen service, verwijzingen en manifesten. Geef uitsluitend uitgevoerde controles als geslaagd weer, met datum, bronidentiteit en resultaat.
+Migraties en Auth-/mailproviderwijzigingen staan los van appbuilds. De huidige twee lege projecten zijn met expliciete eigenaarstoestemming ingericht. Bij latere gebruikersdata zijn passende backup-, herstel- en compatibiliteitscontroles nodig. Een approllback herstelt alleen de eigen vorige gezonde app/configuratie; geen database, provider of proxy. Inspecteer na een onderbroken installatie eerst de eigen service, verwijzingen en manifesten. Geef alleen uitgevoerde controles als geslaagd weer.

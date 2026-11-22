@@ -176,7 +176,7 @@ test('GitHub API uses GET, bounded timeout, no redirects and never prints respon
 
 test('activation preflight requires an existing protected environment and exact main-only policy', async () => {
   const environment = {
-    name: 'fabelpad-vps08-staging',
+    name: 'staging',
     protection_rules: [{ type: 'required_reviewers', prevent_self_review: true, reviewers: [{ type: 'User', reviewer: { login: 'release-reviewer' } }] }],
     deployment_branch_policy: { protected_branches: false, custom_branch_policies: true },
   };
@@ -247,4 +247,27 @@ test('an otherwise active replacement job cannot reuse the earlier dispatch proo
   const f=manualFixture();const proof=await verifyManualDispatch({api:f.api,operation:'build',runId:'501',runAttempt:'2'});
   f.job.id=603;
   await assert.rejects(()=>verifyUnchangedManualDispatch({api:f.api,operation:'build',proof}),/veranderde/);
+});
+
+
+test('existing staging and production environments without extra rules are accepted without changing them', async () => {
+  for (const name of ['staging','production']) {
+    const calls = [];
+    const result = await verifyActivationEnvironment(async path => {calls.push(path);return {name,protection_rules:[],deployment_branch_policy:null};},name);
+    assert.equal(result.environment,name);
+    assert.deepEqual(calls,[`${prefix}/environments/${name}`]);
+  }
+  await assert.rejects(() => verifyActivationEnvironment(async () => ({}),'other'));
+});
+
+test('production dispatch cannot use staging workflow or runner credentials', async () => {
+  const f = manualFixture();
+  await assert.rejects(() => verifyManualDispatch({api:f.api,operation:'build',runId:'501',runAttempt:'2',environment:'production'}));
+  f.workflow.path = f.workflow.path.replace('staging','production');
+  f.run.path = f.workflow.path;
+  const productionApi = async request => f.api(request.replace('fabelpad-dg-vps-08-production-candidate.yml','fabelpad-dg-vps-08-staging-candidate.yml'));
+  await assert.rejects(() => verifyManualDispatch({api:productionApi,operation:'build',runId:'501',runAttempt:'2',environment:'production'}));
+  f.job.runner_name = 'fabelpad-vps08-production';
+  f.job.labels = f.job.labels.map(label => label.replace('staging','production'));
+  assert.equal((await verifyManualDispatch({api:productionApi,operation:'build',runId:'501',runAttempt:'2',environment:'production'})).workflow,'fabelpad-dg-vps-08-production-candidate.yml');
 });

@@ -1,5 +1,7 @@
 # Fabelpad — deployvoorbereiding dg-vps-08
 
+> Historisch verslag van 20 november. Voor de inmiddels geautoriseerde inrichting van **staging én production** geldt het [tweedoelenrunbook](DG-VPS-08-TWEE-OMGEVINGEN.md) en de [actuele status](STAGING-PRODUCTION-STATUS.md). De oorspronkelijke waarnemingen hieronder blijven als bewijs bewaard.
+
 Opdracht en controledatum: **20 november 2026**. Doel: een nieuwe **staging**-inrichting voor Fabelpad voorbereiden. Geen eerste activatie, verhuizing, publieke route, databasewijziging of Android-publicatie. De bestaande omgeving op `dg-nxttrack-01` en alle andere omgevingen blijven ongemoeid.
 
 **Status:** de lokale build is getest en de doelhost is **prepared-inactive** ingericht. De doelconfiguratie en GitHubvoorwaarden zijn nog niet compleet; daarom is het nieuwe doel nog niet buildklaar voor een vrijgegeven kandidaat. Een lokale build en een kandidaat op de doelhost zijn afzonderlijke resultaten. Er staat **geen kandidaat op de doel-VPS**: de vier doelwaarden, vrijgegeven volledige main-SHA met CI en geregistreerde beveiligde doelrunner zijn nog niet compleet.

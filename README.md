@@ -2,7 +2,7 @@
 
 Android-productie 1.0.0 (1), `nl.fabelpad.app`: gratis lokale leesapp zonder accounts of abonnementen. Zie het [bouwbewijs](docs/ANDROID-PRODUCTIE-VALIDATIE.md), [Play Console-invulblad](docs/GOOGLE-PLAY-INVULBLAD-PRODUCTIE.md) en [signing-/release-runbook](docs/GOOGLE-PLAY-RELEASE-RUNBOOK.md) voor het uploadbestand en de eenmalige Cloud-inrichting.
 
-Repository: [fabelpad/platform](https://github.com/fabelpad/platform). De lokale branch `main` volgt `origin/main`.
+Repository: [fabelpad/platform](https://github.com/fabelpad/platform), integratiebranch `main`. De actuele twee-omgevingeninrichting staat in [STAGING-PRODUCTION-STATUS.md](docs/STAGING-PRODUCTION-STATUS.md).
 
 Nederlandstalige interactieve verhalenwereld voor kinderen van 4–8 jaar. Deze checkout bouwt lokaal met native Next.js en bevat een afzonderlijke Expo/React Native-app. Het aangeleverde prototype is behouden in importcommit `a7475c4573d3f125be337eb315c574945c64352c`; de pakketmetadata verwijst naar oorspronkelijke broncommit `97c3881d6bd94f41596ce77fb7a53d55936c6397`.
 
@@ -48,9 +48,11 @@ Geblokkeerde lokale opslag wordt zichtbaar. Browserdownloads bevatten afbeelding
 
 `supabase/migrations/` bevat het PostgreSQL-contract voor oudergebonden gezinsdocumenten, revisiecontrole, expliciete beheerdersrechten, afgeschermde concepten en onveranderlijke contentreleases. Serverroutes verifiëren Supabase-sessies; RLS/RPC beperkt eigendom. De webserver heeft geen service-role key nodig. Concepten worden pas na validatie gepubliceerd. Lokale browserconcepten kunnen uitsluitend via een expliciete importactie in de beheerstudio worden overgenomen.
 
-Voor echte verbindingen: kopieer `.env.example` naar `.env.local` en vul de eigen projectgegevens in. Bewaar secrets buiten Git. Email/Google blijven standaard uit tot providers, callbacks en de bestaande DG-mailgateway zijn ingericht. Zie [supabase/README.md](supabase/README.md).
+Voor echte verbindingen: kopieer `.env.example` naar een nog niet bestaand `.env.local` en vul de eigen publieke projectgegevens in. Bewaar secrets buiten Git. De twee bestaande GitHub environments `staging` en `production` bevatten uitsluitend de vier afgesproken variabelen. Staging gebruikt Supabase-account **fabelpad**; production gebruikt **Duindorpdoet**. Zie [supabase/README.md](supabase/README.md).
 
-Er zijn geen externe accounts/projecten aangemaakt, migraties toegepast, mails verstuurd of deployments uitgevoerd. Native cloudlogin/synchronisatie, productierechten/Play Billing, geautomatiseerde accountverwijdering, Supabase Storage en DG-mailgateway/outbox zijn nog niet volledig aangesloten. De volledige catalogus is in deze lokale fase publiek beschikbaar; betaalde toegang is niet afgedwongen. Voorstelprijzen en pakketgrenzen zijn geen commerciële besluiten.
+Op 22 november zijn schema, beheerderbootstrap en 13 bronverhalen in beide lege Supabase-projecten ingericht. De ondertekende `auth-email` Edge Function staat in beide projecten, met één gedeelde Fabelpad-renderer en Resend API-transport. Er zijn [26 plakklare Auth-templates](docs/EMAIL-TEMPLATES.md). Secrets/Auth-instellingen en echte OTP-bezorging zijn nog niet geverifieerd; er zijn nog geen Auth-gebruikers of verzonden mails. **info@dgwebservices.nl** krijgt de eerste beheerrol na daadwerkelijke adresbevestiging. [Mailconfiguratie en resterende stappen](docs/EMAIL-CONFIGURATIE.md).
+
+Native cloudlogin/synchronisatie, Play Billing, geautomatiseerde accountverwijdering en Supabase Storage vallen buiten de bestaande lokale native release. Webaccountverwijdering verloopt via het publieke supportverzoek. De catalogus is publiek; betaalde toegang wordt niet afgedwongen. Voorstelprijzen en pakketgrenzen zijn geen commerciële besluiten.
 
 ## Controles
 
@@ -59,6 +61,8 @@ pnpm typecheck
 pnpm check:config
 pnpm check:content
 pnpm check:backend
+pnpm check:email
+pnpm check:deploy
 pnpm check:native
 pnpm build
 ```
@@ -83,6 +87,6 @@ Zie [mobile/README.md](mobile/README.md) voor installatie, Expo/Gradle-toolchain
 - [Lokale validatie en verificatiegrenzen](docs/LOKALE-VALIDATIE.md)
 - [Releasegates](.github/RELEASE-GATES.md)
 
-De DG-webstandaard is een native Next.js-serverrelease via `dg-site-deploy`, self-hosted doelrunners en Caddy. Staging en productie bouwen dezelfde volledige broncommit elk met eigen configuratie. Het werkelijke wrappercontract, domeinen, projectrefs en runnergegevens ontbreken nog; deze checkout verzint daarvoor geen deploymentcommando's. De CI-workflow valideert alleen. De push naar `main` start GitHub Actions; de actuele uitslag staat onder [Actions](https://github.com/fabelpad/platform/actions).
+De DG-webroute gebruikt native Next.js, gescheiden self-hosted doelrunners, root-owned projectadapters, systemd en Caddy. Beide doelen op `dg-vps-08` zijn voorbereid met eigen rollen/paden/poorten. Er staan nog geen doelkandidaten of actieve releases. De runners zijn ongeregistreerd totdat de vereiste beperkte organisatiegroep beschikbaar is. De zes handmatige workflows bouwen, activeren of herstellen één eigen doel; zie [het tweedoelenrunbook](docs/DG-VPS-08-TWEE-OMGEVINGEN.md). Gewone web-CI valideert alleen; controleer vóór main-merge ook de bestaande Android-/Play- en eventuele externe integraties.
 
 De oorspronkelijke [prototypeoverdracht](docs/FABELPAD-CODEX-OVERDRACHT.md) blijft historische context; de oude Docker-/SMTP-/Workers-voorstellen zijn niet het huidige releasepad.
