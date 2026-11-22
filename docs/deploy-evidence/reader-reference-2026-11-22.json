@@ -1,0 +1,45 @@
+{
+  "checkedAt": "2026-11-22T22:42:40.762Z",
+  "origin": "https://fabelpad.dgwebserv.chatgpt.site",
+  "mode": "reference",
+  "expectedSha": null,
+  "readOnlyServer": true,
+  "freshAnonymousContexts": true,
+  "syntheticLocalStorageOnly": true,
+  "existingUserStateUsed": false,
+  "otpOrGoogleStarted": false,
+  "serverProgressWrites": false,
+  "screenshotsOrTracesRecorded": false,
+  "pageTextOrPersonalDataRecorded": false,
+  "checks": {
+    "390:document200": true,
+    "390:readerLoadedWithoutAuth": true,
+    "noBrowserErrors": true,
+    "noAttemptedProviderAction": true,
+    "allHttpMutationsBlockedByRoute": true
+  },
+  "matrix": [
+    {
+      "width": 390,
+      "largeText": false,
+      "observation": {
+        "readerLoaded": true,
+        "heroCount": 1,
+        "topbarModeCount": 0,
+        "choiceHeadingCount": 1,
+        "playCount": 1,
+        "viewportFits": true,
+        "shellWidth": 390,
+        "heroHeight": 220,
+        "heroNonInteractive": true,
+        "verticalDomOrder": true
+      }
+    }
+  ],
+  "blockedMutationRequests": 1,
+  "blockedProviderRequests": 0,
+  "blockedExternalRequests": 0,
+  "pageErrors": 0,
+  "passed": true,
+  "completedAt": "2026-11-22T22:42:41.836Z"
+}

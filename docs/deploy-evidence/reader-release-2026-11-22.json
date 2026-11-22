@@ -1,0 +1,198 @@
+{
+  "checkedAt": "2026-11-22T23:02:18.155227+00:00",
+  "repository": "fabelpad/platform",
+  "integrationBranch": "main",
+  "applicationSha": "96ef208439a8b4af1dca985ed7192fb286686b13",
+  "scope": "Reader hero, full text, choices/play scene in one column on web and native Android; scroll/focus and pending-action cancellation.",
+  "githubRuns": {
+    "webCi": {
+      "conclusion": "success",
+      "createdAt": "2026-11-22T22:42:18Z",
+      "databaseId": 45079196385,
+      "event": "push",
+      "headSha": "96ef208439a8b4af1dca985ed7192fb286686b13",
+      "status": "completed",
+      "updatedAt": "2026-11-22T22:43:57Z",
+      "url": "https://github.com/fabelpad/platform/actions/runs/45079196385"
+    },
+    "nativeCi": {
+      "conclusion": "success",
+      "createdAt": "2026-11-22T22:42:18Z",
+      "databaseId": 45079196444,
+      "event": "push",
+      "headSha": "96ef208439a8b4af1dca985ed7192fb286686b13",
+      "status": "completed",
+      "updatedAt": "2026-11-22T22:55:20Z",
+      "url": "https://github.com/fabelpad/platform/actions/runs/45079196444"
+    },
+    "stagingCandidate": {
+      "conclusion": "success",
+      "createdAt": "2026-11-22T22:55:56Z",
+      "databaseId": 45080430787,
+      "event": "workflow_dispatch",
+      "headSha": "96ef208439a8b4af1dca985ed7192fb286686b13",
+      "status": "completed",
+      "updatedAt": "2026-11-22T22:57:36Z",
+      "url": "https://github.com/fabelpad/platform/actions/runs/45080430787"
+    },
+    "productionCandidate": {
+      "conclusion": "success",
+      "createdAt": "2026-11-22T22:58:01Z",
+      "databaseId": 45080609989,
+      "event": "workflow_dispatch",
+      "headSha": "96ef208439a8b4af1dca985ed7192fb286686b13",
+      "status": "completed",
+      "updatedAt": "2026-11-22T22:59:40Z",
+      "url": "https://github.com/fabelpad/platform/actions/runs/45080609989"
+    },
+    "stagingActivation": {
+      "conclusion": "success",
+      "createdAt": "2026-11-22T22:58:03Z",
+      "databaseId": 45080612720,
+      "event": "workflow_dispatch",
+      "headSha": "96ef208439a8b4af1dca985ed7192fb286686b13",
+      "status": "completed",
+      "updatedAt": "2026-11-22T22:58:54Z",
+      "url": "https://github.com/fabelpad/platform/actions/runs/45080612720"
+    },
+    "productionActivation": {
+      "conclusion": "success",
+      "createdAt": "2026-11-22T23:00:41Z",
+      "databaseId": 45080849171,
+      "event": "workflow_dispatch",
+      "headSha": "96ef208439a8b4af1dca985ed7192fb286686b13",
+      "status": "completed",
+      "updatedAt": "2026-11-22T23:01:35Z",
+      "url": "https://github.com/fabelpad/platform/actions/runs/45080849171"
+    }
+  },
+  "localValidation": {
+    "checkedAt": "2026-11-22T22:42:46.696258+00:00",
+    "applicationSha": "96ef208439a8b4af1dca985ed7192fb286686b13",
+    "cleanGitArchive": true,
+    "cleanDirectory": "/tmp/fabelpad-reader-clean-20261122-ife83xof",
+    "install": "pnpm install --frozen-lockfile",
+    "build": "bash scripts/local-build.sh",
+    "node": "24.18.0",
+    "pnpm": "11.25.0",
+    "next": "16.3.4",
+    "dataMode": "local",
+    "buildPassed": true,
+    "buildSeconds": 44.1,
+    "targetedReaderTestsPassed": 7,
+    "completeBrowserSuiteTestsPassed": 50,
+    "browserViewports": [
+      360,
+      390,
+      768,
+      1440
+    ],
+    "temporaryBrowserServerStopped": true,
+    "realAuthOrMailPerformed": false,
+    "nativeSourceChanged": true,
+    "databaseOrLegalDocumentVersionChanged": false,
+    "accessGate": "Source review only: previewLimit is not passed by the current application",
+    "logs": {
+      "clean-build": {
+        "sha256": "c4e09ade070eaadfb9012f3622f4b91b1fa4a9afc06c92ce815ff1047f14e56e"
+      },
+      "browser-build-final": {
+        "sha256": "ea2f905dc6eb098f1f2cf45be5a35e096dec631d53bef2415480265717e91aef"
+      },
+      "focused-browser-final": {
+        "sha256": "6c7b90ca86258a6c25eaf3ab490d8ee31e6e1ea0a35a1376f074da2dbafc7edd"
+      },
+      "all-browser": {
+        "sha256": "cfeb920c7aea11461384e056a0aeec23f1f7c50422002cfc78c6a81f0589a0d8"
+      }
+    }
+  },
+  "environments": {
+    "staging": {
+      "candidateId": "96ef208439a8b4af1dca985ed7192fb286686b13-45080430787-1",
+      "configId": "reader-20261122-stg",
+      "artifactDigest": "4719abf77b2b3114365882e3dd22a157253ecb0c26c5031681e8fb50a12ffd73",
+      "runtimeConfigDigest": "ad803b081dd20a5555549e79465c215c733f56d6932471b8326ca37f680414f6",
+      "serviceActive": true,
+      "serviceEnabled": true,
+      "healthExactSha": true,
+      "current": "/srv/sites/fabelpad-vps08-staging/releases/96ef208439a8b4af1dca985ed7192fb286686b13-45080430787-1",
+      "previous": "releases/d2d8d3e3667d636ad6352bf8c6dca0108e7d2fd9-45076337234-1",
+      "loopbackPort": 4188,
+      "publiclyActive": true
+    },
+    "production": {
+      "candidateId": "96ef208439a8b4af1dca985ed7192fb286686b13-45080609989-1",
+      "configId": "reader-20261122-prd",
+      "artifactDigest": "6fcd95963d51bde10bfedd36ba9893e3ab1af9f3da380ef3ed21da81fe09731e",
+      "runtimeConfigDigest": "884e66156364cab54f95b17d2cdb0acbb53ca5cf068c0e0b892b9b66997fe8d9",
+      "serviceActive": true,
+      "serviceEnabled": true,
+      "healthExactSha": true,
+      "current": "/srv/sites/fabelpad-vps08-production/releases/96ef208439a8b4af1dca985ed7192fb286686b13-45080609989-1",
+      "previous": "releases/d2d8d3e3667d636ad6352bf8c6dca0108e7d2fd9-45076551688-1",
+      "loopbackPort": 4189,
+      "publiclyActive": false
+    }
+  },
+  "publicStaging": {
+    "httpTlsChecksPassed": 23,
+    "browserChecksPassed": 116,
+    "readOnly": true,
+    "realAuthOrMailPerformed": false
+  },
+  "existingEnvironmentPreservation": {
+    "beforeAndAfterAuditsPassed": true,
+    "sixExistingServicesMatchBaseline": true,
+    "sharedConfigurationHashesMatchBaseline": true,
+    "productionPublicRouteRemainsAbsent": true,
+    "stagingProxyUnchanged": true,
+    "defaultHostsUnchanged": true,
+    "dnsFirewallSharedSshPackagesChanged": false,
+    "hostAdaptersChanged": false,
+    "databaseChangesPerformed": false
+  },
+  "configuration": {
+    "githubVariableNamesUnchanged": [
+      "FABELPAD_APP_ORIGIN",
+      "FABELPAD_DATA_MODE",
+      "NEXT_PUBLIC_SUPABASE_URL",
+      "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY"
+    ],
+    "newSecretsAdded": false
+  },
+  "rollback": {
+    "previousAppSha": "d2d8d3e3667d636ad6352bf8c6dca0108e7d2fd9",
+    "appAndRuntimePaired": true,
+    "liveRollbackPerformed": false,
+    "previousReaderLayoutWouldReturn": true
+  },
+  "androidAndStore": {
+    "nativeSourceChanged": true,
+    "typecheckRuntimeAndProductionExportPassed": true,
+    "nativeCiUnsignedBuildPassed": true,
+    "deviceOrEmulatorTestPerformed": false,
+    "signedBundleOrPlayUploadTriggered": false,
+    "playConsoleChanged": false
+  },
+  "acceptanceLimits": [
+    "No connected native device/emulator: rendering, TalkBack, system font scaling and audible offline speech are not device-tested.",
+    "Access gate reviewed in source only; the current App does not pass previewLimit.",
+    "Synthetic browser speech proves state handling, not an audible device voice.",
+    "No real OTP, Google login or email delivery test in this presentation change."
+  ],
+  "evidenceFiles": [
+    "reader-activated-2026-11-22.json",
+    "reader-host-before-2026-11-22.json",
+    "reader-local-validation-2026-11-22.json",
+    "reader-native-ci-2026-11-22.json",
+    "reader-native-validation-2026-11-22.json",
+    "reader-production-candidate-2026-11-22.json",
+    "reader-reference-2026-11-22.json",
+    "reader-routing-2026-11-22.json",
+    "reader-staging-browser-2026-11-22.json",
+    "reader-staging-candidate-2026-11-22.json",
+    "reader-staging-public-2026-11-22.json",
+    "reader-web-review-2026-11-22.json"
+  ]
+}

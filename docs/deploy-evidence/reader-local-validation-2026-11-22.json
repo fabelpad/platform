@@ -1,0 +1,41 @@
+{
+  "checkedAt": "2026-11-22T22:42:46.696258+00:00",
+  "applicationSha": "96ef208439a8b4af1dca985ed7192fb286686b13",
+  "cleanGitArchive": true,
+  "cleanDirectory": "/tmp/fabelpad-reader-clean-20261122-ife83xof",
+  "install": "pnpm install --frozen-lockfile",
+  "build": "bash scripts/local-build.sh",
+  "node": "24.18.0",
+  "pnpm": "11.25.0",
+  "next": "16.3.4",
+  "dataMode": "local",
+  "buildPassed": true,
+  "buildSeconds": 44.1,
+  "targetedReaderTestsPassed": 7,
+  "completeBrowserSuiteTestsPassed": 50,
+  "browserViewports": [
+    360,
+    390,
+    768,
+    1440
+  ],
+  "temporaryBrowserServerStopped": true,
+  "realAuthOrMailPerformed": false,
+  "nativeSourceChanged": true,
+  "databaseOrLegalDocumentVersionChanged": false,
+  "accessGate": "Source review only: previewLimit is not passed by the current application",
+  "logs": {
+    "clean-build": {
+      "sha256": "c4e09ade070eaadfb9012f3622f4b91b1fa4a9afc06c92ce815ff1047f14e56e"
+    },
+    "browser-build-final": {
+      "sha256": "ea2f905dc6eb098f1f2cf45be5a35e096dec631d53bef2415480265717e91aef"
+    },
+    "focused-browser-final": {
+      "sha256": "6c7b90ca86258a6c25eaf3ab490d8ee31e6e1ea0a35a1376f074da2dbafc7edd"
+    },
+    "all-browser": {
+      "sha256": "cfeb920c7aea11461384e056a0aeec23f1f7c50422002cfc78c6a81f0589a0d8"
+    }
+  }
+}

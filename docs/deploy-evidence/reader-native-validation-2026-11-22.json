@@ -1,0 +1,66 @@
+{
+  "checkedAt": "2026-11-22T22:41:01.543111+00:00",
+  "source": "/home/codex/repos/fabelpad/mobile/App.tsx",
+  "sourceSha256": "57bd1dd692ffcdf118e6f4c97312904000026543020e06a7378139444dc18813",
+  "runtime": "Node v24.18.0; npm 11.16.0; React Native 0.88.1; Expo 58.0.26",
+  "checks": [
+    {
+      "command": "npm run check --prefix mobile",
+      "result": "passed",
+      "runtimeEnvironment": "PATH=/home/codex/.nvm/versions/node/v24.18.0/bin:$PATH"
+    },
+    {
+      "command": "npm run test:runtime --prefix mobile",
+      "result": "passed",
+      "coverage": [
+        "13 bundled stories / 403 scenes / 416 endings",
+        "both station task routes",
+        "tasks cannot be skipped",
+        "repeated taps commit once",
+        "suspend/dispose invalidates delayed callback",
+        "per-profile and version-pinned resume",
+        "storage failure and write/delete ordering"
+      ],
+      "runtimeEnvironment": "PATH=/home/codex/.nvm/versions/node/v24.18.0/bin:$PATH"
+    },
+    {
+      "command": "FABELPAD_VARIANT=production FABELPAD_ANDROID_PACKAGE=nl.fabelpad.app FABELPAD_ANDROID_VERSION_CODE=1 EXPO_NO_TELEMETRY=1 CI=1 npx --no-install expo export --platform android --output-dir /tmp/fabelpad-reader-native-export-20261122",
+      "workingDirectory": "mobile",
+      "result": "passed",
+      "modules": 1135,
+      "assets": 15,
+      "bundleSha256": "bf274246901c022955191c823a4513a1ee6304e735933cb25fca3b7e7748d271",
+      "runtimeEnvironment": "PATH=/home/codex/.nvm/versions/node/v24.18.0/bin:$PATH"
+    },
+    {
+      "command": "git diff --check",
+      "result": "passed",
+      "runtimeEnvironment": "PATH=/home/codex/.nvm/versions/node/v24.18.0/bin:$PATH"
+    },
+    {
+      "command": "adb devices",
+      "result": "no connected devices",
+      "runtimeEnvironment": "existing Android SDK platform-tools"
+    }
+  ],
+  "nativeReader": {
+    "stationPlayScene": "existing native implementation retained, first two station passages",
+    "webViewAdded": false,
+    "contentOrProfileDataChanged": false,
+    "signingOrVersionChanged": false,
+    "playUploadPerformed": false,
+    "deviceOrEmulatorTestPerformed": false,
+    "closeButton": "Verhaal sluiten; minWidth/minHeight 48 dp; leaveReader library invalidates pending play callbacks",
+    "focusReview": "onLayout entry and scheduled frame both require the current reader content key; an obsolete layout event cannot cancel the new focus frame. Passage title host ref receives AccessibilityInfo.sendAccessibilityEvent(focus), then scrollTo(y:0,animated:false).",
+    "modeScrollClamp": {
+      "confirmedNativeCause": "Installed ReactScrollView.kt lines1193-1211 clamps currentScrollY to getMaxScrollY on child layout; lines751-754 define maxScrollY=max(0,contentHeight-viewportHeight).",
+      "implementation": "On mode switch set content-container minHeight to ceil(currentScrollOffset + measuredScrollViewViewportHeight), with nonnegative refs updated by onScroll/onLayout. Ordinary content grows naturally above that floor. No empty play container or second scroll view.",
+      "reservedSpace": "Only max(0,offset+viewport-naturalContentHeight), at most <1dp extra rounding. Never captures the full outgoing play-scene height.",
+      "reasoning": "contentHeight >= offset+viewport => maxScrollY >= offset, so shorter mode cannot clamp the current offset. The unchanged choice header/mode button stays at the same content position.",
+      "reset": "Floor and remembered offset reset to zero immediately on valid choice, restart, story open and reader leave; keyed layout scrolls the newly committed passage to top.",
+      "deviceVerified": false
+    }
+  },
+  "limitation": "JavaScript export, typecheck and behavioral checks are not a native Gradle build or a device/TalkBack/large-system-font test. Existing Android CI must build the native app; actual rendering and offline speech require later device acceptance.",
+  "applicationSha": "96ef208439a8b4af1dca985ed7192fb286686b13"
+}

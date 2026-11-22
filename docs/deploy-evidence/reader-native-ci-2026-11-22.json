@@ -1,0 +1,56 @@
+{
+  "checkedAt": "2026-11-22T22:56:15.520750+00:00",
+  "repo": "fabelpad/platform",
+  "sourceSha": "96ef208439a8b4af1dca985ed7192fb286686b13",
+  "runId": 45079196444,
+  "runUrl": "https://github.com/fabelpad/platform/actions/runs/45079196444",
+  "event": "push",
+  "requiredNativeJob": {
+    "id": 137383261767,
+    "conclusion": "success",
+    "allRequiredStepsSuccess": true
+  },
+  "signedUploadJob": "skipped",
+  "githubArtifact": {
+    "id": 14776604079,
+    "name": "fabelpad-android-check-96ef208439a8b4af1dca985ed7192fb286686b13",
+    "sha256": "a2605d30b29539b3f4f751cd75d70f7e309bdaf9318b8250b60530fba801c3c0",
+    "githubDigestVerified": true,
+    "zipCrcVerified": true,
+    "bytes": 36680186
+  },
+  "aab": {
+    "file": "fabelpad-production-unsigned.aab",
+    "sha256": "8ef99affc863f1901b480112a8c11488f2682d7188bf73a142a4d38bc7af052e",
+    "bytes": 36971895,
+    "reportHashAndBytesVerified": true,
+    "packageId": "nl.fabelpad.app",
+    "versionName": "1.0.0",
+    "versionCode": 1,
+    "sourceIdentityAndCleanWorkingTreeVerified": true,
+    "variant": "production",
+    "signed": false,
+    "playUploaded": false,
+    "bundletoolValidate": true,
+    "bundletoolVersion": "1.18.3",
+    "targetSdk": 36,
+    "minSdk": 24,
+    "architectures": [
+      "arm64-v8a",
+      "x86_64"
+    ],
+    "nativeLibraries": 44,
+    "allElfLoadAlignmentsAtLeast16KiB": true,
+    "bundlePageAlignment16K": true,
+    "permissions": [
+      "android.permission.VIBRATE",
+      "nl.fabelpad.app.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
+    ],
+    "debuggable": false,
+    "allowBackup": false,
+    "cleartextTraffic": false
+  },
+  "deviceInstallationTested": false,
+  "deviceRuntimeTested": false,
+  "scope": "Read-only CI and downloaded unsigned artifact validation. No workflow dispatch, signing, Play upload, repository change or actual device test."
+}

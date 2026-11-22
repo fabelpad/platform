@@ -1,0 +1,50 @@
+{
+  "review_date": "2026-11-22",
+  "scope": "Bronreview van webreader, speelprent-lifecycle, focus en moduswissel; geen wijzigingen aan productie, toegang, auth of gebruikersgegevens.",
+  "files_sha256": {
+    "src/StationPlayScene.tsx": "1a6a91c7627ce287ee62768b2d406d939fc25afe1c1cbbf1d149c98fc8f2f35e",
+    "src/storyPlayLogic.ts": "154a3e6ab16344af6a78ddac82a8d5c57c747c658cfb5c6fbd3236435e642e16",
+    "src/StoryReader.tsx": "aaccb202ef3a489853abda1df54d42fa91dff41a21ea37b2d4fb18d1a340ce30",
+    "src/reader.css": "3815c7dcc74443a5c845c47b76ba058a0a1fc6f78f942ea33f98ff63521b9614",
+    "src/reader-extended.css": "c4a78643ff684498d2323a2f75d50e84c6b02c24c7b1927591eb7b2ff18ceba7",
+    "src/App.tsx": "c8e08cfacdd47167479747a2b679131eb99aa3595382b45786c93cf5da5a4fe6"
+  },
+  "station_cleanup": {
+    "result": "Geen aanvullende fout gevonden in bronreview.",
+    "evidence": [
+      "src/StationPlayScene.tsx: layout-effect ruimt timer synchroon bij unmount op, maakt active false, verhoogt generation en sluit eigen AudioContext.",
+      "src/StationPlayScene.tsx: apply weigert inactieve en reeds gecommitteerde acties; timer controleert active, committed en generation voordat onChoose exact eenmaal wordt aangeroepen.",
+      "src/storyPlayLogic.ts: repaired/map vereisen de concrete repair/unlock-handeling; depart is alleen vanuit die voltooide taak mogelijk en leaving is terminaal.",
+      "src/StationPlayScene.tsx: interne instructiefocus gebruikt preventScroll; nieuwe speelprenten starten zonder phaseFocus, zodat de nieuwe inhoudstitel focus houdt.",
+      "De reader levert onReadInstruction; unmount van de speelprent annuleert daardoor niet onnodig het centraal beheerde voorlezen."
+    ]
+  },
+  "reader_transitions": {
+    "result": "Keuze, einde en opnieuw beginnen gebruiken dezelfde postmount scroll-/focusroute.",
+    "evidence": [
+      "src/StoryReader.tsx: choose heeft een actuele-picks-guard en stopt na een gesloten reader; opslag en recordStoryProgress blijven bestaande logica gebruiken.",
+      "src/StoryReader.tsx: nieuwe inhoud mount direct zonder uitgaande AnimatePresence-wachtrij; useLayoutEffect zet reader-layout bovenaan en focust de inhouds-h2 met preventScroll.",
+      "src/StoryReader.tsx: restart is alleen vanuit de actuele complete voortgang toegestaan; reset bewaart bestaande openStoryThread/opslaglogica.",
+      "src/StoryReader.tsx: moduswissel wijzigt geen picks, revision, opslag of audio-instellingen; de modusknop blijft dezelfde DOM-node."
+    ]
+  },
+  "access_gate": {
+    "verification": "Alleen bronreview; geen publieke route, testhook of toegangsregel toegevoegd.",
+    "reason": "De bestaande App geeft geen previewLimit door; de conditionele toegangstak is momenteel niet bereikbaar vanuit de echte app.",
+    "assessment": "Bij een bestaande previewLimit-grens mount de toegangsmelding direct met dezelfde sceneHeadingRef en tabIndex=-1. De postmount effect-dependencies bevatten picks.length en accessLocked. De scrollreset en titel-focus hangen daardoor niet af van een animatiecallback. canPlay wordt bij accessLocked false, zodat speelprent en modusknop ontbreken.",
+    "runtime_claim": false
+  },
+  "finding_and_fix": {
+    "finding": "QA mat browserclamping bij wisselen van de langere speelprent naar de kortere keuzeknoppen: 24/52/47/32 px bij 360/390/768/1440 px.",
+    "source": "reader_tests: /tmp/fabelpad-reader-focused-browser-20261122.log en gerichte before/after/max-scroll-metingen.",
+    "fix": "togglePlay bewaart vóór de wissel de actuele scrollpositie en onderste zichtbare viewportgrens. Alleen de bestaande reader-page krijgt de minimale hoogte die daarvoor nodig is; een layout-effect herstelt exact de oude scrollpositie en de modusfocus. Geen lege speelcontainer en geen eigen scroller. De tijdelijke minimale hoogte vervalt bij een echte keuze/herstart en wordt niet gebruikt bij een einde of toegangsgrens.",
+    "local_checks": "pnpm typecheck en git diff --check geslaagd na deze fix.",
+    "runtime_reverification": "reader_tests heeft de ongewijzigde gerichte reader-QA opnieuw uitgevoerd: 7/7 geslaagd in 19,1 sec, inclusief alle vier breedtes en strikte scroll-/focus-/voortgangsasserties. Log: /tmp/fabelpad-reader-focused-browser-final-20261122.log."
+  },
+  "limits": [
+    "Deze review is brongebaseerd; de browsermatrix en volledige releasecontrole worden door root/reader_tests uitgevoerd.",
+    "De goedgekeurde referentie is als HTML beschikbaar, maar voor dit rapport is geen visuele gelijkheidsclaim gedaan.",
+    "Geen toestel-, emulator- of assistive-technology-test uitgevoerd door deze reviewer."
+  ],
+  "applicationSha": "96ef208439a8b4af1dca985ed7192fb286686b13"
+}
