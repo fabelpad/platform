@@ -1,0 +1,38 @@
+{
+  "startedAt": "2026-11-22T19:41:48.761718+00:00",
+  "expectedSha": "538c6b719e372f4dca99cfa2bc824cbf6310f5c1",
+  "target": "staging",
+  "publicProductionActivated": false,
+  "dnsChanged": false,
+  "sharedConfigChanged": false,
+  "existingRoutesChanged": false,
+  "performed": [
+    "isolated_combined_config_validated",
+    "own_staging_route_installed_root_0644",
+    "complete_active_config_validated",
+    "caddy_reloaded"
+  ],
+  "beforeDefaultRoutes": {
+    "fabelpad.nl": {
+      "status": 200,
+      "sha256": "cceac34b8028aaf370ad368ce255280b3e14981c523a8459a51822fc795bba47"
+    },
+    "dg-unconfigured-host.invalid": {
+      "status": 200,
+      "sha256": "cceac34b8028aaf370ad368ce255280b3e14981c523a8459a51822fc795bba47"
+    }
+  },
+  "stagingRouteSha256": "51891aa7e784adfa6126c43f7f36f329341898ed4f3e2bbf2c8cfe8546cd76ab",
+  "afterDefaultRoutes": {
+    "fabelpad.nl": {
+      "status": 200,
+      "sha256": "cceac34b8028aaf370ad368ce255280b3e14981c523a8459a51822fc795bba47"
+    },
+    "dg-unconfigured-host.invalid": {
+      "status": 200,
+      "sha256": "cceac34b8028aaf370ad368ce255280b3e14981c523a8459a51822fc795bba47"
+    }
+  },
+  "passed": true,
+  "finishedAt": "2026-11-22T19:41:49.070520+00:00"
+}

@@ -1,0 +1,35 @@
+{
+  "checkedAt": "2026-11-22T19:44:10.946918+00:00",
+  "scope": "defer own Fabelpad Referrer-Policy until upstream headers are written; refresh own validation snapshots",
+  "publicProductionActivated": false,
+  "paths": {
+    "/etc/caddy/sites/fabelpad-vps08-staging.caddy": {
+      "beforeSha256": "51891aa7e784adfa6126c43f7f36f329341898ed4f3e2bbf2c8cfe8546cd76ab",
+      "afterSha256": "ba6facd1a010dab378eeb170cbaf26b2969c38f4fbfd735269a873280d039acb"
+    },
+    "/etc/dg-webservices/fabelpad-vps08-staging/prepared/fabelpad-vps08-staging.caddy.ready": {
+      "beforeSha256": "c184b58c98c1a3f806e525b33b451c3466a299655239528bd3952f4e3f547874",
+      "afterSha256": "ac3e14e59ad0ebb9f54dd03628078b2a597723c4488d7730f0126e43577d15af"
+    },
+    "/etc/dg-webservices/fabelpad-vps08-production/prepared/fabelpad-vps08-production.caddy.ready": {
+      "beforeSha256": "628ef1d6819e6d3b3ed143fed00fecfb1e4d6929980550e40261cbb6989c1362",
+      "afterSha256": "c98bf166a14b46b23c3141e55d7476d0eda44c7142bf5153de0c785aca546a9b"
+    },
+    "/etc/dg-webservices/fabelpad-vps08-staging/prepared/validation.Caddyfile": {
+      "beforeSha256": "2f1391eed8cbd2f90949aa54a54731fc3873cc049bbda6b01b603d80e9a99ba4",
+      "afterSha256": "32c12bea6f62b5e8771e00dfd725bf64eadcea82eb8fe871c98550f4b3a918eb"
+    },
+    "/etc/dg-webservices/fabelpad-vps08-production/prepared/validation.Caddyfile": {
+      "beforeSha256": "0b47f006c226e3036fc215a5e990b6f11e4d96829306177cdc837f050b1d48cd",
+      "afterSha256": "ee1adc27720e89e38321458fe97de8cf795aefe350a9e6b1416fd0fd1d58e40b"
+    }
+  },
+  "sharedConfigurationModified": false,
+  "priorFailedAttemptRestoredOwnFiles": true,
+  "validations": {
+    "/etc/caddy/Caddyfile": true,
+    "/etc/dg-webservices/fabelpad-vps08-staging/prepared/validation.Caddyfile": true,
+    "/etc/dg-webservices/fabelpad-vps08-production/prepared/validation.Caddyfile": true
+  },
+  "passed": true
+}

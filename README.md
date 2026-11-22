@@ -4,6 +4,8 @@ Android-productie 1.0.0 (1), `nl.fabelpad.app`: gratis lokale leesapp zonder acc
 
 Repository: [fabelpad/platform](https://github.com/fabelpad/platform), integratiebranch `main`. De actuele twee-omgevingeninrichting staat in [STAGING-PRODUCTION-STATUS.md](docs/STAGING-PRODUCTION-STATUS.md).
 
+Webstatus 22 november 2026: **[staging.fabelpad.nl](https://staging.fabelpad.nl) is actief voor eigenaaracceptatie**. Beide VPS-apps en databases zijn bijgewerkt; productie draait intern en haar publieke route blijft uit. De afzonderlijke Resend API-key wordt na echte eerste beheerderlogin via **Beheer → E-mail** gekoppeld. Auth blijft Supabase Custom SMTP via Resend gebruiken.
+
 Nederlandstalige interactieve verhalenwereld voor kinderen van 4–8 jaar. Deze checkout bouwt lokaal met native Next.js en bevat een afzonderlijke Expo/React Native-app. Het aangeleverde prototype is behouden in importcommit `a7475c4573d3f125be337eb315c574945c64352c`; de pakketmetadata verwijst naar oorspronkelijke broncommit `97c3881d6bd94f41596ce77fb7a53d55936c6397`.
 
 ## Lokaal starten
@@ -25,10 +27,10 @@ Open `http://localhost:3000`. De demo heeft geen externe accounts of secrets nod
 | `/lezen` | Direct bruikbare lokale kinderleesapp |
 | `/ouders` | Lokale ouderdemo: profielen, instellingen, downloads en toegangsmodel testen |
 | `/demo` | Reviewroute met Website/Webapp/Android/Ouders/Verhalenstudio-balk |
-| `/inloggen` | Supabase e-mail-OTP/Google; uitgeschakeld tot echte configuratie aanwezig is |
+| `/inloggen` | Supabase e-mail-OTP/Google op staging; eerste account via **Ouderaccount maken**; lokale modus heeft geen online login |
 | `/gezin` | Gezinsomgeving met geverifieerde ouderidentiteit en synchronisatiecontract |
 | `/studio` | Verhalenstudio met servergecontroleerde beheerdersrechten |
-| `/privacy`, `/support`, `/account-verwijderen` | Dienstpagina's met expliciete nog ontbrekende gegevens |
+| `/privacy`, `/support`, `/account-verwijderen` | Privacyversie, ondersteuning en account-/gegevensverwijdering |
 
 De ontwerpschakelaar staat uitsluitend op `/demo`. De primaire leesroute heeft geen ontwikkelmenu of automatische boekopening. De Android-iframe op de reviewroute is alleen een browserpreview.
 
@@ -44,17 +46,17 @@ De ontwerpschakelaar staat uitsluitend op `/demo`. De primaire leesroute heeft g
 
 Geblokkeerde lokale opslag wordt zichtbaar. Browserdownloads bevatten afbeeldingen en verhaalroutes, maar account-/navigatie-HTML wordt uit privacyoverwegingen niet gecachet. **Koud starten van de webapp zonder internet is nog niet beschikbaar.** De native app bundelt de oorspronkelijke content; werkelijk toestelgedrag wordt afzonderlijk getest.
 
-## Backendvoorbereiding
+## Backend en webomgeving
 
 `supabase/migrations/` bevat het PostgreSQL-contract voor oudergebonden gezinsdocumenten, revisiecontrole, expliciete beheerdersrechten, afgeschermde concepten en onveranderlijke contentreleases. Serverroutes verifiëren Supabase-sessies; RLS/RPC beperkt eigendom. De webserver heeft geen service-role key nodig. Concepten worden pas na validatie gepubliceerd. Lokale browserconcepten kunnen uitsluitend via een expliciete importactie in de beheerstudio worden overgenomen.
 
 Voor echte verbindingen: kopieer `.env.example` naar een nog niet bestaand `.env.local` en vul de eigen publieke projectgegevens in. Bewaar secrets buiten Git. De twee bestaande GitHub environments `staging` en `production` bevatten uitsluitend de vier afgesproken variabelen. Staging gebruikt Supabase-account **fabelpad**; production gebruikt **Duindorpdoet**. Zie [supabase/README.md](supabase/README.md).
 
-Op 22 november zijn schema, beheerderbootstrap en 13 bronverhalen in beide lege Supabase-projecten ingericht. De ondertekende `auth-email` Edge Function staat in beide projecten, met één gedeelde Fabelpad-renderer en Resend API-transport. Er zijn [26 plakklare Auth-templates](docs/EMAIL-TEMPLATES.md). Secrets/Auth-instellingen en echte OTP-bezorging zijn nog niet geverifieerd; er zijn nog geen Auth-gebruikers of verzonden mails. **info@dgwebservices.nl** krijgt de eerste beheerrol na daadwerkelijke adresbevestiging. [Mailconfiguratie en resterende stappen](docs/EMAIL-CONFIGURATIE.md).
+Op 22 november zijn tien migraties en 13 bronverhalen in beide Supabase-projecten ingericht en gecontroleerd. Privacyversie `2026-11-22.1` en vaste 210-dagenbewaring voor minimale wisbewijzen staan live. Auth gebruikt de door de eigenaar ingerichte Custom SMTP-koppeling via Resend; de voorbereide `auth-email` Send Email Hook is niet actief. De eigenaar heeft de [Auth-templates](docs/EMAIL-TEMPLATES.md) overgenomen. Echte OTP-bezorging en Google-aanmelding blijven nog te testen; bij de laatste databasecontrole waren er geen Auth-gebruikers. **info@dgwebservices.nl** krijgt de eerste beheerrol na echte adresbevestiging en afgeronde serveronboarding. [Mailbeheer en eerste inrichting](docs/EMAIL-BEHEER.md).
 
-De beheeromgeving heeft **E-mail** (`/studio/email`) voor de Resend-koppeling, afzender, antwoordadressen, voettekst en testmail, en **E-mailtemplates** (`/studio/email/templates`) voor alle 17 templates met teksteditor en voorbeeld. De key staat na opslag versleuteld in het eigen Supabase Vault; opslaan vereist een geaccepteerde test naar de bevestigde beheerder. Zie [de beheerhandleiding](docs/EMAIL-BEHEER.md) voor eerste inrichting en gebruik. De pagina's worden zichtbaar bij een afzonderlijk vrijgegeven apprelease.
+De beheeromgeving heeft **E-mail** (`/studio/email`) voor de Resend-koppeling, afzender, antwoordadressen, voettekst en testmail, en **E-mailtemplates** (`/studio/email/templates`) voor alle 17 templates met teksteditor en voorbeeld. Deze pagina's staan op staging en vereisen een bevestigde beheerder. De key staat na opslag versleuteld in het eigen Supabase Vault; opslaan vereist een geaccepteerde test naar de bevestigde beheerder. Zie [de beheerhandleiding](docs/EMAIL-BEHEER.md) voor eerste inrichting en gebruik. SMTP-Auth-teksten worden na aanpassen afzonderlijk naar Supabase geëxporteerd; servicemails gebruiken opgeslagen wijzigingen rechtstreeks.
 
-Native cloudlogin/synchronisatie, Play Billing, geautomatiseerde accountverwijdering en Supabase Storage vallen buiten de bestaande lokale native release. Webaccountverwijdering verloopt via het publieke supportverzoek. De catalogus is publiek; betaalde toegang wordt niet afgedwongen. Voorstelprijzen en pakketgrenzen zijn geen commerciële besluiten.
+Native cloudlogin/synchronisatie, Play Billing, geautomatiseerde accountverwijdering en Supabase Storage vallen buiten de bestaande lokale native release. Webaccounts hebben servergestuurde verwijdering met 30 dagen hersteltermijn; onafgeronde onboarding vervalt na 7 dagen. De eigen onderhoudscron is actief. Automatische 90-dageninactiviteitswissing blijft uit tot mailwaarschuwingen en overgangscontrole zijn geaccepteerd. Privacyverzoeken kunnen daarnaast via de publieke supportroute worden ingediend. Back-uprotatie (maximaal 180 dagen) en Stackmail-opschoning (maximaal 12 maanden na afsluiting) worden buiten de app uitgevoerd. De catalogus is publiek; er is geen actieve betaalroute.
 
 ## Controles
 

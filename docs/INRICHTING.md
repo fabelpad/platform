@@ -48,7 +48,7 @@ Voorstel: `noreply@fabelpad.nl`. Dit adres is pas inzetbaar na controle van Rese
 
 ## Resterende gegevens en acceptatie
 
-1. De eigenaar bevestigt maximaal 180 dagen voor back-ups, Stackmail, maximaal 12 maanden na afsluiting voor gewone supportmail en de verwerkers-/doorgifteafspraken. Verwerk deze vastgelegde bron in privacyversie `2026-11-22.1` en test/rol die uit vóór publieke activering; zie `PRIVACY-AANVULLING-180-DAGEN.md`. Providerlogcriteria, daadwerkelijke mailboxopschoning en het weigeren van onvoldoende gedekte herstelpunten blijven afzonderlijke uitvoeringscontroles.
+1. De bevestigde 180 dagen voor back-ups, Stackmail, maximaal 12 maanden na afsluiting voor gewone supportmail en de verwerkers-/doorgifteafspraken zijn verwerkt in de uitgerolde privacyversie `2026-11-22.1`; zie `PRIVACY-AANVULLING-180-DAGEN.md`. Staging is via HTTPS bereikbaar; productie draait intern. Providerlogcriteria, daadwerkelijke mailboxopschoning en het weigeren van onvoldoende gedekte herstelpunten blijven afzonderlijke uitvoeringscontroles.
 2. Plaats per omgeving de eigen Resend API-key veilig via **Beheer → E-mail**, na de eerste echte beheerderlogin; zie de optionele API-bootstrap hieronder. De werkende Auth-SMTP-route levert geen API-key voor servicemails.
 3. Rond echte OTP-/Google-/beheerder-/gezins-/studioacceptatie af. Configuratiecontrole, synthetische tests en loopbackhealth zijn afzonderlijke resultaten.
 4. Bouw en activeer elke kandidaat volgens de exact-SHA-route en controleer de eigen service, proxy/TLS en publieke routes volgens het [hostrunbook](DG-VPS-08-TWEE-OMGEVINGEN.md). De [actuele status](STAGING-PRODUCTION-STATUS.md) vermeldt welke stappen werkelijk zijn uitgevoerd.
@@ -57,7 +57,7 @@ De repositoryspecifieke runners zijn al geregistreerd: staging ID 21 en producti
 
 ## Database en Android
 
-Beide Supabase-projecten waren leeg. De bestaande content-, beheerder- en mailmigraties zijn aangevuld met vijf lifecycle-/scheduler-/deadlinepreview-migraties. Beide projecten bevatten de acht gecommitte migraties met overeenkomende identiteiten en de 13 eerdere contentreleases. Zie het [Supabase-contract](../supabase/README.md), het [eerdere contentbewijs](deploy-evidence/supabase-2026-11-22.json) en het [lifecyclebewijs](deploy-evidence/google-legal-lifecycle-2026-11-22.json). Latere wijzigingen bij echte gebruikers vereisen een passende backup-, herstel- en compatibiliteitscontrole; approllback herstelt geen database/provider.
+Beide Supabase-projecten waren leeg. Beide projecten bevatten nu **tien** gecommitte migraties met gecontroleerde identiteiten en de 13 eerdere contentreleases. De laatste twee migraties voegen de nieuwe privacyversie en vaste 210-dagenbewaring voor minimale account-/profielwisbewijzen toe. Zie het [Supabase-contract](../supabase/README.md), het [eerdere contentbewijs](deploy-evidence/supabase-2026-11-22.json), het [lifecyclebewijs](deploy-evidence/google-legal-lifecycle-2026-11-22.json) en de [laatste live databasecontrole](deploy-evidence/privacy180-supabase-live-2026-11-22.json). Latere wijzigingen bij echte gebruikers vereisen een passende backup-, herstel- en compatibiliteitscontrole; approllback herstelt geen database/provider.
 
 De lokale native productie-app `nl.fabelpad.app` gebruikt geen Supabase/Resend; zie het [afzonderlijke Play-proces](GOOGLE-PLAY-RELEASE-RUNBOOK.md).
 

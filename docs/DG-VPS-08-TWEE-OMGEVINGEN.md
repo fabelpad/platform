@@ -2,7 +2,9 @@
 
 Actuele overdracht: **22 november 2026**. De eigenaar heeft uitrol naar beide Fabelpad-omgevingen toegestaan. Dit document beschrijft de bestaande doelidentiteiten, de huidige configuratieroute en de uitvoeringsvolgorde; een opdrachtvoorbeeld is geen uitgevoerde deployment.
 
-**Toestand vóór de kandidaatbouw:** beide eigen runners zijn geregistreerd voor uitsluitend repository `fabelpad/platform`, online en actief. De rechtenaudit van 22 november 2026 om 18:17 UTC bevestigt twaalf correcte root-owned adapters per doel en gescheiden runner-, build- en apprechten. Beide appservices zijn op dat controlemoment inactief, zonder doelkandidaten, releases of `current`-verwijzingen. Zie de [actuele status](STAGING-PRODUCTION-STATUS.md) voor de daarna werkelijk uitgevoerde bouw- en activatiestappen. Auth gebruikt de bestaande Supabase Custom SMTP via Resend, met volgens de eigenaar zes OTP-cijfers. De publieke Auth-settings bevestigen in beide projecten e-mail en Google. Een interactieve OTP-/OAuth-proef is daarmee niet bewezen.
+**Actuele uitvoering, 22 november 2026:** beide doelen draaien de gecontroleerde SHA `538c6b719e372f4dca99cfa2bc824cbf6310f5c1` met hun eigen runtimeconfiguratie. Staging is bereikbaar op **https://staging.fabelpad.nl**; de publieke productieroute blijft uit. Beide Supabase-projecten bevatten tien geverifieerde migraties, privacyversie `2026-11-22.1` en 210-dagenbewaring voor minimale wisbewijzen. Zie [status en run-ID's](STAGING-PRODUCTION-STATUS.md) en [het uitrolbewijs](deploy-evidence/privacy180-release-2026-11-22.json). Auth gebruikt de bestaande Supabase Custom SMTP via Resend met volgens de eigenaar zes OTP-cijfers. Echte OTP-/Google-login en de aparte Resend API-koppeling worden nog geaccepteerd.
+
+**Historische toestand vóór de eerste kandidaatbouw:** de rechtenaudit van 22 november 2026 om 18:17 UTC bevestigde twaalf correcte root-owned adapters per doel en gescheiden runner-, build- en apprechten. De appservices waren toen inactief, zonder kandidaten, releases of `current`-verwijzingen. Deze momentopname wordt niet als huidige toestand gebruikt.
 
 ## Vaste doelidentiteiten
 
@@ -187,7 +189,7 @@ Test afzonderlijk met synthetische gegevens: e-mailcode van zes cijfers, Google-
 
 De domeinen wezen bij de eerdere controle naar `204.168.128.28`, hetzelfde publieke adres als op de doelhost. Verifieer DNS opnieuw vóór routing; een Tailscale-adres is geen publiek DNS-doel. Valideer de eigen Caddy-snippet samen met de bestaande configuratie vóór installatie/reload, behoud bestaande sites en vergelijk hun health vóór en na. Controleer TLS, publieke `/api/health` en de volledige gebruikersflow via HTTPS. Een `.caddy.disabled` is geen actieve route.
 
-**Productiegate:** ontbrekende projectfeiten over hosting, support, maximale back-uprotatie en internationale toegang/doorgifte blijven een blokkade voor productie-openstelling van online kinderdata. Werk de privacyversie en DPIA hiermee af vóór die verwerking; geen huidige versie overschrijven nadat iemand haar heeft aanvaard. Zie [PRIVACY-DATASTROMEN.md](PRIVACY-DATASTROMEN.md), [PRIVACY-DPIA-2026-11-22.md](PRIVACY-DPIA-2026-11-22.md) en [STAGING-PRODUCTION-STATUS.md](STAGING-PRODUCTION-STATUS.md). De lokale gratis leesroute en voorbereide kandidaten staan los van die productie-openstelling. Er is geen actieve betaalroute.
+**Productiegate:** supportleverancier, supporttermijn, maximale back-upbewaring en verwerkers-/doorgifteafspraken zijn door de eigenaar bevestigd en verwerkt in privacyversie `2026-11-22.1`. Vraag die feiten niet opnieuw. Rond de staging-aanmeld-/beheer-/mailacceptatie af vóór de publieke productieroute wordt vrijgegeven. Vervolledig vóór online verwerking van echte kindgegevens het toepasselijke hosting-/landenregister en providerlogcriteria en beoordeel de uitvoering in de DPIA. Herstelverkeer uit back-ups vereist daarnaast volledig actueel wis-/intrekkingsbewijs; weiger ongedekte herstelpunten. Zie [PRIVACY-DATASTROMEN.md](PRIVACY-DATASTROMEN.md), [PRIVACY-DPIA-2026-11-22.md](PRIVACY-DPIA-2026-11-22.md) en [STAGING-PRODUCTION-STATUS.md](STAGING-PRODUCTION-STATUS.md). Er is geen actieve betaalroute.
 
 ## Rollback en eerste-installatiefout
 
@@ -203,25 +205,27 @@ gh run list --repo fabelpad/platform \
 gh run watch ROLLBACK_RUN_ID --repo fabelpad/platform --exit-status
 ```
 
-Rollback herstelt app én de bijbehorende runtimeconfiguratie onder hetzelfde doelgebonden activatielock, met hercontrole van CI en health. Zonder vorige gezonde release stopt een mislukte eerste installatie alleen de eigen app en verwijdert de eigen `current`-verwijzing. Er bestaat nu nog geen vorige gezonde release; geen live rollbacktest is geclaimd.
+Rollback herstelt app én de bijbehorende runtimeconfiguratie onder hetzelfde doelgebonden activatielock, met hercontrole van CI en health. De huidige vorige procesgezonde combinatie is in beide doelen SHA `c1a9829c6580b835b9845dd672c9d89127f60c64`. Er is geen live rollback uitgevoerd. Die oude app toont de eerdere privacyversie, terwijl de nieuwe database nieuwe onboarding/toestemming tegen `.1` controleert. **Gebruik terugkeer naar deze oude combinatie uitsluitend intern en sluit zo nodig eerst de eigen publieke stagingroute. Geef een teruggerolde app pas publiek vrij na verificatie van juridische weergave en onboarding met de actuele database, of bouw een compatibele herstelrelease.** Een health200 bewijst die compatibiliteit niet. Zonder vorige gezonde release stopt een mislukte eerste installatie alleen de eigen app en verwijdert de eigen `current`-verwijzing.
 
 Een approllback draait geen database-, Vault-, SMTP- of templateswijzigingen terug. Houd migraties compatibel en leg back-up, herstel en heruitvoering van verwijdertombstones afzonderlijk vast. Herstel nooit verwijderde accounts door een oude databasekopie opnieuw voor gebruikers open te stellen. De actuele testuitkomsten en uitgevoerde hostwijzigingen worden bij de feitelijke release als nieuw bewijs toegevoegd; historische bewijsbestanden blijven intact.
 
 
-## Voorbereide HTTPS-route later activeren
+## HTTPS: staging actief, productie later activeren
 
 De gecontroleerde bestanden staan buiten de actieve Caddy-import:
 
 - `/etc/dg-webservices/fabelpad-vps08-staging/prepared/fabelpad-vps08-staging.caddy.ready` → `staging.fabelpad.nl`, loopback 4188.
 - `/etc/dg-webservices/fabelpad-vps08-production/prepared/fabelpad-vps08-production.caddy.ready` → `fabelpad.nl`, loopback 4189.
 
-Beide bestanden zijn samen met de bestaande Caddy-configuratie gevalideerd. Er is niets naar `/etc/caddy/sites` gekopieerd, Caddy is niet herladen en certificaatuitgifte is niet gestart. De toen gecontroleerde DNS A-records wijzen naar het op de host geverifieerde publieke adres `204.168.128.28`; dit is geen opdracht om DNS te wijzigen.
+Staging is op 22 november 2026 gecontroleerd toegevoegd als `/etc/caddy/sites/fabelpad-vps08-staging.caddy` en Caddy is herladen. Het certificaat is uitgegeven en strikt gecontroleerd. De actieve stagingroute heeft tevens `X-Robots-Tag: noindex, nofollow, noarchive`. De productiesnippet is niet geïnstalleerd en productie is niet publiek geactiveerd. DNS is niet gewijzigd; de staging-A-verwijzing is opnieuw gecontroleerd tegen `204.168.128.28`. Het gedeelde Caddyfile en de bestaande standaard-HTTP-antwoorden bleven gelijk.
 
-**Pas uitvoeren nadat de open privacyfeiten zijn vastgelegd en de bijbehorende documentversie klopt.** Publiceer eerst de eigen stagingroute voor een gecontroleerde aanmeld-/beheer-/mailproef met toegestane testgegevens. De volledige Google-callback en de browserinrichting van Beheer vereisen juist deze canonieke HTTPS-origin; maak daarvan geen onmogelijke voorwaarde vóór staging-HTTPS. Rond stagingacceptatie af, geef daarna de productieroute gecontroleerd vrij en voer daar de eigen eerste beheerder-/mail-/authacceptatie uit vóór algemene ingebruikname of online verwerking van echte kindgegevens. Een optionele API-bootstrap via eigen Edge Secrets kan vooraf, zonder publieke app. Deze opdrachten horen op de geverifieerde doelhost; zij publiceren de gekozen omgeving:
+De eigen actieve en voorbereide snippets gebruiken `header >Referrer-Policy "no-referrer"`, zodat de header na de upstreamresponse wordt gezet. Zonder `>` kon Next.js de waarde overschrijven. Beide voorbereide validatiebestanden zijn ververst met de huidige andere routes en opnieuw gecontroleerd. Zie [Caddy header/defer](https://caddyserver.com/docs/caddyfile/directives/header), gecontroleerd 22 november 2026, en [het correctiebewijs](deploy-evidence/privacy180-proxy-header-fix-2026-11-22.json). De eerste mislukte headerassertie blijft als historische momentopname bewaard; de eindcontrole slaagt voor alle 23 HTTP/TLS-controles.
+
+**De onderstaande publieke activering is nog uitsluitend voor productie nodig en wordt hier niet uitgevoerd.** Rond eerst de echte staging-aanmeld-/beheer-/mailproef af. Geef daarna de productieroute gecontroleerd vrij en voer daar de eigen eerste beheerder-/mail-/authacceptatie uit vóór algemene ingebruikname of online verwerking van echte kindgegevens. Een optionele API-bootstrap via eigen Edge Secrets kan vooraf, zonder publieke app. Deze opdrachten horen op de geverifieerde doelhost; zij publiceren productie. Controleer vóór uitvoering opnieuw de actuele DNS, exact-SHA-health en samengestelde proxyconfiguratie:
 
 ```bash
 set -euo pipefail
-DEPLOY_ENV=staging
+DEPLOY_ENV=production
 case "$DEPLOY_ENV" in staging) APP_PORT=4188; PUBLIC_ORIGIN=https://staging.fabelpad.nl ;; production) APP_PORT=4189; PUBLIC_ORIGIN=https://fabelpad.nl ;; *) exit 64 ;; esac
 SITE="fabelpad-vps08-$DEPLOY_ENV"
 READY="/etc/dg-webservices/$SITE/prepared/$SITE.caddy.ready"

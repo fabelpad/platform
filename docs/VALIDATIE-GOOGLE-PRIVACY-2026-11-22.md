@@ -1,118 +1,86 @@
 # Fabelpad — Google, OTP, privacy en accountlevenscyclus
 
-Gecontroleerd op **22 november 2026**. Releasebron **`c1a9829c6580b835b9845dd672c9d89127f60c64`** staat op `main` van `fabelpad/platform`. De webrelease gebruikt de door de eigenaar bevestigde Supabase Custom SMTP via Resend. Google en e-mail zijn in beide projecten ingeschakeld; de applicatie accepteert precies zes OTP-cijfers. Er is geen Send Email Hook geactiveerd.
+Actueel [samenvattend releasebewijs](deploy-evidence/privacy180-release-2026-11-22.json): beide CI-runs, beide kandidaatbouwen, beide activeringen en alleen staging-HTTPS.
 
-**Resultaat bij deze vastlegging:** schone lokale webbuild en alle 36 browsertests op exact de release-SHA geslaagd; beide verplichte CI-controles op die SHA zijn geslaagd. Beide kandidaten zijn gebouwd, onafhankelijk gecontroleerd en geactiveerd op uitsluitend de eigen loopbackpoorten. Beide services zijn actief en boot-enabled; de gezamenlijke releaseaudit en 22/22 veilige runtimecontroles per omgeving slagen. Er is geen publieke Fabelpad-routing toegevoegd. Ontbrekende privacyfeiten blijven een gate vóór publieke activatie.
+Datum: **22 november 2026**. Exacte bron: **`538c6b719e372f4dca99cfa2bc824cbf6310f5c1`**, repository `fabelpad/platform`, branch `main`. De nieuwe release biedt privacyversie **`2026-11-22.1`**, behoudt de eerdere documenten en gebruikt de bestaande Supabase Custom SMTP via Resend. Er is geen Send Email Hook geactiveerd.
 
-## Resultatenmatrix
+**Resultaat:** schone build en 37 browsertests op dezelfde SHA geslaagd; beide verplichte CI-controles geslaagd; beide kandidaten gebouwd en gecontroleerd. Staging is geactiveerd en via eigen HTTPS bereikbaar voor de eigenaaracceptatie. Production draait dezelfde nieuwe app intern op loopback; de gezamenlijke geactiveerde audit slaagt voor beide doelen. Echte OTP-/Google-aanmelding, API-servicemail en de afzonderlijke productie-openstelling worden niet als voltooid geclaimd.
 
-| Onderdeel | Exacte bron of run | Resultaat | Wat dit nog niet bewijst |
+## Huidige resultaten
+
+| Onderdeel | Exacte bron / run | Resultaat | Grens van de controle |
 | --- | --- | --- | --- |
-| Schone lokale build | Bron `c1a9829c6580b835b9845dd672c9d89127f60c64`; `bash scripts/local-build.sh` | Geslaagd | Geen doelbuild of doelconfiguratieacceptatie |
-| Browserregressie | Productiebuild met synthetische gegevens; alle 36 tests | Geslaagd in 23,5 seconden | Geen echte mailbox, OAuth-provideracceptatie of live gebruikersflow |
-| Main-release | `c1a9829c6580b835b9845dd672c9d89127f60c64` | Op GitHub aanwezig; op beide eigen loopbackreleases actief | Geen publieke openstelling |
-| Verplichte web-CI `verify` | [Run 45055273294](https://github.com/fabelpad/platform/actions/runs/45055273294), release-SHA | **SUCCESS** | Geen appactivatie of publieke release |
-| Verplichte `Native Android-controles` | [Run 45055273282](https://github.com/fabelpad/platform/actions/runs/45055273282), release-SHA | **SUCCESS** | Geen Play-upload |
-| Live Supabase | Beide vaste projecten; vijf nieuwe migraties en Edge-updates | Toegepast en gecontroleerd | Geen interactieve OTP-/Google-acceptatie |
-| Onderhoudsproef | Eigen HMAC, nonce en minuutcron per project | HTTP200, `completed:0,deferred:0` | Geen echte verwijdering of mailbezorging |
-| Hostaudit | Beide doelen, twaalf modules per doel, **18:17 UTC** | **PASS**; runners 21 en 22 online | Geen kandidaat, appstart of publieke routing |
-| Doelkandidaat staging | [Run 45057052139](https://github.com/fabelpad/platform/actions/runs/45057052139) | **SUCCESS**, onafhankelijke audit **PASS** | Geen appactivatie, login of mailacceptatie |
-| Doelkandidaat production | [Run 45057304416](https://github.com/fabelpad/platform/actions/runs/45057304416) | **SUCCESS**, gezamenlijke audit **PASS** om 18:52 UTC | Geen appactivatie, login of mailacceptatie |
-| Loopbackactivering staging | [Run 45057551364](https://github.com/fabelpad/platform/actions/runs/45057551364) | **SUCCESS**, 18:53:37 UTC; audit/health PASS | Geen publieke openstelling of gebruikersacceptatie |
-| Loopbackactivering production | [Run 45057814826](https://github.com/fabelpad/platform/actions/runs/45057814826) | **SUCCESS**, 18:56:52 UTC; audit/health PASS | Geen publieke openstelling of gebruikersacceptatie |
-| Veilige runtimecontrole | Beide eigen loopbackpoorten, 18:57 UTC | **22/22 PASS per omgeving** | Geen afgeronde OAuth-/OTP-/mail-/accountflow |
-| Publieke routing | Caddy blijft buiten actieve configuratie | Niet geactiveerd | Geen publieke HTTPS-/gebruikersacceptatie |
+| Schone productiebuild | `538c6b719e372f4dca99cfa2bc824cbf6310f5c1`, `git archive`, frozen lockfile en normale projectbuild | **PASS** | Geïsoleerde lokale configuratie; geen echte mail of live migratie |
+| Browserregressie | Productiebundel van dezelfde SHA | **37/37 PASS**, 24,0 s | Synthetische sessies/gegevens; geen echte providerlogin |
+| Web-CI | [45060149261](https://github.com/fabelpad/platform/actions/runs/45060149261) | **SUCCESS** | Exacte SHA; geen deployment uit de CI |
+| Native CI | [45060149267](https://github.com/fabelpad/platform/actions/runs/45060149267) | **SUCCESS**, 19:37:55 UTC | Native bron ongewijzigd; geen Play-upload |
+| Live Supabase | [Privacy-/retentiebewijs](deploy-evidence/privacy180-supabase-live-2026-11-22.json) | Beide projecten **PASS**, 10 migraties | Geen echte accounts/mails aangemaakt |
+| Stagingkandidaat | [45061896274](https://github.com/fabelpad/platform/actions/runs/45061896274) | **SUCCESS**, audit PASS | Oude gezonde release bleef tijdens bouw beschikbaar |
+| Productiekandidaat | [45062081153](https://github.com/fabelpad/platform/actions/runs/45062081153) | **SUCCESS**, audit PASS | Oude gezonde release bleef tijdens bouw beschikbaar |
+| Stagingactivering | [45062096570](https://github.com/fabelpad/platform/actions/runs/45062096570) | **SUCCESS**, audit/loopbackhealth PASS | Geen voltooide login-/mailacceptatie |
+| Productionactivering | [45062262163](https://github.com/fabelpad/platform/actions/runs/45062262163) | **SUCCESS**, gezamenlijke audit/loopbackhealth PASS | Geen publieke productionroute |
+| Staging-HTTPS | Eigen route sinds 19:41:49 UTC | **23/23 PASS**, certificaat-/headercontrole en health 200 op exacte SHA | Alleen-lezen bereikbaarheid/configuratie; eigenaaracceptatie volgt |
+| Production-HTTPS | Geen eigen Fabelpad-route actief | **Uit** | Geen publieke productievrijgave |
 
-## Schone lokale build
+## Schone build en browserregressie
 
-De lokale buildbron **`c1a9829c6580b835b9845dd672c9d89127f60c64`** is via `git archive` naar een afzonderlijke lege werkmap gekopieerd, gevolgd door `pnpm install --frozen-lockfile`. Toolchain: Node **24.18.0**, pnpm **11.25.0**, Next **16.3.4**. Configuratie: `FABELPAD_DATA_MODE=local`, geen Supabasewaarden of runtimegeheimen. Dit is een echte productiebuild van de webapp met geïsoleerde testconfiguratie, geen doelkandidaat.
+De bron is uit exact de genoemde commit met `git archive` in een schone aparte werkmap geplaatst. Installatie: **`pnpm install --frozen-lockfile`**. Build: **`bash scripts/local-build.sh`**. Toolchain: **Node 24.18.0**, **pnpm 11.25.0**, **Next 16.3.4**. De bouw gebruikte `FABELPAD_DATA_MODE=local`, zonder Supabasewaarden of runtimegeheimen.
 
-`bash scripts/local-build.sh` slaagt volledig: configuratie, TypeScript, alle content-/profiel-/synchronisatiechecks, PostgreSQL/RLS en CAS, 32 Auth-contractscenario’s, 36 ouder-API-scenario’s, 48 AVG-beheer-API-scenario’s, lifecycle- en echte pgcrypto/HMAC-checks, 18 workertests, 59 mailtests, 17 Python-mailconfiguratietests, 87 releasetests, 19 hostinstallatietests, native gedragscontrole en `next build`.
+Alle normale controles slagen: configuratie/TypeScript, profielen/content/synchronisatie/PWA, echte PostgreSQL/RLS/CAS-logica, **32 Auth-contractscenario’s**, **36 ouder-API-scenario’s**, **48 AVG-beheer-API-scenario’s**, retentie- en documentupgrades, echte pgcrypto-HMAC, **18 workertests**, **59 mailtests**, **17 Python-mailtests**, **89 releasetests**, **19 Python-hostinstallatietests**, native gedragscontrole en de Next-productiebundel. De 89 releasetests zitten nu in deze nieuwe appbron; de historische c1-build had 87. Er is geen nieuwe testtelling aan een oudere build toegeschreven.
 
-De optimalisatiebuild compileerde met Turbopack en maakte de nieuwe publieke juridische pagina’s, ouderaccount-/herstelpagina, AVG-beheerpagina en afgeschermde API-routes aan. Alle statische bestanden, lokale fonts en het officiële Google-icoon worden met het project geleverd. De normale build voert geen echte mailverzending, live databasemigratie of appactivering uit.
+Alle **37 browsertests slagen in 24,0 seconden**. Zij omvatten de bestaande lees-/beheerflows, Google/OTP, afzonderlijke ouderverklaring en voorwaarden, geen privacycheckbox, actuele documentversies en historische privacyweergave/downloads, profieltoestemming en intrekking, verse authenticatie, serverpreview vóór accountverwijdering, atomische minute-rolloverafhandeling, expliciet herstel, cachewissing na bewezen verwijdering, offline TTS, AVG-beheer en veilige SMTP-HTML-download. Er zijn geen echte mailboxen of provideraccounts gebruikt.
 
-Deze nieuwe schone build beoordeelt exact de huidige release, inclusief de laatste wijziging aan accountverwijdering. Het buildlog staat lokaal op `/tmp/fabelpad-deadline-clean-build-20261122.log`. Eerdere builds op oudere commits zijn historische controles en vervangen deze exacte broncontrole niet. De nieuwe GitHub CI-runs hierboven zijn daarnaast afzonderlijk geslaagd op exact dezelfde SHA.
+Lokale logs: `/tmp/fabelpad-staging-final-clean-build-20261122.log` en `/tmp/fabelpad-staging-final-browser-20261122.log`. Deze build/testopdrachten voeren geen live migratie, gebruikersmail of appactivering uit.
 
-## Browser en Edge
+## Nieuwe database- en juridische versie
 
-Alle **36 browsertests slagen** op de geïsoleerd gestarte productiebuild van exact dezelfde release-SHA, in **23,5 seconden**. De volledige run omvat mobiele vormgeving, bestaande lees-/beheerflows, Google/OTP, registratieverklaringen, documentversiewissel, toestemming per profiel, intrekking tijdens een open verhaal, verse authenticatie, expliciet herstel, apparaatgegevens wissen bij bewezen verwijdering, juridische downloads, offline TTS, AVG-beheer en de SMTP-HTML-download.
+De twee additieve migraties zijn eerst op staging toegepast en gecontroleerd en daarna op production. De livecontrole is afgerond op **19:37:06 UTC**:
 
-De twee toegevoegde browserscenario’s controleren dat de ouder vóór bevestiging de serverberekende verwijderdatum tot op de minuut ziet en dat een verlopen of gewijzigde minuut opnieuw expliciet bevestigd moet worden. Een preview die verse authenticatie vereist, laat geen bevestiging of wisaanvraag toe. De server berekent de preview zonder activiteit, voorwaarden, outbox of accountstatus te wijzigen. De bewaakte SQL-aanroep vergelijkt de bevestigde minuut binnen dezelfde transactie; bij een verschil worden ook accountblokkering, outbox en sessie-intrekking teruggedraaid. De PostgreSQL-tests controleren deze terugdraaiing daadwerkelijk.
-
-De eerder aangescherpte toegankelijke testlocators zijn behouden. Alle 36 browsertests zijn samen opnieuw uitgevoerd; log `/tmp/fabelpad-deadline-browser-20261122.log`. De tijdelijke testserver op poort 3017 is daarna gestopt. Er zijn geen echte mailboxen, accounts of externe providers gebruikt in deze browsertests.
-
-De drie Edge-entrypoints zijn met Deno **2.9.8** gecontroleerd. De onderhoudswerker accepteert uitsluitend een projectgebonden HMAC met korte geldigheid en een atomair eenmalige nonce. Geen herbruikbare sleutel staat in de providerqueue; echte SQL-HMAC-uitkomsten zijn lokaal met Node-crypto vergeleken.
-
-## Live Supabase
-
-Beide projecten hebben de vijf nieuwe migraties met gelijkgetrokken, op exacte SQL-hashes gecontroleerde historie:
-
-| Migratie | Staging | Production |
+| Migratie | Exacte SQL-SHA-256 | Beide projecten |
 | --- | --- | --- |
-| `20261122172905_parent_account_lifecycle.sql` | Toegepast; hash gecontroleerd | Toegepast; dezelfde hash |
-| `20261122174433_lifecycle_worker_schedule.sql` | Toegepast; hash gecontroleerd | Toegepast; dezelfde hash |
-| `20261122175306_signed_lifecycle_worker_requests.sql` | Toegepast; hash gecontroleerd | Toegepast; dezelfde hash |
-| `20261122175654_private_pg_net_extension.sql` | Toegepast; hash gecontroleerd | Toegepast; dezelfde hash |
-| `20261122182638_account_deletion_deadline_preview.sql` | Toegepast; hash gecontroleerd | Toegepast; dezelfde hash |
+| `20261122190748_backup_erasure_evidence_retention.sql` | `b436de9753f28f90b44605c7988c1992fdea410b3688c0d5b42e1fa5c9de0977` | Toegepast; opgeslagen historie exact gelijk |
+| `20261122190924_privacy_backup_support_update.sql` | `d362f0b8bad9074fd910d4dfd64122635c68b2a5f7723aa1359d882bfc4232a6` | Toegepast; opgeslagen historie exact gelijk |
 
-De actieve Edge-versies zijn **`email-admin` v3**, **`auth-email` v3** en **`account-maintenance` v2**, afzonderlijk in staging en production. De bestaande SMTP-inrichting blijft behouden; de aanwezigheid van `auth-email` activeert geen Send Email Hook. Het [lifecyclecontrolebewijs](deploy-evidence/google-legal-lifecycle-2026-11-22.json) bevat de eerdere exacte migratie- en documenthashes, Edge-updates en rechtenaudit. De later toegepaste previewmigratie heeft SHA-256 **`465155f8d009f0ddddd8eda0dfe356b903862c47739b1e7c08628d0c3a32b9cc`**; de opgeslagen migratiehistorie is in beide projecten exact daarmee vergeleken. De functierechten en authenticatievereisten van de nieuwe preview en bewaakte verwijderaanroep zijn gecontroleerd.
+Beide histories bevatten nu **10 migraties**. Bij afwijkende beheertooltijdstempels is uitsluitend de versie-administratie gewijzigd na exacte hash-, naam-, cardinaliteits- en doelversiecontrole. Auth-/SMTP-configuratie, Vault en gebruikers zijn niet door deze migratieproef veranderd.
 
-Een expliciete onderhoudsaanroep en daaropvolgende cronaanroepen geven in beide projecten HTTP200 met `completed:0,deferred:0`. Dit bewijst de scheduler-/authenticatieroute, geen echte verwijdering of mailbezorging. Bij de laatste livecontrole zijn er nul gebruikers, beheerders, gezinnen en API-mailconfiguraties. Na de vijfde migratie zijn nul Auth-gebruikers, de actieve cron en de uitgeschakelde inactiviteitswissing opnieuw bevestigd. Automatische 90-dagenwissing blijft uit tot een gecontroleerd stagingrapport, werkende waarschuwingen en een beoordeelde overgang.
+Privacy **`2026-11-22.1`** heeft SHA-256 **`c3f6186be703dda5320b70227070fea79e395eac225dbbbde0420913c57727e4`**. De oude privacy **`2026-11-22`** behoudt SHA-256 `97673d3103443115097def26e20e6c677650dcb760d095de900ae3c5c5961cb7`; voorwaarden **`2026-11-22`** behouden SHA-256 `8da71baa717f1e98b393320532670b4ebbddacbd390a14dba3c4cc144b394840`. Bestaande aanvaardingen en bytes zijn niet overschreven. Huidige onboarding en nieuwe profieltoestemming gebruiken de nieuwe privacy-informatieversie; voorwaardenversie blijft gelijk.
 
-Ook na de vijfde migratie melden security advisors in beide projecten **0 WARN/ERROR** en 13 verklaarde INFO-meldingen voor private tabellen met bewuste directe toegangsweigering. De providerextensie `pg_net` staat in `extensions`. Toegepaste database- en Edge-wijzigingen betekenen niet dat de webapp al actief is.
+De vaste bewijsretentie is **210 dagen**: te korte en te lange expiries worden naar de juiste einddatum geklemd, het eerste voltooiings-/registratiemoment verschuift niet door retries en minimaal gehasht kindwisbewijs blijft na een Auth-cascade beschikbaar. De directe tabelrechten zijn voor anon/authenticated/service_role geweigerd; toegestane functies blijven begrensd. De onderhoudstaak is actief, maar 90-dagenmassawissing staat **uit**. Er zijn 0 Auth-gebruikers,0 gezinnen en 0 aanvaardingen in de gecontroleerde projecten.
 
-## Hostvoorbereiding
+Security advisors: **0 WARN,0 ERROR,14 INFO**. De extra INFO betreft de nieuwe private kindwisbewijstabel met RLS en bewust geweigerde directe toegang. De volledige metadata en bewijslimieten staan in het [livebewijs](deploy-evidence/privacy180-supabase-live-2026-11-22.json).
 
-Op **dg-vps-08** zijn de beperkte repositoryrunners **21** (staging) en **22** (production) online. De audit van **22 november 2026, 18:17 UTC** is voor beide doelen geslaagd en controleerde twaalf eigen root-owned adaptermodules per doel. De eigen journaldnamespaces en zesuurlijkse retentietimers zijn ingericht; zie de afzonderlijke hostcontrole hieronder. Een v2-configuratiebewijs per doel bindt de gecontroleerde publieke providerinstellingen aan het juiste project en origin, met settingscontroletijd `2026-11-22T17:50:30.645511+00:00`. Het verklaart uitdrukkelijk dat interactieve OTP-/Google-acceptatie nog nodig is.
+## Kandidaatbouw en activering
 
-Bij de gezamenlijke kandidaataudit om **18:52 UTC** waren beide eigen appservices inactief op de loopbackpoorten **4188** en **4189** en ontbraken de `current`-verwijzingen. Beide kandidaten zijn verzegeld en gecontroleerd. Daarna zijn de eigen staging- en productionreleases succesvol op loopback geactiveerd; de gezamenlijke audit en runtimecontrole hieronder bevestigen de nieuwe toestand. De voorbereide Caddy-configuratie is gevalideerd en staat **buiten de actieve configuratie**. Bestaande publieke routing, SSH, Tailscale en Castiq zijn hiermee niet gewijzigd. Een geldige proxysnippet bewijst geen DNS-, TLS- of publieke healthacceptatie.
-
-## Kandidaatbouw en afzonderlijke infrastructuurcontrole
-
-De eerste stagingrun **45056659715** mislukte door de overgeërfde runnerwerkmap. De hostadapter gebruikt nu expliciet de eigen werkmap bij het starten van het beperkte bouwproces. Beide doelen hebben de twaalf eigen modules uit rootbundel `/root/fabelpad-adapters-63600acaf8038166`. De afzonderlijke infrastructuurregressie slaagt voor **89 Node-tests en 19 Python-tests**. Deze twee ops-bron-/testbestanden en de loghelper zijn wijzigingen in de werkomgeving voor een latere ops-/documentatiecommit; zij zijn geen onderdeel van de app-SHA. De hierboven beschreven schone appbuild op `c1a9829…` omvat **87 releasetests**, en blijft afzonderlijk bewezen.
-
-Stagingrun **45057052139** is geslaagd met kandidaat `c1a9829c6580b835b9845dd672c9d89127f60c64-45057052139-1` en configuratie `auth-legal-20261122-stg`. De kandidaat is verzegeld om `2026-11-22T18:48:53.439Z`. Artefact-SHA256: `a5cbb3c1e74e4373d9d57373ad9691867028509adcbf09f262ecd08c1a8aa956`. De onafhankelijke audit **18:50 UTC** bevestigt doelidentiteit, twaalf adapterhashes, configuratiebinding, volledige artefactdigest, root-eigendom, bescherming tegen runner-/buildschrijven en leesrechten voor uitsluitend de bedoelde rollen. De appservice bleef inactief; `current` en `previous` ontbraken. Lokale audit: `/tmp/fabelpad-staging-candidate-audit-20261122.json`, `passed:true`, geen failures of warnings. De bestaande service- en configuratiebaselines bleven gelijk; credentialbestanden zijn niet gelezen en configuratiewaarden zijn niet gelogd.
-
-Productionrun **45057304416** is geslaagd voor dezelfde app-SHA, met kandidaat `c1a9829c6580b835b9845dd672c9d89127f60c64-45057304416-1`, configuratie `auth-legal-20261122-prd` en artefact-SHA256 `d0861cf393ce33e8402817fda7400cc117b30039557f942c0cbd59eb7b8f8141`. De kandidaat is verzegeld op `2026-11-22T18:51:43.290Z`. De gezamenlijke audit om **18:52 UTC** slaagt voor beide kandidaten, met dezelfde volledige manifest-, configuratie-, rechten- en baselinecontroles: `/tmp/fabelpad-both-candidate-audit-20261122.json`, `passed:true`, geen failures of warnings. Beide apps waren toen nog inactief. Daarna zijn de activeringsruns **45057551364** en **45057814826** geslaagd, uitsluitend op loopback; de actuele release- en healthcontrole staat hieronder. Publieke Caddy-routing staat nu uit. Na afronding van de privacyfeiten en juiste documentversie volgt eerst gecontroleerde staging-HTTPS voor de echte auth-/beheer-/mailacceptatie; production-HTTPS volgt gecontroleerd met eigen acceptatie.
-
-De anonieme liveproef op **preview_account_deletion** en de bewaakte **request_account_deletion** is in beide projecten geweigerd met **HTTP401 / SQLSTATE42501**. Bewijs: `/tmp/fabelpad-live-rpc-anonymous-20261122.json`, gecontroleerd om `2026-11-22T18:52:13.652641+00:00`. Dit bevestigt de weigering zonder sessie en bewijst geen geslaagde of uitgevoerde accountverwijdering.
-
-De loghelper heeft **zes geslaagde selftests** en echte `systemd-analyze verify` voor beide service-/timerparen. Het hostbewijs `/tmp/fabelpad-log-retention-20261122.json` bevestigt actieve timers om **00, 06, 12 en 18 uur**, 29-dagenretentie, maximaal 12 uur per journalbestand en een nauwkeurigheid van één minuut. Alleen de eigen namespaces worden geroteerd en opgeruimd; bij ontbreken wordt overgeslagen. De bewaakte timerupdate controleerde eerst de exacte oude bytes. Geen appservice of gedeelde logging is hierdoor gewijzigd. Dit bewijst geen providerback-up- of mailboxretentie.
-
-## Werkelijke activatie en runtimecontrole
-
-Stagingactivering [45057551364](https://github.com/fabelpad/platform/actions/runs/45057551364) is geslaagd om **18:53:37 UTC**; productionactivering [45057814826](https://github.com/fabelpad/platform/actions/runs/45057814826) om **18:56:52 UTC**. Beide eigen services zijn **active/running** en **enabled** voor een hostherstart. Zij luisteren uitsluitend op `127.0.0.1:4188` en `127.0.0.1:4189`.
-
-De gezamenlijke [geactiveerde release-/rechtenaudit](deploy-evidence/loopback-release-2026-11-22.json) liep van **18:57:08 tot 18:57:13 UTC** en is geslaagd zonder failures of warnings. Zij controleerde de beide `current`-verwijzingen naar de verwachte releases, de verzegelde runtimeconfiguratie tegenover bronconfiguratie en manifest, volledige artefact-/configuratiedigests, root-eigendom, de gescheiden lees-/schrijfrechten en de gezonde releasebewijzen. Alle zes bestaande servicebaselines en gecontroleerde configuratiehashes bleven gelijk. Er is bij beide doelen **geen `previous`-release**; een live rollback is niet uitgevoerd.
-
-De [veilige runtimecontrole](deploy-evidence/loopback-smoke-2026-11-22.json), voltooid om **18:57:04 UTC**, slaagt voor **22/22 controles per omgeving**. De controle omvat alleen eigen loopbackbinding, HTTP200-health met juiste omgeving en exacte app-SHA, cachebescherming, anonieme providerstatus, anonieme weigering van ouderstatus/-verwijdering, acht juridische routes zonder login, exacte bytes van beide juridische downloads en manifest, het officiële Google-SVG en veilige OAuth-initiatie.
-
-De OAuth-initiatie gebruikt het eigen Supabase-authorize-endpoint, Google als provider, de juiste publieke callback en PKCE-S256. De verifiercookies hebben **HttpOnly**, **Secure**, **SameSite=Lax** en pad `/`; een cross-origin aanvraag wordt geweigerd. De redirect is **niet gevolgd**. Autorisatie-URL’s, challenges en cookiewaarden zijn alleen in procesgeheugen onderzocht en niet opgeslagen. Er is geen echt account aangemaakt, OTP aangevraagd, e-mail verstuurd of Google-aanmelding voltooid.
-
-Beide healthantwoorden melden `ok:true`, `runtime:nextjs-node`, de juiste omgeving en exact `c1a9829c6580b835b9845dd672c9d89127f60c64`, met scope **`process-liveness-only`** en backend **`configured-unverified`**. Dit is proces-/configuratiebewijs; database-, gezin-, beheer-, mailbox- en volledige loginacceptatie blijven open. De juridische pagina’s zijn zonder login gecontroleerd via loopback; zij zijn daarmee nog niet via internet gepubliceerd. De voorbereide Caddy-snippets staan nog buiten de actieve configuratie.
-
-## Releasebewijs en resterende gebruikersacceptatie
-
-Beide kandidaten, activatieruns en loopbackhealth zijn daadwerkelijk gecontroleerd. De overgebleven placeholders betreffen echte gebruikersacceptatie; vul die uitsluitend na uitvoering in.
-
-| Bewijsveld | Staging | Production |
+| Gegeven | Staging | Production |
 | --- | --- | --- |
-| Kandidaatbouwrun-ID en conclusie | `45057052139` / **SUCCESS, audit PASS** | `45057304416` / **SUCCESS, audit PASS** |
-| Kandidaat-ID, configuratie-ID en artefactdigest | `c1a9829c6580b835b9845dd672c9d89127f60c64-45057052139-1` / `auth-legal-20261122-stg` / `a5cbb3c1e74e4373d9d57373ad9691867028509adcbf09f262ecd08c1a8aa956` | `c1a9829c6580b835b9845dd672c9d89127f60c64-45057304416-1` / `auth-legal-20261122-prd` / `d0861cf393ce33e8402817fda7400cc117b30039557f942c0cbd59eb7b8f8141` |
-| Activatierun-ID en conclusie | `45057551364` / **SUCCESS** | `45057814826` / **SUCCESS** |
-| Actieve SHA / gekoppelde runtimeconfiguratie | `c1a9829c6580b835b9845dd672c9d89127f60c64` / `auth-legal-20261122-stg` | `c1a9829c6580b835b9845dd672c9d89127f60c64` / `auth-legal-20261122-prd` |
-| Loopbackhealth, 18:57 UTC | HTTP200, juiste omgeving en SHA; [audit](deploy-evidence/loopback-release-2026-11-22.json) | HTTP200, juiste omgeving en SHA; [audit](deploy-evidence/loopback-release-2026-11-22.json) |
-| Publieke HTTPS-health | Niet uitgevoerd; Caddy-routing uit | Niet uitgevoerd; Caddy-routing uit |
-| OTP-, Google-, onboarding- en beheeracceptatie | `<STAGING_AUTH_ACCEPTANCE_EVIDENCE>` | `<PRODUCTION_AUTH_ACCEPTANCE_EVIDENCE>` |
+| Kandidaat-ID | `538c6b719e372f4dca99cfa2bc824cbf6310f5c1-45061896274-1` | `538c6b719e372f4dca99cfa2bc824cbf6310f5c1-45062081153-1` |
+| Configuratie-ID | `privacy180-20261122-stg` | `privacy180-20261122-prd` |
+| Artefact-SHA-256 | `347d8c18b546721b45250b155eeac85bd4b9ed489e08856989ebff00a4577175` | `2e475b808862cac2792e7372a3ba1c8ff71f2d64dcb1f72a1121234a84d077d2` |
+| Verzegeld |19:39:58 UTC |19:41:54 UTC |
+| Kandidaataudit |19:40:26–27 UTC **PASS** |19:42:11–13 UTC **PASS** |
+| Activeringsrun |45062096570 **SUCCESS** |45062262163 **SUCCESS** |
+| Geactiveerde releaseaudit / health |Gezamenlijke audit 19:44 UTC **PASS**, HTTP 200 exacte SHA | Gezamenlijke audit 19:44 UTC **PASS**, HTTP 200 exacte SHA |
 
-De exacte handmatige stappen staan in [DG-VPS-08-TWEE-OMGEVINGEN.md](DG-VPS-08-TWEE-OMGEVINGEN.md). Gebruik de actuele [statuspagina](STAGING-PRODUCTION-STATUS.md) voor de runner-, Edge- en schedulerstatus; eerdere offline-/v1-vermeldingen zijn historische voorbereidingstekst.
+De audits controleren doelidentiteit, twaalf vertrouwde adapterhashes, configuratiebinding, volledige artefactdigest, root-eigendom en gescheiden runner-/build-/applees- en schrijfrechten. Tijdens beide builds bleef de vorige gezonde c1-release behouden. Beide activeringen koppelen de nieuwe app aan de eigen verzegelde runtimeconfiguratie en bewaren hun c1-app/configuratie als vorige combinatie. De gezamenlijke audit van 19:44:22–19:44:27 UTC bevestigt beide services active/running en enabled, de juiste current- en previous-verwijzingen, gezonde releasebewijzen en de volledige digest-/rechtencontrole. Geen failures of warnings; de zes bestaande servicebaselines en basisconfiguraties blijven gelijk. Er is geen live rollback uitgevoerd.
 
-## Open punten vóór publieke activatie
+Bewijs: [stagingkandidaat](deploy-evidence/privacy180-staging-candidate-2026-11-22.json), [productiekandidaat](deploy-evidence/privacy180-production-candidate-2026-11-22.json) en [beide geactiveerde releases](deploy-evidence/privacy180-activated-2026-11-22.json). De `/api/health`-scope blijft **`process-liveness-only`**, backend **`configured-unverified`**. Proceshealth vervangt geen volledige login-, gezins-, beheer- of mailboxacceptatie.
 
-De bijlage vereist correcte openbare voorwaarden/privacy vóór publicatie. Daarvoor ontbreken nog bevestigde maximale back-up-/provider-/VPS-termijnen, de feitelijke supportmailleverancier en de toepasselijke verwerkers-/doorgifteafspraken. DNS toont `mx.stackmail.com`; een MX-record bewijst geen contract, reseller, bewaarbeleid of maximale retentie. Een algemeen Free-/Pro-plan bewijst evenmin de werkelijke projectinstellingen, PITR of externe back-ups. De publieke privacytekst moet met de onderbouwde feiten overeenkomen vóór publieke account-/kindverwerking. Een reeds aanvaarde documentversie mag niet stilzwijgend worden overschreven.
+## Gecontroleerde staging-HTTPS
 
-De vervolgstappen zijn afhankelijk van de juiste HTTPS-origin: **eerst** provider-/retentiefeiten en de passende privacy-/voorwaardenversie afronden; **daarna** de eigen staging-HTTPS-route gecontroleerd activeren, DNS/TLS/health verifiëren en echte OTP-/Google-callback, eerste beheerder en API-servicemail testen; **vervolgens** production-HTTPS gecontroleerd vrijgeven en de afzonderlijke productieacceptatie uitvoeren. Breed gebruik of open verwerking van kindgegevens begint pas na die acceptatie. Een interactieve Google-callbacktest wordt niet vóór bereikbare staging-HTTPS als vereiste gesteld. Afgeschermde API-bootstrap via Edge-configuratie kan desgewenst onafhankelijk worden voorbereid.
+Alleen `/etc/caddy/sites/fabelpad-vps08-staging.caddy` is als nieuwe eigen site toegevoegd, root-owned 0644, SHA-256 `ba6facd1a010dab378eeb170cbaf26b2969c38f4fbfd735269a873280d039acb`. Geïsoleerde én complete actieve configuratievalidatie slaagden vóór de Caddy-reload. Het basisbestand, DNS, bestaande routes en vooraf gemeten default-hostantwoorden zijn behouden. Sinds **19:41:49 UTC** is staging bereikbaar met normale certificaatcontrole en health 200 op exacte 538-SHA. De route geeft `X-Robots-Tag: noindex, nofollow, noarchive`. Production-HTTPS is niet geactiveerd.
 
-De afzonderlijke **Resend API-key** voor applicatieservicemails ontbreekt nog in het Vault-beheer van beide omgevingen. Voer die na de echte eerste beheerderaanmelding per omgeving via **Beheer → E-mail** in en test afzender, servicebericht, outboxafhandeling en ontvangst. Werkende SMTP levert de API-key niet automatisch aan Vault. Auth-HTML en onderwerp gaan handmatig vanuit de template-editor naar het juiste Supabase Dashboard; er is geen automatische SMTP-templatesynchronisatie.
+De publieke **alleen-lezen** UI-proef bevestigt: OTP en de geladen Google-knop daaronder; voor registratie twee aanvankelijk lege verklaring-/voorwaardenkeuzes; privacy.1 met Stackmail/180 dagen/12 maanden en expliciet uitgeschakelde 90-dagenautomatisering; actuele download en historische redirect 307 met ongewijzigde hash; de route `/registreren` bestaat niet; anonieme e-mailbeheer-API’s 401 en geen bewerkbare mailinstellingen voor bezoekers. Het zescijferige invoerveld is in broncode en synthetische tests gecontroleerd; vóór een live OTP-aanvraag is het codeveld nog afwezig. Er is **geen OTP verzonden, geen Google-navigatie uitgevoerd en geen echt account gemaakt**. Geen onverwachte externe aanvragen zijn waargenomen.
 
-Interactieve OTP-/Google-login, eerste beheerderonboarding, echte inboxbezorging en een back-upherstelproef zijn niet als geslaagd aangemerkt. Beide vereiste CI-controles zijn geslaagd op de exacte SHA; dat vervangt geen kandidaat-/rechtenaudit of gebruikersacceptatie. Er zijn geen betaalroute, abonnement, incasso of storepublicatie toegevoegd of uitgevoerd. De native Android-bron is ongewijzigd en blijft de afzonderlijke lokale, gratis leesapp zonder cloudaccounts. De geslaagde native CI is een broncontrole; er is geen nieuwe Android-upload of Play-publicatie uitgevoerd.
+Bewijzen: [routeactivatie](deploy-evidence/privacy180-staging-https-activation-2026-11-22.json), [publieke browsercontrole](deploy-evidence/privacy180-staging-browser-2026-11-22.json), [publieke HTTP-/TLS-controle](deploy-evidence/privacy180-staging-public-2026-11-22.json) en [headercorrectie](deploy-evidence/privacy180-proxy-header-fix-2026-11-22.json). De definitieve publieke proef om 19:44:16 UTC slaagt voor **23/23 controles**: geldige normale TLS-controle/TLS 1.3, exacte staging-SHA, noindex/nosniff/no-referrer, providerstatus, juridische routes en hashes, anonieme API-weigering, onbekende privacyversie 404 en HTTP→HTTPS. De referrerheader werd aanvankelijk door Next overschreven. Alleen de eigen actieve stagingroute, beide eigen voorbereide snippets en hun validatiesnapshots zijn gecorrigeerd met uitgestelde `>Referrer-Policy`; alle drie configuraties zijn daarna gevalideerd. De eerste mislukte correctiepoging heeft de eigen bestanden hersteld. De basisconfiguratie en andere projecten zijn ongewijzigd. De appcode/bundels zijn niet opnieuw gebouwd; de actieve bron blijft 538.
+
+De eerste eigenaarflow loopt via **`/inloggen` → Ouderaccount maken**, de actieve ouderverklaring/voorwaardenkeuze, zes OTP-cijfers, serveronboarding en **Beheer → E-mailinstellingen** (`/studio/email`). Een volledige Google-callback wordt pas via deze bereikbare canonieke HTTPS-origin getest.
+
+## Open uitvoering en herstel
+
+De eigenaar bevestigde 180 dagen voor back-ups, Stackmail,12 maanden voor gewone support na afsluiting, verwerkers-/doorgifteafspraken en overgenomen Auth-templates. Die informatievragen zijn gesloten; zie [bron](deploy-evidence/privacy-owner-confirmation-2026-11-22.json). De beleidstermijnen voor back-ups en Stackmail zijn geen door de Fabelpad-app uitgevoerde opschooncron. Geïmplementeerde regels zijn 7 dagen onvoltooide onboarding,30 dagen handmatige hersteltermijn,12 maanden minimale AVG-zaakmetadata en 210 dagen minimale wisbewijzen.90-dageninactiviteit staat nog **uit**.
+
+Echte OTP-/Google-aanmelding, eerste beheerderonboarding, de afzonderlijke Resend API-koppeling, inbox-/outboxacceptatie en een gecontroleerde inactiviteitsproef blijven uit te voeren. Production-HTTPS wacht eerst op stagingacceptatie en krijgt daarna haar eigen gecontroleerde vrijgave/acceptatie vóór breed gebruik van online kindgegevens. Auth blijft Supabase Custom SMTP gebruiken; activeer geen Send Email Hook.
+
+Voor herstel uit een oude back-up is volledige actuele wis-/intrekkingsinformatie buiten het teruggezette domein vereist, of moet een ongedekt herstelpunt worden geweigerd. De 210-dagenbewijzen in dezelfde database leveren geen zelfstandige hersteljournal en er is geen herstelproef geclaimd. Approllback draait de nieuwe documentcatalogus/database niet terug; controleer de oude app daarom ook op juridische versie-/onboardingcompatibiliteit vóór publiek gebruik.
+
+Historische bewijsbestanden blijven intact: de c1-[releaseaudit](deploy-evidence/loopback-release-2026-11-22.json) en [runtimecontrole](deploy-evidence/loopback-smoke-2026-11-22.json), plus de eerdere [2467a 47-broncontrole](deploy-evidence/privacy-update-validation-2026-11-22.json). De nieuwe schone 538-build en 37 tests zijn onafhankelijk daarvan uitgevoerd. De native app blijft de afzonderlijke gratis lokale leesapp zonder cloudaccounts; geen Android-upload of Play-publicatie is uitgevoerd.

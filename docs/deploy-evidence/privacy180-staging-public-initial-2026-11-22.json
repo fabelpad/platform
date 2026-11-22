@@ -1,0 +1,113 @@
+{
+  "checkedAt": "2026-11-22T19:42:53.849557+00:00",
+  "origin": "https://staging.fabelpad.nl",
+  "expectedSha": "538c6b719e372f4dca99cfa2bc824cbf6310f5c1",
+  "readOnly": true,
+  "secretsOrUserDataRecorded": false,
+  "realAuthOrMailPerformed": false,
+  "checks": {
+    "strictTlsValid": true,
+    "healthExactRevision": true,
+    "noIndex": true,
+    "noSniff": true,
+    "noReferrer": false,
+    "providersEnabledAnonymous": true,
+    "route:/inloggen": true,
+    "route:/privacy": true,
+    "route:/privacyverklaring": true,
+    "route:/algemene-voorwaarden": true,
+    "route:/privacy-voor-kinderen": true,
+    "route:/privacyverzoek": true,
+    "route:/account-verwijderen": true,
+    "route:/studio/email": true,
+    "route:/studio/email/templates": true,
+    "anonymousDenied:/api/admin/email": true,
+    "anonymousDenied:/api/admin/email/domain": true,
+    "anonymousDenied:/api/parent/status": true,
+    "document:2026-11-22.1": true,
+    "document:2026-11-22": true,
+    "historicalVersionRedirect": true,
+    "unknownVersion404": true,
+    "httpRedirectsToHttps": true
+  },
+  "responses": {
+    "health": {
+      "status": 200,
+      "ok": true,
+      "service": "fabelpad",
+      "runtime": "nextjs-node",
+      "environment": "staging",
+      "revision": "538c6b719e372f4dca99cfa2bc824cbf6310f5c1",
+      "scope": "process-liveness-only",
+      "backend": "configured-unverified"
+    },
+    "anonymousSession": {
+      "status": 200,
+      "configured": true,
+      "providers": {
+        "email": true,
+        "google": true
+      },
+      "anonymous": true
+    },
+    "/inloggen": {
+      "status": 200
+    },
+    "/privacy": {
+      "status": 200
+    },
+    "/privacyverklaring": {
+      "status": 200
+    },
+    "/algemene-voorwaarden": {
+      "status": 200
+    },
+    "/privacy-voor-kinderen": {
+      "status": 200
+    },
+    "/privacyverzoek": {
+      "status": 200
+    },
+    "/account-verwijderen": {
+      "status": 200
+    },
+    "/studio/email": {
+      "status": 200
+    },
+    "/studio/email/templates": {
+      "status": 200
+    },
+    "/api/admin/email": {
+      "status": 401
+    },
+    "/api/admin/email/domain": {
+      "status": 401
+    },
+    "/api/parent/status": {
+      "status": 401
+    },
+    "/legal/2026-11-22.1/privacyverklaring.md": {
+      "status": 200,
+      "sha256": "c3f6186be703dda5320b70227070fea79e395eac225dbbbde0420913c57727e4",
+      "bytes": 22560
+    },
+    "/legal/2026-11-22/privacyverklaring.md": {
+      "status": 200,
+      "sha256": "97673d3103443115097def26e20e6c677650dcb760d095de900ae3c5c5961cb7",
+      "bytes": 20971
+    }
+  },
+  "certificate": {
+    "subjectAltName": [
+      [
+        "DNS",
+        "staging.fabelpad.nl"
+      ]
+    ],
+    "notBefore": "Nov 22 18:43:23 2026 GMT",
+    "notAfter": "Feb 20 18:43:22 2027 GMT",
+    "tlsVersion": "TLSv1.3"
+  },
+  "passed": false,
+  "completedAt": "2026-11-22T19:42:54.818336+00:00"
+}

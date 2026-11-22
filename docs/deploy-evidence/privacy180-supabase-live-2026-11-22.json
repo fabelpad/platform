@@ -1,0 +1,468 @@
+{
+  "sourceSha": "538c6b719e372f4dca99cfa2bc824cbf6310f5c1",
+  "changesStartedAt": "2026-11-22T19:33:56.818Z",
+  "completedAt": "2026-11-22T19:37:06.123Z",
+  "scope": "Two previously tested additive Fabelpad Supabase migrations; staging verified before production; no Auth/SMTP/provider configuration or users changed.",
+  "migrations": [
+    {
+      "version": "20261122190748",
+      "name": "backup_erasure_evidence_retention",
+      "sha256": "b436de9753f28f90b44605c7988c1992fdea410b3688c0d5b42e1fa5c9de0977"
+    },
+    {
+      "version": "20261122190924",
+      "name": "privacy_backup_support_update",
+      "sha256": "d362f0b8bad9074fd910d4dfd64122635c68b2a5f7723aa1359d882bfc4232a6"
+    }
+  ],
+  "applicationHostChanges": false,
+  "authConfigurationChanged": false,
+  "smtpChanged": false,
+  "vaultSecretsReadOrChanged": false,
+  "usersCreated": false,
+  "emailsSent": false,
+  "secretValuesPersisted": false,
+  "independentBackupRestoreJournalImplemented": false,
+  "backupRestoreReplayTestPerformed": false,
+  "targets": {
+    "staging": {
+      "projectId": "tlwfpivafcokcjyjwgmq",
+      "passed": true,
+      "before": {
+        "authUsers": 0,
+        "historyCount": 8,
+        "legalVersions": [
+          {
+            "kind": "privacy",
+            "sha256": "97673d3103443115097def26e20e6c677650dcb760d095de900ae3c5c5961cb7",
+            "version": "2026-11-22"
+          },
+          {
+            "kind": "terms",
+            "sha256": "8da71baa717f1e98b393320532670b4ebbddacbd390a14dba3c4cc144b394840",
+            "version": "2026-11-22"
+          }
+        ],
+        "ownCronActive": 1,
+        "historyColumns": [
+          {
+            "name": "version",
+            "type": "text"
+          },
+          {
+            "name": "statements",
+            "type": "ARRAY"
+          },
+          {
+            "name": "name",
+            "type": "text"
+          },
+          {
+            "name": "created_by",
+            "type": "text"
+          },
+          {
+            "name": "idempotency_key",
+            "type": "text"
+          },
+          {
+            "name": "rollback",
+            "type": "ARRAY"
+          }
+        ],
+        "acceptedParents": 0,
+        "inactivityEnabled": false,
+        "newRetentionExists": false
+      },
+      "after": {
+        "history": [
+          {
+            "name": "backup_erasure_evidence_retention",
+            "version": "20261122190748",
+            "sqlSha256": "b436de9753f28f90b44605c7988c1992fdea410b3688c0d5b42e1fa5c9de0977",
+            "statementCount": 1
+          },
+          {
+            "name": "privacy_backup_support_update",
+            "version": "20261122190924",
+            "sqlSha256": "d362f0b8bad9074fd910d4dfd64122635c68b2a5f7723aa1359d882bfc4232a6",
+            "statementCount": 1
+          }
+        ],
+        "families": 0,
+        "authUsers": 0,
+        "historyCount": 10,
+        "legalVersions": [
+          {
+            "kind": "privacy",
+            "sha256": "97673d3103443115097def26e20e6c677650dcb760d095de900ae3c5c5961cb7",
+            "version": "2026-11-22",
+            "actualByteHashMatches": true
+          },
+          {
+            "kind": "privacy",
+            "sha256": "c3f6186be703dda5320b70227070fea79e395eac225dbbbde0420913c57727e4",
+            "version": "2026-11-22.1",
+            "actualByteHashMatches": true
+          },
+          {
+            "kind": "terms",
+            "sha256": "8da71baa717f1e98b393320532670b4ebbddacbd390a14dba3c4cc144b394840",
+            "version": "2026-11-22",
+            "actualByteHashMatches": true
+          }
+        ],
+        "ownCronActive": 1,
+        "acceptedParents": 0,
+        "childEvidenceRls": true,
+        "childEvidenceRows": 0,
+        "inactivityEnabled": false,
+        "receiptDefault210": true,
+        "functionBoundaries": [
+          {
+            "anon": false,
+            "signature": "private.get_account_lifecycle()",
+            "serviceRole": false,
+            "authenticated": true,
+            "currentPrivacyInBody": true
+          },
+          {
+            "anon": false,
+            "signature": "private.complete_parent_onboarding(text,text,boolean,boolean,text)",
+            "serviceRole": false,
+            "authenticated": true,
+            "currentPrivacyInBody": true
+          },
+          {
+            "anon": false,
+            "signature": "private.consent_child_profile(text,boolean,boolean)",
+            "serviceRole": false,
+            "authenticated": true,
+            "currentPrivacyInBody": true
+          }
+        ],
+        "childTriggerEnabled": true,
+        "deletionReceiptRows": 0,
+        "publicInvokerWrappers": true,
+        "receiptTriggerEnabled": true,
+        "receiptTriggerFixed210": true,
+        "childEvidenceForeignKeys": 0,
+        "cleanupIncludesChildEvidence": true,
+        "childEvidenceDirectPrivileges": [
+          {
+            "role": "anon",
+            "allowed": false
+          },
+          {
+            "role": "authenticated",
+            "allowed": false
+          },
+          {
+            "role": "service_role",
+            "allowed": false
+          }
+        ]
+      },
+      "actualReadOnlyRoleDenials": [
+        "anon",
+        "authenticated",
+        "service_role"
+      ],
+      "migrationHistoryNormalization": {
+        "onlyVersionColumnChanged": true,
+        "guardedByExactStoredSqlSha256": true,
+        "statementCardinalityRequired": 1,
+        "oneMatchingNameRequired": true,
+        "targetVersionRequiredAbsent": true,
+        "observedMcpVersions": {
+          "retention": "20261122193358",
+          "privacy": "20261122193414"
+        }
+      },
+      "securityAdvisors": {
+        "before": {
+          "levels": {
+            "ERROR": 0,
+            "WARN": 0,
+            "INFO": 13
+          },
+          "lints": [
+            {
+              "name": "rls_enabled_no_policy",
+              "level": "INFO",
+              "count": 13,
+              "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy",
+              "objects": [
+                "private.account_lifecycle",
+                "private.child_profile_consents",
+                "private.deletion_receipts",
+                "private.email_delivery_settings",
+                "private.email_delivery_tests",
+                "private.family_activity_events",
+                "private.legal_document_versions",
+                "private.lifecycle_controls",
+                "private.lifecycle_outbox",
+                "private.lifecycle_worker_nonces",
+                "private.lifecycle_worker_schedule",
+                "private.parent_acceptances",
+                "private.privacy_requests"
+              ]
+            }
+          ]
+        },
+        "after": {
+          "levels": {
+            "ERROR": 0,
+            "WARN": 0,
+            "INFO": 14
+          },
+          "lints": [
+            {
+              "name": "rls_enabled_no_policy",
+              "level": "INFO",
+              "count": 14,
+              "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy",
+              "objects": [
+                "private.account_lifecycle",
+                "private.child_erasure_evidence",
+                "private.child_profile_consents",
+                "private.deletion_receipts",
+                "private.email_delivery_settings",
+                "private.email_delivery_tests",
+                "private.family_activity_events",
+                "private.legal_document_versions",
+                "private.lifecycle_controls",
+                "private.lifecycle_outbox",
+                "private.lifecycle_worker_nonces",
+                "private.lifecycle_worker_schedule",
+                "private.parent_acceptances",
+                "private.privacy_requests"
+              ]
+            }
+          ]
+        },
+        "explanation": "Private tables intentionally have RLS and no policies or direct application-role grants; the additional INFO is the new child-erasure evidence table."
+      }
+    },
+    "production": {
+      "projectId": "aptprpkosqctwrzeetgs",
+      "passed": true,
+      "before": {
+        "authUsers": 0,
+        "historyCount": 8,
+        "legalVersions": [
+          {
+            "kind": "privacy",
+            "sha256": "97673d3103443115097def26e20e6c677650dcb760d095de900ae3c5c5961cb7",
+            "version": "2026-11-22"
+          },
+          {
+            "kind": "terms",
+            "sha256": "8da71baa717f1e98b393320532670b4ebbddacbd390a14dba3c4cc144b394840",
+            "version": "2026-11-22"
+          }
+        ],
+        "ownCronActive": 1,
+        "historyColumns": [
+          {
+            "name": "version",
+            "type": "text"
+          },
+          {
+            "name": "statements",
+            "type": "ARRAY"
+          },
+          {
+            "name": "name",
+            "type": "text"
+          },
+          {
+            "name": "created_by",
+            "type": "text"
+          },
+          {
+            "name": "idempotency_key",
+            "type": "text"
+          },
+          {
+            "name": "rollback",
+            "type": "ARRAY"
+          }
+        ],
+        "acceptedParents": 0,
+        "inactivityEnabled": false,
+        "newRetentionExists": false
+      },
+      "after": {
+        "history": [
+          {
+            "name": "backup_erasure_evidence_retention",
+            "version": "20261122190748",
+            "sqlSha256": "b436de9753f28f90b44605c7988c1992fdea410b3688c0d5b42e1fa5c9de0977",
+            "statementCount": 1
+          },
+          {
+            "name": "privacy_backup_support_update",
+            "version": "20261122190924",
+            "sqlSha256": "d362f0b8bad9074fd910d4dfd64122635c68b2a5f7723aa1359d882bfc4232a6",
+            "statementCount": 1
+          }
+        ],
+        "families": 0,
+        "authUsers": 0,
+        "historyCount": 10,
+        "legalVersions": [
+          {
+            "kind": "privacy",
+            "sha256": "97673d3103443115097def26e20e6c677650dcb760d095de900ae3c5c5961cb7",
+            "version": "2026-11-22",
+            "actualByteHashMatches": true
+          },
+          {
+            "kind": "privacy",
+            "sha256": "c3f6186be703dda5320b70227070fea79e395eac225dbbbde0420913c57727e4",
+            "version": "2026-11-22.1",
+            "actualByteHashMatches": true
+          },
+          {
+            "kind": "terms",
+            "sha256": "8da71baa717f1e98b393320532670b4ebbddacbd390a14dba3c4cc144b394840",
+            "version": "2026-11-22",
+            "actualByteHashMatches": true
+          }
+        ],
+        "ownCronActive": 1,
+        "acceptedParents": 0,
+        "childEvidenceRls": true,
+        "childEvidenceRows": 0,
+        "inactivityEnabled": false,
+        "receiptDefault210": true,
+        "functionBoundaries": [
+          {
+            "anon": false,
+            "signature": "private.get_account_lifecycle()",
+            "serviceRole": false,
+            "authenticated": true,
+            "currentPrivacyInBody": true
+          },
+          {
+            "anon": false,
+            "signature": "private.complete_parent_onboarding(text,text,boolean,boolean,text)",
+            "serviceRole": false,
+            "authenticated": true,
+            "currentPrivacyInBody": true
+          },
+          {
+            "anon": false,
+            "signature": "private.consent_child_profile(text,boolean,boolean)",
+            "serviceRole": false,
+            "authenticated": true,
+            "currentPrivacyInBody": true
+          }
+        ],
+        "childTriggerEnabled": true,
+        "deletionReceiptRows": 0,
+        "publicInvokerWrappers": true,
+        "receiptTriggerEnabled": true,
+        "receiptTriggerFixed210": true,
+        "childEvidenceForeignKeys": 0,
+        "cleanupIncludesChildEvidence": true,
+        "childEvidenceDirectPrivileges": [
+          {
+            "role": "anon",
+            "allowed": false
+          },
+          {
+            "role": "authenticated",
+            "allowed": false
+          },
+          {
+            "role": "service_role",
+            "allowed": false
+          }
+        ]
+      },
+      "actualReadOnlyRoleDenials": [
+        "anon",
+        "authenticated",
+        "service_role"
+      ],
+      "migrationHistoryNormalization": {
+        "onlyVersionColumnChanged": true,
+        "guardedByExactStoredSqlSha256": true,
+        "statementCardinalityRequired": 1,
+        "oneMatchingNameRequired": true,
+        "targetVersionRequiredAbsent": true,
+        "observedMcpVersions": {
+          "retention": "20261122193554",
+          "privacy": "20261122193606"
+        }
+      },
+      "securityAdvisors": {
+        "before": {
+          "levels": {
+            "ERROR": 0,
+            "WARN": 0,
+            "INFO": 13
+          },
+          "lints": [
+            {
+              "name": "rls_enabled_no_policy",
+              "level": "INFO",
+              "count": 13,
+              "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy",
+              "objects": [
+                "private.account_lifecycle",
+                "private.child_profile_consents",
+                "private.deletion_receipts",
+                "private.email_delivery_settings",
+                "private.email_delivery_tests",
+                "private.family_activity_events",
+                "private.legal_document_versions",
+                "private.lifecycle_controls",
+                "private.lifecycle_outbox",
+                "private.lifecycle_worker_nonces",
+                "private.lifecycle_worker_schedule",
+                "private.parent_acceptances",
+                "private.privacy_requests"
+              ]
+            }
+          ]
+        },
+        "after": {
+          "levels": {
+            "ERROR": 0,
+            "WARN": 0,
+            "INFO": 14
+          },
+          "lints": [
+            {
+              "name": "rls_enabled_no_policy",
+              "level": "INFO",
+              "count": 14,
+              "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy",
+              "objects": [
+                "private.account_lifecycle",
+                "private.child_erasure_evidence",
+                "private.child_profile_consents",
+                "private.deletion_receipts",
+                "private.email_delivery_settings",
+                "private.email_delivery_tests",
+                "private.family_activity_events",
+                "private.legal_document_versions",
+                "private.lifecycle_controls",
+                "private.lifecycle_outbox",
+                "private.lifecycle_worker_nonces",
+                "private.lifecycle_worker_schedule",
+                "private.parent_acceptances",
+                "private.privacy_requests"
+              ]
+            }
+          ]
+        },
+        "explanation": "Private tables intentionally have RLS and no policies or direct application-role grants; the additional INFO is the new child-erasure evidence table."
+      }
+    }
+  },
+  "passed": true
+}

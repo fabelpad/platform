@@ -1,0 +1,200 @@
+{
+  "checkedAt": "2026-11-22T19:47:13.256106+00:00",
+  "repository": "fabelpad/platform",
+  "integrationBranch": "main",
+  "applicationSha": "538c6b719e372f4dca99cfa2bc824cbf6310f5c1",
+  "scope": "new privacy and retention version; public staging for owner acceptance; production app remains loopback-only",
+  "githubRuns": {
+    "webCi": {
+      "conclusion": "success",
+      "createdAt": "2026-11-22T19:20:05Z",
+      "databaseId": 45060149261,
+      "event": "push",
+      "headSha": "538c6b719e372f4dca99cfa2bc824cbf6310f5c1",
+      "status": "completed",
+      "updatedAt": "2026-11-22T19:21:56Z",
+      "url": "https://github.com/fabelpad/platform/actions/runs/45060149261"
+    },
+    "nativeCi": {
+      "conclusion": "success",
+      "createdAt": "2026-11-22T19:20:05Z",
+      "databaseId": 45060149267,
+      "event": "push",
+      "headSha": "538c6b719e372f4dca99cfa2bc824cbf6310f5c1",
+      "status": "completed",
+      "updatedAt": "2026-11-22T19:37:56Z",
+      "url": "https://github.com/fabelpad/platform/actions/runs/45060149267"
+    },
+    "stagingCandidate": {
+      "conclusion": "success",
+      "createdAt": "2026-11-22T19:38:23Z",
+      "databaseId": 45061896274,
+      "event": "workflow_dispatch",
+      "headSha": "538c6b719e372f4dca99cfa2bc824cbf6310f5c1",
+      "status": "completed",
+      "updatedAt": "2026-11-22T19:40:03Z",
+      "url": "https://github.com/fabelpad/platform/actions/runs/45061896274"
+    },
+    "productionCandidate": {
+      "conclusion": "success",
+      "createdAt": "2026-11-22T19:40:25Z",
+      "databaseId": 45062081153,
+      "event": "workflow_dispatch",
+      "headSha": "538c6b719e372f4dca99cfa2bc824cbf6310f5c1",
+      "status": "completed",
+      "updatedAt": "2026-11-22T19:41:59Z",
+      "url": "https://github.com/fabelpad/platform/actions/runs/45062081153"
+    },
+    "stagingActivation": {
+      "conclusion": "success",
+      "createdAt": "2026-11-22T19:40:34Z",
+      "databaseId": 45062096570,
+      "event": "workflow_dispatch",
+      "headSha": "538c6b719e372f4dca99cfa2bc824cbf6310f5c1",
+      "status": "completed",
+      "updatedAt": "2026-11-22T19:41:29Z",
+      "url": "https://github.com/fabelpad/platform/actions/runs/45062096570"
+    },
+    "productionActivation": {
+      "conclusion": "success",
+      "createdAt": "2026-11-22T19:42:21Z",
+      "databaseId": 45062262163,
+      "event": "workflow_dispatch",
+      "headSha": "538c6b719e372f4dca99cfa2bc824cbf6310f5c1",
+      "status": "completed",
+      "updatedAt": "2026-11-22T19:43:12Z",
+      "url": "https://github.com/fabelpad/platform/actions/runs/45062262163"
+    }
+  },
+  "localValidation": {
+    "cleanGitArchive": true,
+    "cleanDirectory": "/tmp/fabelpad-staging-final-clean-20261122-gybtings",
+    "node": "24.18.0",
+    "pnpm": "11.25.0",
+    "next": "16.3.4",
+    "install": "pnpm install --frozen-lockfile",
+    "build": "bash scripts/local-build.sh",
+    "dataMode": "local",
+    "buildPassed": true,
+    "browserPassed": 37,
+    "browserTotal": 37,
+    "temporaryServerStopped": true,
+    "syntheticDataOnly": true,
+    "finalDeployNodeTestsPassed": 89,
+    "finalDeployPythonTestsPassed": 19,
+    "buildLogSha256": "739af401b57befa41b7736effed89a92942259761d0a9741018319e08096f6e1",
+    "browserLogSha256": "35c9404397f29c98e827c1f3ab8b4db2e0ec214889421914ddc5c40c9aec82ee",
+    "finalDeployLogSha256": "fad79306f73e55aa604abd5554f1f77dffe7ccbb3731dcbc8110a025bceb8775"
+  },
+  "environments": {
+    "staging": {
+      "candidateId": "538c6b719e372f4dca99cfa2bc824cbf6310f5c1-45061896274-1",
+      "configId": "privacy180-20261122-stg",
+      "artifactDigest": "347d8c18b546721b45250b155eeac85bd4b9ed489e08856989ebff00a4577175",
+      "runtimeConfigDigest": "643ee0ce41afc13a9feb3115bf1bfab0235abdb2e73f7d36d57e74543d37672d",
+      "serviceActive": true,
+      "serviceEnabled": true,
+      "healthExactSha": true,
+      "current": "/srv/sites/fabelpad-vps08-staging/releases/538c6b719e372f4dca99cfa2bc824cbf6310f5c1-45061896274-1",
+      "previous": "releases/c1a9829c6580b835b9845dd672c9d89127f60c64-45057052139-1",
+      "publiclyActive": true,
+      "loopbackPort": 4188
+    },
+    "production": {
+      "candidateId": "538c6b719e372f4dca99cfa2bc824cbf6310f5c1-45062081153-1",
+      "configId": "privacy180-20261122-prd",
+      "artifactDigest": "2e475b808862cac2792e7372a3ba1c8ff71f2d64dcb1f72a1121234a84d077d2",
+      "runtimeConfigDigest": "a9ac7ede9cc82a04c805ef8822465ce8ffec4dffcf42d0451c114543b8b43e8a",
+      "serviceActive": true,
+      "serviceEnabled": true,
+      "healthExactSha": true,
+      "current": "/srv/sites/fabelpad-vps08-production/releases/538c6b719e372f4dca99cfa2bc824cbf6310f5c1-45062081153-1",
+      "previous": "releases/c1a9829c6580b835b9845dd672c9d89127f60c64-45057304416-1",
+      "publiclyActive": false,
+      "loopbackPort": 4189
+    }
+  },
+  "privacy": {
+    "version": "2026-11-22.1",
+    "sha256": "c3f6186be703dda5320b70227070fea79e395eac225dbbbde0420913c57727e4",
+    "termsVersionUnchanged": "2026-11-22",
+    "historicalBytesPreserved": true,
+    "hostedMigrationCountPerProject": 10,
+    "securityWarnings": 0,
+    "securityErrors": 0,
+    "securityInfo": 14,
+    "minimalErasureEvidenceRetentionDays": 210,
+    "inactivityDeletionEnabled": false,
+    "ownerConfirmedBackupMaximumDays": 180,
+    "ownerConfirmedSupportProvider": "Stackmail",
+    "ownerConfirmedOrdinarySupportMaximumMonthsAfterClosure": 12,
+    "externalMailboxCleanupVerified": false,
+    "independentCurrentErasureJournalImplemented": false,
+    "realBackupRestorePerformed": false,
+    "restoredUserTrafficRequiresCompleteCurrentErasureAndWithdrawalCoverage": true
+  },
+  "publicStaging": {
+    "origin": "https://staging.fabelpad.nl",
+    "strictTlsVerified": true,
+    "httpChecksPassed": 23,
+    "readOnlyBrowserPassed": true,
+    "noIndex": true,
+    "finalRouteSha256": "ba6facd1a010dab378eeb170cbaf26b2969c38f4fbfd735269a873280d039acb",
+    "deferredNoReferrerVerified": true,
+    "initialHeaderAssertionFailedAndCorrected": true,
+    "initialFailedAttemptRestoredOwnFiles": true
+  },
+  "emailAndAuth": {
+    "existingCustomSmtpPreserved": true,
+    "sendEmailHookEnabled": false,
+    "authTemplatesCopiedOwnerConfirmed": true,
+    "authProvidersEnabled": [
+      "email",
+      "google"
+    ],
+    "otpLengthOwnerConfirmed": 6,
+    "apiConfigurationViaAdmin": "/studio/email",
+    "templateEditor": "/studio/email/templates",
+    "separateResendApiSetupAndDeliveryAcceptancePending": true,
+    "firstAdministratorRequiresRealConfirmedLoginAndParentOnboarding": true,
+    "firstAdministratorAddress": "info@dgwebservices.nl",
+    "realOtpRequested": false,
+    "realGoogleLoginPerformed": false,
+    "realMailDeliveryProven": false,
+    "reviewOrUserCredentialsWritten": false
+  },
+  "existingEnvironmentPreservation": {
+    "preparationBaseline": "privacy180-before-staging-public-2026-11-22.json",
+    "sixExistingServicesMatchBaseline": true,
+    "sharedConfigurationHashesMatchBaseline": true,
+    "publicProductionRouteAbsentAtFinalHostCheck": true,
+    "defaultProductionAndUnknownHostHttpStatus": 200,
+    "defaultProductionAndUnknownHostBodySha256": "cceac34b8028aaf370ad368ce255280b3e14981c523a8459a51822fc795bba47",
+    "finalHostRoutingCheckAt": "2026-11-22T19:45:02.492480+00:00",
+    "dnsFirewallSshSharedPackagesChanged": false
+  },
+  "rollback": {
+    "previousAppSha": "c1a9829c6580b835b9845dd672c9d89127f60c64",
+    "liveRollbackPerformed": false,
+    "appAndRuntimePaired": true,
+    "databaseNotRevertedByAppRollback": true,
+    "previousAppLegalOnboardingCompatibilityWithNewDatabaseNotProven": true,
+    "previousAppMayOnlyBeRolledBackInternallyUntilCompatibleLegalOnboardingVerified": true
+  },
+  "android": {
+    "nativeSourceChanged": false,
+    "playUploadTriggered": false
+  },
+  "evidenceFiles": [
+    "privacy180-activated-2026-11-22.json",
+    "privacy180-before-staging-public-2026-11-22.json",
+    "privacy180-production-candidate-2026-11-22.json",
+    "privacy180-proxy-header-fix-2026-11-22.json",
+    "privacy180-staging-browser-2026-11-22.json",
+    "privacy180-staging-candidate-2026-11-22.json",
+    "privacy180-staging-https-activation-2026-11-22.json",
+    "privacy180-staging-public-2026-11-22.json",
+    "privacy180-staging-public-initial-2026-11-22.json",
+    "privacy180-supabase-live-2026-11-22.json"
+  ]
+}
