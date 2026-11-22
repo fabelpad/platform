@@ -19,10 +19,10 @@ Dit zijn geen secrets. Geen secret/service-role/databasekey in NEXT_PUBLIC-velde
 
 | Naam / gegeven | Bron en opslag | Gebruik |
 | --- | --- | --- |
-| `RESEND_API_KEY` | Eigen Resend-key; Supabase **Edge Functions → Secrets**, per project | Alleen Edge-mailfunctie; nooit build, browser of GitHub-variable |
+| Resend-key | Na eerste beheeropslag: eigen **Supabase Vault**. Vóór eerste login: `RESEND_API_KEY` in Edge Secrets als bootstrap | Alleen Edge-mailfunctie ontsleutelt; nooit build, browserresponse of GitHub-variable |
 | `SEND_EMAIL_HOOK_SECRET` | Cryptografisch gegenereerd per project; Auth Hook en Edge Secrets moeten overeenkomen | Auth/HMAC-verificatie; verschillende secrets per omgeving |
-| `FABELPAD_EMAIL_FROM` | Geverifieerde Fabelpad-afzender; Edge-configuratie | `Fabelpad <...>` of `Fabelpad Staging <...>` |
-| `FABELPAD_EMAIL_REPLY_TO` | `support@fabelpad.nl`, door eigenaar bevestigd; Edge-configuratie | Antwoorden naar de support-inbox |
+| Afzender / `FABELPAD_EMAIL_FROM` | Beheer → E-mail; Edge-waarde alleen voor bootstrap | Geverifieerd adres, bewerkbare naam; staging krijgt altijd testmarkering |
+| Antwoordadres / `FABELPAD_EMAIL_REPLY_TO` | Beheer → E-mail; Edge-waarde alleen voor bootstrap | Antwoorden naar de ingestelde support-inbox |
 | `FABELPAD_APP_ORIGIN` | Eigen canonieke origin hierboven; ook Edge-configuratie | Bindt ondertekende mail aan de juiste omgeving |
 | `FABELPAD_ENVIRONMENT` | `staging` of `production`, Edge-configuratie | Zichtbaar testkenmerk en gescheiden idempotentie |
 | Supabase Management PAT | Afgeschermde toegang van het account dat het bedoelde project beheert | Alleen tijdelijk in geheugen van configuratietool |
@@ -31,6 +31,8 @@ Dit zijn geen secrets. Geen secret/service-role/databasekey in NEXT_PUBLIC-velde
 De Edge-configuratienamen zijn **geen extra GitHub-variabelen**. Supabase bewaart functieconfiguratie onder Secrets. De configuratietool vraagt keys verborgen in een eigen terminal; geen keys, PAT's, OTP's of wachtwoorden in chat, argumenten of documenten.
 
 De webserver gebruikt gebruikerssessies en RLS. Next-build en normale runtime vereisen geen service-role key, databasewachtwoord of Resend-key.
+
+**Beheer → E-mail** (`/studio/email`) verzorgt Resend-koppeling en test; **Beheer → E-mailtemplates** (`/studio/email/templates`) bevat alle 17 templates. Na de eerste geaccepteerde opslag is de Vault-configuratie leidend. De automatische servicecredential blijft uitsluitend binnen de Edge-runtime. Zie [EMAIL-BEHEER.md](EMAIL-BEHEER.md) voor eerste login, de twee gescheiden omgevingen en sleutelrotatie.
 
 ## Hostmetadata en OTP-gate
 

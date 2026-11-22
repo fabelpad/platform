@@ -1,0 +1,308 @@
+{
+  "checkedAt": "2026-11-22",
+  "scope": "Fabelpad Resend admin and 17 template editor; no app activation or real email",
+  "migration": {
+    "version": "20261122150754",
+    "name": "admin_email_settings",
+    "sha256": "6fe26fa91f58074511d2e1896898253a38a52e34a0096d9455bc713c5ce0c585",
+    "historyNormalization": "MCP-assigned timestamp replaced only after exact stored SQL SHA-256 match; migration statements preserved"
+  },
+  "environments": [
+    {
+      "environment": "staging",
+      "projectRef": "tlwfpivafcokcjyjwgmq",
+      "before": {
+        "database_name": "postgres",
+        "auth_users": 0,
+        "admins": 0,
+        "families": 0,
+        "drafts": 0,
+        "releases": 13,
+        "vault_secrets": 0,
+        "email_table": null,
+        "migrations": [
+          {
+            "name": "family_content_contract",
+            "version": "20261104095714"
+          },
+          {
+            "name": "verified_bootstrap_admin",
+            "version": "20261122140451"
+          }
+        ],
+        "tables": [
+          {
+            "rls": true,
+            "name": "content_admins",
+            "schema": "public"
+          },
+          {
+            "rls": true,
+            "name": "content_drafts",
+            "schema": "public"
+          },
+          {
+            "rls": true,
+            "name": "content_releases",
+            "schema": "public"
+          },
+          {
+            "rls": true,
+            "name": "family_documents",
+            "schema": "public"
+          }
+        ]
+      },
+      "after": {
+        "auth_users": 0,
+        "admins": 0,
+        "families": 0,
+        "drafts": 0,
+        "releases": 13,
+        "vault_secrets": 0,
+        "configured": 0,
+        "tests": 0,
+        "unconfigured": true,
+        "migrations": [
+          {
+            "name": "family_content_contract",
+            "version": "20261104095714",
+            "sql_sha256": "6ff5a5ca218c60edeb3bd5c046cd350b8300904a6ffdfcce97f5ebbc9e0f3cb0"
+          },
+          {
+            "name": "verified_bootstrap_admin",
+            "version": "20261122140451",
+            "sql_sha256": "26336b12af62fac8a78bb47b48d40cf91d455a8383586bce2393b95df1fe1725"
+          },
+          {
+            "name": "admin_email_settings",
+            "version": "20261122150754",
+            "sql_sha256": "6fe26fa91f58074511d2e1896898253a38a52e34a0096d9455bc713c5ce0c585"
+          }
+        ],
+        "all_app_tables_rls": true,
+        "user_can_read_key": false,
+        "anon_can_read_settings": false,
+        "user_can_save_direct": false,
+        "edge_can_read_config": true
+      },
+      "securityAdvisors": {
+        "lints": [
+          {
+            "name": "rls_enabled_no_policy",
+            "title": "RLS Enabled No Policy",
+            "level": "INFO",
+            "facing": "EXTERNAL",
+            "categories": [
+              "SECURITY"
+            ],
+            "description": "Detects cases where row level security (RLS) has been enabled on a table but no RLS policies have been created.",
+            "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy",
+            "count": 2,
+            "findings": [
+              {
+                "detail": "Table \\`private.email_delivery_settings\\` has RLS enabled, but no policies exist",
+                "metadata": {
+                  "name": "email_delivery_settings",
+                  "type": "table",
+                  "schema": "private"
+                },
+                "observed_at": "2026-11-22T15:18:52.198Z"
+              },
+              {
+                "detail": "Table \\`private.email_delivery_tests\\` has RLS enabled, but no policies exist",
+                "metadata": {
+                  "name": "email_delivery_tests",
+                  "type": "table",
+                  "schema": "private"
+                },
+                "observed_at": "2026-11-22T15:18:52.198Z"
+              }
+            ]
+          }
+        ]
+      },
+      "functions": {
+        "manager": {
+          "id": "fcb361fd-d139-4d78-b335-4240da4aade4",
+          "slug": "email-admin",
+          "name": "email-admin",
+          "status": "ACTIVE",
+          "version": 1,
+          "created_at": 1795360670389,
+          "updated_at": 1795360670389,
+          "verify_jwt": false,
+          "import_map": true,
+          "entrypoint_path": "file:///tmp/user_fn_tlwfpivafcokcjyjwgmq_fcb361fd-d139-4d78-b335-4240da4aade4_1/source/supabase/functions/email-admin/index.ts",
+          "import_map_path": "file:///tmp/user_fn_tlwfpivafcokcjyjwgmq_fcb361fd-d139-4d78-b335-4240da4aade4_1/source/supabase/functions/email-admin/deno.json",
+          "ezbr_sha256": "19219c6271c12511f284ae37c66dfbffa7caa7ef9f8fa593e2acfe3c90a24e65"
+        },
+        "authHook": {
+          "id": "65b2a980-210c-408a-aa51-b5b8d5bdcf77",
+          "slug": "auth-email",
+          "name": "auth-email",
+          "status": "ACTIVE",
+          "version": 2,
+          "created_at": 1795356546527,
+          "updated_at": 1795360679206,
+          "verify_jwt": false,
+          "import_map": true,
+          "entrypoint_path": "file:///tmp/user_fn_tlwfpivafcokcjyjwgmq_65b2a980-210c-408a-aa51-b5b8d5bdcf77_2/source/supabase/functions/auth-email/index.ts",
+          "import_map_path": "file:///tmp/user_fn_tlwfpivafcokcjyjwgmq_65b2a980-210c-408a-aa51-b5b8d5bdcf77_2/source/supabase/functions/auth-email/deno.json",
+          "ezbr_sha256": "92c0cce61f2c1f077c9f511e3cc330f1da3514679fd1ee135c3a38142df53725"
+        }
+      }
+    },
+    {
+      "environment": "production",
+      "projectRef": "aptprpkosqctwrzeetgs",
+      "before": {
+        "database_name": "postgres",
+        "auth_users": 0,
+        "admins": 0,
+        "families": 0,
+        "drafts": 0,
+        "releases": 13,
+        "vault_secrets": 0,
+        "email_table": null,
+        "migrations": [
+          {
+            "name": "family_content_contract",
+            "version": "20261104095714"
+          },
+          {
+            "name": "verified_bootstrap_admin",
+            "version": "20261122140451"
+          }
+        ],
+        "tables": [
+          {
+            "rls": true,
+            "name": "content_admins",
+            "schema": "public"
+          },
+          {
+            "rls": true,
+            "name": "content_drafts",
+            "schema": "public"
+          },
+          {
+            "rls": true,
+            "name": "content_releases",
+            "schema": "public"
+          },
+          {
+            "rls": true,
+            "name": "family_documents",
+            "schema": "public"
+          }
+        ]
+      },
+      "after": {
+        "auth_users": 0,
+        "admins": 0,
+        "families": 0,
+        "drafts": 0,
+        "releases": 13,
+        "vault_secrets": 0,
+        "configured": 0,
+        "tests": 0,
+        "unconfigured": true,
+        "migrations": [
+          {
+            "name": "family_content_contract",
+            "version": "20261104095714",
+            "sql_sha256": "6ff5a5ca218c60edeb3bd5c046cd350b8300904a6ffdfcce97f5ebbc9e0f3cb0"
+          },
+          {
+            "name": "verified_bootstrap_admin",
+            "version": "20261122140451",
+            "sql_sha256": "26336b12af62fac8a78bb47b48d40cf91d455a8383586bce2393b95df1fe1725"
+          },
+          {
+            "name": "admin_email_settings",
+            "version": "20261122150754",
+            "sql_sha256": "6fe26fa91f58074511d2e1896898253a38a52e34a0096d9455bc713c5ce0c585"
+          }
+        ],
+        "all_app_tables_rls": true,
+        "user_can_read_key": false,
+        "anon_can_read_settings": false,
+        "user_can_save_direct": false,
+        "edge_can_read_config": true
+      },
+      "securityAdvisors": {
+        "lints": [
+          {
+            "name": "rls_enabled_no_policy",
+            "title": "RLS Enabled No Policy",
+            "level": "INFO",
+            "facing": "EXTERNAL",
+            "categories": [
+              "SECURITY"
+            ],
+            "description": "Detects cases where row level security (RLS) has been enabled on a table but no RLS policies have been created.",
+            "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy",
+            "count": 2,
+            "findings": [
+              {
+                "detail": "Table \\`private.email_delivery_settings\\` has RLS enabled, but no policies exist",
+                "metadata": {
+                  "name": "email_delivery_settings",
+                  "type": "table",
+                  "schema": "private"
+                },
+                "observed_at": "2026-11-22T15:18:54.038Z"
+              },
+              {
+                "detail": "Table \\`private.email_delivery_tests\\` has RLS enabled, but no policies exist",
+                "metadata": {
+                  "name": "email_delivery_tests",
+                  "type": "table",
+                  "schema": "private"
+                },
+                "observed_at": "2026-11-22T15:18:54.038Z"
+              }
+            ]
+          }
+        ]
+      },
+      "functions": {
+        "manager": {
+          "id": "cb2c71b3-aec3-4c5b-93d0-55b2d2353a0c",
+          "slug": "email-admin",
+          "name": "email-admin",
+          "status": "ACTIVE",
+          "version": 1,
+          "created_at": 1795360706369,
+          "updated_at": 1795360706369,
+          "verify_jwt": false,
+          "import_map": true,
+          "entrypoint_path": "file:///tmp/user_fn_aptprpkosqctwrzeetgs_cb2c71b3-aec3-4c5b-93d0-55b2d2353a0c_1/source/supabase/functions/email-admin/index.ts",
+          "import_map_path": "file:///tmp/user_fn_aptprpkosqctwrzeetgs_cb2c71b3-aec3-4c5b-93d0-55b2d2353a0c_1/source/supabase/functions/email-admin/deno.json",
+          "ezbr_sha256": "ade9a3dfbe43dff2dcec5729e18c4f865a599b80afcf9b7c595981e2ab1cd0b1"
+        },
+        "authHook": {
+          "id": "6ed76b14-e0cf-482b-846e-40f2fd515e3d",
+          "slug": "auth-email",
+          "name": "auth-email",
+          "status": "ACTIVE",
+          "version": 2,
+          "created_at": 1795356558768,
+          "updated_at": 1795360707488,
+          "verify_jwt": false,
+          "import_map": true,
+          "entrypoint_path": "file:///tmp/user_fn_aptprpkosqctwrzeetgs_6ed76b14-e0cf-482b-846e-40f2fd515e3d_2/source/supabase/functions/auth-email/index.ts",
+          "import_map_path": "file:///tmp/user_fn_aptprpkosqctwrzeetgs_6ed76b14-e0cf-482b-846e-40f2fd515e3d_2/source/supabase/functions/auth-email/deno.json",
+          "ezbr_sha256": "97ae1b285380a6d5608e5ea9ae183125d7fcde1fa8ea6a3733c9ef0861401ccb"
+        }
+      }
+    }
+  ],
+  "remaining": [
+    "Resend verified sending domain and protected API key",
+    "Supabase Auth/Hook/secrets Management access or owner bootstrap tool",
+    "Real OTP inbox receipt and first verified administrator",
+    "Reviewed main SHA/CI, target candidate, separately authorized app activation"
+  ]
+}

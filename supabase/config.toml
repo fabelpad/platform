@@ -6,3 +6,9 @@ enabled = true
 verify_jwt = false # Auth calls before login; mandatory Standard Webhooks HMAC in handler.
 entrypoint = "./functions/auth-email/index.ts"
 import_map = "./functions/auth-email/deno.json"
+
+[functions.email-admin]
+enabled = true
+verify_jwt = false # Mandatory Auth getUser + current database admin role inside handler.
+entrypoint = "./functions/email-admin/index.ts"
+import_map = "./functions/email-admin/deno.json"

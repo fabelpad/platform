@@ -5,7 +5,11 @@
 export const EMAIL_TEMPLATE_VERSION = 'fabelpad-2026-11-22';
 export type EmailEnvironment = 'staging' | 'production';
 export type RenderedEmail = { subject: string; html: string; text: string };
-export type EmailContext = { siteUrl: string; environment: EmailEnvironment };
+export type EmailBrandSettings = {
+  supportEmail: string; footerText: string;
+  templates: Partial<Record<AuthEmailAction | 'welcome' | 'account-deletion-requested' | 'account-deleted' | 'service-notice', { subject: string; title: string; intro: string }>>;
+};
+export type EmailContext = { siteUrl: string; environment: EmailEnvironment; settings?: EmailBrandSettings };
 export type AuthEmailValues = {
   token?: string; confirmationUrl?: string; email?: string; newEmail?: string;
   oldEmail?: string; phone?: string; oldPhone?: string; provider?: string; factorType?: string;
@@ -29,10 +33,16 @@ export const AUTH_EMAIL_CATALOG = {
 export type AuthEmailAction = keyof typeof AUTH_EMAIL_CATALOG;
 
 const SUPPORT = 'support@fabelpad.nl';
+function support(context: EmailContext) {
+  const value = context.settings?.supportEmail ?? SUPPORT;
+  if (typeof value !== 'string' || value.length > 254 || !/^[^\s<>@]+@[^\s<>@]+\.[^\s<>@]+$/u.test(value)) throw new Error('Invalid email support address.');
+  return value;
+}
 const templateVariable = /^(?:\{\{ \.SiteURL \}\}(?:\/auth\/confirm\?token_hash=\{\{ \.TokenHash \}\}&type=(?:invite|recovery|email_change)&next=\/gezin)?|\{\{ \.ConfirmationURL \}\})$/u;
 const escapeHtml = (value: string) => value.replace(/[&<>"']/gu, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]!);
+const escapeBlock = (value: string) => escapeHtml(value).replace(/\r?\n/gu, '<br>');
 const text = (value: unknown, maximum = 500) => {
-  if (typeof value !== 'string' || value.length > maximum || /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/u.test(value)) throw new Error('Invalid email content.');
+  if (typeof value !== 'string' || Array.from(value).length > maximum || /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/u.test(value)) throw new Error('Invalid email content.');
   return value;
 };
 function safeUrl(value: string, allowTemplate = false) {
@@ -58,10 +68,11 @@ function renderLayout(subject: string, title: string, introduction: string, sect
   const paragraphs = sections.map(section => {
     if (section.type === 'code') return `<tr><td style="padding:8px 0 22px;"><div aria-label="Eenmalige code" style="background:#fcf9f0;border:2px dashed #d8b75f;border-radius:16px;color:#1d503f;font-family:Consolas,monospace;font-size:32px;font-weight:bold;letter-spacing:6px;line-height:1.5;padding:18px 10px;text-align:center;word-break:break-all;">${escapeHtml(text(section.value, 100))}</div></td></tr>`;
     if (section.type === 'button') return `<tr><td style="padding:4px 0 24px;"><a href="${escapeHtml(safeUrl(section.url, allowTemplate))}" style="background:#f9cb52;border-bottom:4px solid #c59832;border-radius:12px;color:#1c4135;display:inline-block;font-size:16px;font-weight:bold;line-height:1.4;padding:14px 22px;text-decoration:none;">${escapeHtml(text(section.value, 100))}</a></td></tr>`;
-    return `<tr><td style="color:#53685c;font-size:16px;line-height:1.7;padding:0 0 18px;">${escapeHtml(text(section.value, 4000))}</td></tr>`;
+    return `<tr><td style="color:#53685c;font-size:16px;line-height:1.7;padding:0 0 18px;">${escapeBlock(text(section.value, 4000))}</td></tr>`;
   }).join('\n');
   const badge = context.environment === 'staging' ? '<p style="color:#1d503f;font-size:12px;font-weight:bold;margin:0 0 16px;">TESTOMGEVING — FABELPAD STAGING</p>' : '';
-  const footerText = `Dit is een servicebericht van Fabelpad over je ouderaccount. Hulp nodig? Mail ${SUPPORT}.`;
+  const contact = support(context);
+  const footerText = text(context.settings?.footerText ?? `Dit is een servicebericht van Fabelpad over je ouderaccount. Hulp nodig? Mail ${contact}.`, 1000);
   const html = `<!doctype html>
 <html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"><title>${escapeHtml(finalSubject)}</title></head>
 <body style="margin:0;padding:0;background:#fcf9f0;color:#1c4135;font-family:Arial,Helvetica,sans-serif;">
@@ -71,9 +82,9 @@ function renderLayout(subject: string, title: string, introduction: string, sect
 <a href="${escapeHtml(origin)}" style="color:#1d503f;font-family:Georgia,serif;font-size:34px;font-weight:bold;text-decoration:none;">Fabelpad<span aria-hidden="true" style="color:#c59832;"> ✦</span></a><p style="color:#6e7d72;font-size:13px;line-height:1.5;margin:5px 0 0;">Kleine lezers. Grote avonturen.</p></td></tr>
 <tr><td style="background:#ffffff;border:1px solid #e3e6d6;border-bottom:6px solid #e9e5d6;border-radius:24px;padding:32px 26px;">${badge}<table role="presentation" width="100%" cellpadding="0" cellspacing="0">
 <tr><td><p style="color:#7b804f;font-size:11px;font-weight:bold;letter-spacing:2px;margin:0 0 12px;">VOOR OUDERS EN VERZORGERS</p><h1 style="color:#1d503f;font-family:Georgia,serif;font-size:29px;line-height:1.2;margin:0 0 20px;">${escapeHtml(text(title, 200))}</h1></td></tr>
-<tr><td style="color:#53685c;font-size:16px;line-height:1.7;padding:0 0 22px;">${escapeHtml(text(introduction, 1000))}</td></tr>
+<tr><td style="color:#53685c;font-size:16px;line-height:1.7;padding:0 0 22px;">${escapeBlock(text(introduction, 1000))}</td></tr>
 ${paragraphs}
-<tr><td style="border-top:1px solid #e3e6d6;color:#6e7d72;font-size:13px;line-height:1.7;padding-top:20px;">${escapeHtml(footerText)}<br><a href="mailto:${SUPPORT}" style="color:#1d503f;font-weight:bold;">${SUPPORT}</a></td></tr>
+<tr><td style="border-top:1px solid #e3e6d6;color:#6e7d72;font-size:13px;line-height:1.7;padding-top:20px;">${escapeBlock(footerText)}<br><a href="mailto:${escapeHtml(contact)}" style="color:#1d503f;font-weight:bold;">${escapeHtml(contact)}</a></td></tr>
 </table></td></tr><tr><td align="center" style="color:#6e7d72;font-size:12px;line-height:1.8;padding:22px 10px 0;"><a href="${escapeHtml(origin)}/privacy" style="color:#53685c;">Privacy en gegevens verwijderen</a><br>Deel je inlogcode nooit. Fabelpad vraagt je code niet per e-mail.</td></tr></table>
 </td></tr></table></body></html>`;
   const plainSections = sections.map(section => section.type === 'button' ? `${section.value}: ${section.url}` : section.value);
@@ -83,6 +94,8 @@ ${paragraphs}
 function authEmail(action: AuthEmailAction, values: AuthEmailValues, context: EmailContext, allowTemplate: boolean): RenderedEmail {
   if (!Object.hasOwn(AUTH_EMAIL_CATALOG, action)) throw new Error('Unsupported email action.');
   const definition = AUTH_EMAIL_CATALOG[action];
+  const copy = context.settings?.templates[action] ?? definition;
+  const contact = support(context);
   const sections: Section[] = [];
   if (definition.mode === 'otp' || definition.mode === 'change') {
     const code = values.token;
@@ -102,8 +115,8 @@ function authEmail(action: AuthEmailAction, values: AuthEmailValues, context: Em
     if (action.startsWith('identity_')) sections.push({ type: 'paragraph', value: `Inlogmethode: ${text(values.provider ?? '', 80)}.` });
     if (action.startsWith('mfa_')) sections.push({ type: 'paragraph', value: `Verificatiemethode: ${text(values.factorType ?? '', 80)}.` });
   }
-  sections.push({ type: 'paragraph', value: definition.mode === 'notification' ? `Heb je deze wijziging niet zelf gedaan? Neem direct contact op via ${SUPPORT} en gebruik alleen de vertrouwde Fabelpad-website om je account te controleren.` : `Niet zelf aangevraagd? Gebruik de code of link niet en deel deze met niemand. Bij twijfel kun je contact opnemen via ${SUPPORT}.` });
-  return renderLayout(definition.subject, definition.title, definition.intro, sections, context, allowTemplate);
+  sections.push({ type: 'paragraph', value: definition.mode === 'notification' ? `Heb je deze wijziging niet zelf gedaan? Neem direct contact op via ${contact} en gebruik alleen de vertrouwde Fabelpad-website om je account te controleren.` : `Niet zelf aangevraagd? Gebruik de code of link niet en deel deze met niemand. Bij twijfel kun je contact opnemen via ${contact}.` });
+  return renderLayout(copy.subject, copy.title, copy.intro, sections, context, allowTemplate);
 }
 export function renderAuthEmail(action: AuthEmailAction, values: AuthEmailValues, context: EmailContext): RenderedEmail {
   return authEmail(action, values, context, false);
@@ -119,12 +132,19 @@ export type ServiceEmail =
   | { kind: 'account-deletion-requested' }
   | { kind: 'account-deleted' }
   | { kind: 'service-notice'; subject: string; title: string; paragraphs: string[]; action?: { label: string; path: string } };
+export const SERVICE_EMAIL_CATALOG = {
+  welcome: { subject: 'Welkom bij Fabelpad', title: 'Er wacht een wereld vol verhalen', intro: 'Je ouderaccount bij Fabelpad is klaar voor gebruik.' },
+  'account-deletion-requested': { subject: 'Je verwijderverzoek bij Fabelpad', title: 'We hebben je verzoek ontvangen', intro: 'Je verzoek om je Fabelpad-account en de bijbehorende gegevens te verwijderen is ontvangen.' },
+  'account-deleted': { subject: 'Je Fabelpad-account is verwijderd', title: 'Je account is verwijderd', intro: 'De verwijdering van je Fabelpad-account is afgerond.' },
+  'service-notice': { subject: 'Een servicebericht van Fabelpad', title: 'Een bericht over je ouderaccount', intro: 'Dit is een servicebericht over je ouderaccount.' },
+} as const;
 /** All application transactional mail goes through this same layout, never raw HTML. */
 export function renderServiceEmail(message: ServiceEmail, context: EmailContext): RenderedEmail {
   const origin = siteUrl(context, false);
-  if (message.kind === 'welcome') return renderLayout('Welkom bij Fabelpad', 'Er wacht een wereld vol verhalen', 'Je ouderaccount bij Fabelpad is klaar voor gebruik.', [{ type: 'button', value: 'Open Fabelpad', url: `${origin}/gezin` }, { type: 'paragraph', value: 'Je kunt op het inlogscherm steeds een nieuwe eenmalige e-mailcode aanvragen.' }], context);
-  if (message.kind === 'account-deletion-requested') return renderLayout('Je verwijderverzoek bij Fabelpad', 'We hebben je verzoek ontvangen', 'Je verzoek om je Fabelpad-account en de bijbehorende gegevens te verwijderen is ontvangen.', [{ type: 'paragraph', value: 'Dit bericht bevestigt de ontvangst van je verzoek. Je account en gegevens zijn hiermee nog niet verwijderd. Je ontvangt bericht wanneer het verzoek is afgehandeld.' }], context);
-  if (message.kind === 'account-deleted') return renderLayout('Je Fabelpad-account is verwijderd', 'Je account is verwijderd', 'De verwijdering van je Fabelpad-account is afgerond.', [{ type: 'paragraph', value: 'Lees in het privacybeleid welke beperkte bewaartermijnen eventueel gelden. Heb je vragen over je gegevens? Neem dan contact met ons op.' }], context);
+  const copy = context.settings?.templates[message.kind] ?? (message.kind === 'service-notice' ? { subject: message.subject, title: message.title, intro: message.paragraphs[0] } : SERVICE_EMAIL_CATALOG[message.kind]);
+  if (message.kind === 'welcome') return renderLayout(copy.subject, copy.title, copy.intro, [{ type: 'button', value: 'Open Fabelpad', url: `${origin}/gezin` }, { type: 'paragraph', value: 'Je kunt op het inlogscherm steeds een nieuwe eenmalige e-mailcode aanvragen.' }], context);
+  if (message.kind === 'account-deletion-requested') return renderLayout(copy.subject, copy.title, copy.intro, [{ type: 'paragraph', value: 'Dit bericht bevestigt de ontvangst van je verzoek. Je account en gegevens zijn hiermee nog niet verwijderd. Je ontvangt bericht wanneer het verzoek is afgehandeld.' }], context);
+  if (message.kind === 'account-deleted') return renderLayout(copy.subject, copy.title, copy.intro, [{ type: 'paragraph', value: 'Lees in het privacybeleid welke beperkte bewaartermijnen eventueel gelden. Heb je vragen over je gegevens? Neem dan contact met ons op.' }], context);
   if (message.kind !== 'service-notice' || !Array.isArray(message.paragraphs) || message.paragraphs.length < 1 || message.paragraphs.length > 12) throw new Error('Invalid service email.');
   const sections: Section[] = message.paragraphs.slice(1).map(value => ({ type: 'paragraph', value: text(value, 4000) }));
   if (message.action) {
@@ -133,7 +153,7 @@ export function renderServiceEmail(message: ServiceEmail, context: EmailContext)
     if (url.origin !== origin) throw new Error('Invalid service email action.');
     sections.push({ type: 'button', value: message.action.label, url: url.href });
   }
-  return renderLayout(message.subject, message.title, text(message.paragraphs[0], 1000), sections, context);
+  return renderLayout(copy.subject, copy.title, text(copy.intro, 1000), sections, context);
 }
 
 export type AuthHookPayload = {

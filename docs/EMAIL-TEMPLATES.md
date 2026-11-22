@@ -74,7 +74,11 @@ Applicatiecode gebruikt `renderServiceEmail()` en verstuurt het resultaat via `s
 
 Dit levert de gedeelde berichtopmaak en het Resend-transport op. Het voegt geen fictieve gebeurtenissen, marketinglijst, automatische verwijdering of afleverstatus toe. Stuur een ontvangstbevestiging alleen nadat een verzoek werkelijk is vastgelegd en een verwijderbevestiging pas nadat de verwijdering is uitgevoerd. Een toekomstige duurzame outbox moet event-ID, retries, blokkering bij bounces en bewaartermijnen vastleggen voordat een nieuwe automatische mailflow wordt aangezet. Alle bestaande applicatiemails zijn Auth-mails en lopen via de hook.
 
-## Controleren en wijzigen
+## Teksten wijzigen in Beheer
+
+Op **Beheer → E-mailtemplates** (`/studio/email/templates`) staan alle 13 Auth- en 4 servicetemplates met onderwerp, kop, introductie, voorbeeld en standaardtekstherstel. **Beheer → E-mail** beheert de gezamenlijke afzender, antwoordadressen en voettekst. Zie [EMAIL-BEHEER.md](EMAIL-BEHEER.md) voor opslag, testmail, sleutelrotatie en eerste login. De actieve Send Email Hook leest deze instellingen uit de eigen Vault-configuratie; wijzigingen in de losse Supabase-dashboardtemplates overschrijven die beheerinstellingen niet.
+
+## Vormgeving en broncode controleren
 
 Pas bij een stijl- of tekstwijziging uitsluitend de gedeelde bron aan en genereer de exports opnieuw:
 

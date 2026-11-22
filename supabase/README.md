@@ -46,11 +46,17 @@ Er zijn nog **nul Auth-gebruikers**. Er is geen fictieve gebruiker aangemaakt en
 
 ## E-mail-OTP via Resend API
 
-`auth-email` Edge Function versie 1 staat in beide projecten. `verify_jwt=false` is bewust: Auth verstuurt vóór een gebruikerssessie. De handler vereist een geldige **Standard Webhooks HMAC-SHA256-handtekening**, tijdvenster, begrensde body en juiste Site URL. Niet-ondertekende verzoeken kunnen niet mailen. Zolang de zes Edge-instellingen ontbreken, retourneert POST een generieke HTTP503.
+`auth-email` is in beide projecten voorbereid. `verify_jwt=false` is bewust: Auth verstuurt vóór een gebruikerssessie. De handler vereist een geldige **Standard Webhooks HMAC-SHA256-handtekening**, tijdvenster, begrensde body en juiste Site URL. Niet-ondertekende verzoeken kunnen niet mailen. Zolang de bootstrapinstellingen ontbreken, retourneert POST een generieke HTTP503. Na eerste beheeropslag leest de hook de configuratie via het service-only RPC uit Vault; databasefouten vallen niet terug op een oude bootstrapkey.
 
 [functions.auth-email] staat in `config.toml`; imports verwijzen naar de gedeelde `lib/email/`-bron. Dezelfde renderer levert 26 plakklare HTML-bestanden en alle ondersteunde applicatieserviceberichten. Er wordt geen advertentie- of trackingmail toegevoegd.
 
 Volg [mailconfiguratie](../docs/EMAIL-CONFIGURATIE.md) en [templatehandleiding](../docs/EMAIL-TEMPLATES.md). De workspaceconnector kan geen Auth-instellingen of Edge secrets instellen. Daarvoor is de bedoelde Management PAT plus Resend-key via een afgeschermde bron of de verborgen terminaltool nodig. Geen beheerkeys in GitHub-variabelen.
+
+## Resend en templates in Beheer
+
+Migratie `20261122150754_admin_email_settings.sql` voegt twee afgeschermde RLS-tabellen in `private` toe. De Resend-key wordt uitsluitend via Supabase Vault versleuteld bewaard. `get_email_settings()` geeft alleen aan bevestigde huidige beheerders de niet-geheime instellingen terug. Ontsleutelde configuratie, testreservering en atomair opslaan zijn service-only RPC's voor de Edge-runtime; het browser-JWT en de Next-server krijgen deze rechten niet.
+
+De `email-admin` Edge Function doet zelf verplicht `getUser` plus databasebeheercontrole; `verify_jwt=false` vervangt die controle niet. Beide Edge-entrypoints controleren de vaste omgeving/project/origin-combinatie voordat zij private configuratie lezen. Opslag vereist een geaccepteerde test naar uitsluitend de ingelogde beheerder, actuele revisie en een eenmalig testbewijs met vervaltijd. Zie [EMAIL-BEHEER.md](../docs/EMAIL-BEHEER.md) voor `/studio/email` en `/studio/email/templates` met alle 17 templates. Deze inrichting maakt geen fictieve beheerder aan en activeert geen toekomstige servicemails zonder echte gebeurtenis.
 
 ## Verificatie en herstel
 

@@ -37,6 +37,7 @@ curl --fail --silent --show-error --output /dev/null http://127.0.0.1:3017/priva
 | --- | --- |
 | `/`, `/lezen`, `/ouders`, `/demo` | Website/lokale lees- en reviewfuncties; lokale data zijn geen echte cloudaccounts |
 | `/inloggen`, `/gezin`, `/studio` | Echte sessie-/autorisatiegrens; alleen beschikbaar met expliciet geconfigureerde backend |
+| `/studio/email`, `/studio/email/templates` | Bevestigde beheerder; eigen Resend-configuratie en 17 templates, test vereist vóór opslag |
 | `/privacy`, `/support`, `/account-verwijderen` | Publieke dienstpagina's; hosting en definitieve juridische gegevens afzonderlijk controleren |
 | `/api/health` | Process-liveness met release-/omgevingmetadata; geen bewijs van backendreadiness |
 
@@ -49,6 +50,8 @@ curl --fail --silent --show-error --output /dev/null http://127.0.0.1:3017/priva
 Controleer eerst de mapping in [PROJECTPROFIEL.md](PROJECTPROFIEL.md). De schemawijzigingen en content zijn al in beide projecten toegepast; voer ze niet blind opnieuw uit. Volg [EMAIL-CONFIGURATIE.md](EMAIL-CONFIGURATIE.md) voor de veilige terminaltool en [EMAIL-TEMPLATES.md](EMAIL-TEMPLATES.md) voor de 13 HTML-velden per omgeving. Keys worden verborgen gevraagd en blijven uit GitHub, bestanden en uitvoer.
 
 Test staging eerst: OTP aanvragen, bezorging controleren, code bevestigen, sessie opvragen, aangewezen beheerder en studio controleren, tweede synthetische ouder en gegevensisolatie testen, uitloggen. Herhaal afzonderlijk in production met minimale testdata. Leg geen OTP/token of echte gezinsgegevens vast. Pas daarna de eigen host-readinessontvangst aanleggen. Een account bestaat pas na de echte Auth-aanvraag; de eerste beheerder wordt pas na geverifieerd bezit toegekend.
+
+Beheer daarna de Resend-key, afzender, antwoordadressen, gezamenlijke voettekst en 17 templates volgens [EMAIL-BEHEER.md](EMAIL-BEHEER.md). Eenmalige Auth/bootstrapconfiguratie blijft nodig vóór de eerste login; daarna gebruikt de Edge-mailroute de opgeslagen Vault-configuratie. Een wijziging via Beheer vereist geen nieuwe appbuild en geen extra GitHub-variable.
 
 ## Schone verificatie vóór oplevering
 

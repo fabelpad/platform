@@ -99,7 +99,7 @@ test('Resend API sends HTML and text with stable idempotency and no redirects', 
   assert.deepEqual(result, { providerId: 'synthetic-provider-id' }); assert.equal(calls, 1);
 });
 test('invalid headers, recipient, sender and idempotency key cannot send', async () => {
-  for (const fields of [{ to: 'a@example.test\r\nBcc:b@example.test' }, { from: 'Other <noreply@example.test>' }, { apiKey: 'not-key' }, { idempotencyKey: 'short' }]) {
+  for (const fields of [{ to: 'a@example.test\r\nBcc:b@example.test' }, { from: 'Injected\r\nBcc: bad <noreply@example.test>' }, { apiKey: 'not-key' }, { idempotencyKey: 'short' }]) {
     let called = false;
     await assert.rejects(sendFabelpadEmail({ ...delivery(), ...fields }, async () => { called = true; return Response.json({ id: 'should-not-send' }); }), EmailDeliveryError);
     assert.equal(called, false);
@@ -138,4 +138,13 @@ test('a stalled provider response body is cancelled within the total three-secon
     return new Response(new ReadableStream({ start(controller) { controller.enqueue(new TextEncoder().encode('{')); }, cancel() { cancelled = true; } }));
   }), error => error instanceof EmailDeliveryError && error.retryable);
   assert.equal(cancelled, true); assert.equal(signal.aborted, true); assert.ok(Date.now() - started < 4500);
+});
+
+test('all four service templates accept edited subject/title/intro through the canonical safe layout', () => {
+  const ids = ['welcome', 'account-deletion-requested', 'account-deleted', 'service-notice'];
+  for (const id of ids) {
+    const settings = { supportEmail: 'hulp@example.test', footerText: 'Gedeelde voettekst', templates: { [id]: { subject: 'Eigen onderwerp', title: 'Eigen titel & uitleg', intro: 'Eigen inleiding' } } };
+    const message = renderServiceEmail(id === 'service-notice' ? { kind: id, subject: 'Default', title: 'Default', paragraphs: ['Default'] } : { kind: id }, { ...context, settings });
+    assert.equal(message.subject, 'Eigen onderwerp'); assert.match(message.html, /Eigen titel &amp; uitleg/u); assert.match(message.text, /Eigen inleiding/u); assert.match(message.html, /Gedeelde voettekst/u); assert.match(message.html, /hulp@example.test/u);
+  }
 });

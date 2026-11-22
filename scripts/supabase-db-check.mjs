@@ -4,6 +4,7 @@ import { createHash } from 'node:crypto';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { compileSource } from './source-test-loader.mjs';
+import { installEmailVaultTestFixture } from './email/settings-db-fixture.mjs';
 const { PGlite } = await import(process.env.FABELPAD_PGLITE_MODULE ?? '@electric-sql/pglite');
 const db = new PGlite();
 const temp = await mkdtemp(join(tmpdir(), 'fabelpad-db-content-'));
@@ -21,7 +22,7 @@ async function identity(id, role = 'authenticated', extra = {}) {
 async function save(revision, snapshot) { return (await db.query('select public.save_family_snapshot($1, $2::jsonb) as result', [revision, JSON.stringify(snapshot)])).rows[0].result; }
 async function denied(sql, params = []) { await assert.rejects(db.query(sql, params), error => error.code === '42501'); }
 try {
-  // Auth is the only Supabase service stubbed here. PostgreSQL executes real grants,
+  // Auth and Vault's API are stubbed here. PostgreSQL executes real grants,
   // RLS, functions, constraints, triggers and atomic write predicates.
   await db.exec(`
     create role anon nologin; create role authenticated nologin;
@@ -36,6 +37,7 @@ try {
     insert into auth.users(id,email,email_confirmed_at) values('${bootstrapAdministrator}','INFO@dgwebservices.nl',now());
     create function public.rls_auto_enable() returns event_trigger language plpgsql security definer as $$ begin return; end; $$;
   `);
+  await installEmailVaultTestFixture(db); // Not a cryptographic test; hosted Vault is verified separately.
   const migrationRoot = new URL('../supabase/migrations/', import.meta.url);
   for (const name of (await readdir(migrationRoot)).filter(name => name.endsWith('.sql')).sort()) await db.exec(await readFile(new URL(name, migrationRoot), 'utf8'));
   const bootstrapGrant = async id => (await db.query('select grant_source from public.content_admins where user_id=$1', [id])).rows[0]?.grant_source;

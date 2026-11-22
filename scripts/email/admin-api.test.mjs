@@ -1,0 +1,108 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+import { mkdtemp, readFile, writeFile, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
+import { compileSource } from '../source-test-loader.mjs';
+
+test('mail BFF verifies real Auth/DB grants and never exposes provider secrets', async () => {
+  const temp = await mkdtemp(join(tmpdir(), 'fabelpad-email-api-'));
+  const originalEnvironment = { ...process.env }, originalFetch = globalThis.fetch;
+  const context = Symbol.for('fabelpad.email.api.cookies'), previous = globalThis[context];
+  const origin = 'https://staging.fabelpad.nl'; let jar = new Map(), calls = [], admin = true, remoteError = null, override = null;
+  const user = { id: '00000000-0000-4000-8000-000000000101', email: 'admin@example.test', aud: 'authenticated', role: 'authenticated', email_confirmed_at: '2026-01-01T00:00:00Z', is_anonymous: false, user_metadata: { admin: true, role: 'admin' } };
+  const jwt = `${Buffer.from('{"alg":"HS256","typ":"JWT"}').toString('base64url')}.${Buffer.from(JSON.stringify({ sub: user.id, exp: Math.floor(Date.now() / 1000) + 3600, role: 'authenticated', aud: 'authenticated' })).toString('base64url')}.synthetic-signature`;
+  const request = (path = '', body, headers = {}, method = body ? 'POST' : 'GET') => new Request(`${origin}/api/admin/email${path}`, { method, headers: { ...(body ? { 'Content-Type': 'application/json', origin } : {}), ...headers }, ...(body ? { body: JSON.stringify(body) } : {}) });
+  try {
+    for (const name of Object.keys(process.env)) if (/^(NEXT_PUBLIC_|FABELPAD_|APP_URL$)/u.test(name)) delete process.env[name];
+    Object.assign(process.env, { FABELPAD_DATA_MODE: 'supabase', FABELPAD_DEPLOY_ENV: 'staging', FABELPAD_APP_ORIGIN: origin, NEXT_PUBLIC_SUPABASE_URL: 'https://tlwfpivafcokcjyjwgmq.supabase.co', NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_synthetic_test_only', FABELPAD_AUTH_EMAIL_ENABLED: 'true' });
+    globalThis[context] = { getAll: () => [...jar].map(([name, value]) => ({ name, value })), set(name, value) { if (!value) jar.delete(name); else jar.set(name, value); } };
+    const fakeHeaders = pathToFileURL(join(temp, 'headers.mjs'));
+    await writeFile(fakeHeaders, 'export async function cookies() { return globalThis[Symbol.for("fabelpad.email.api.cookies")]; }');
+    const serverURL = await compileSource(new URL('../../lib/supabase/server.ts', import.meta.url), temp);
+    await writeFile(new URL(serverURL), (await readFile(new URL(serverURL), 'utf8')).replace("'next/headers'", JSON.stringify(fakeHeaders.href)).replace("'@supabase/ssr'", JSON.stringify(import.meta.resolve('@supabase/ssr'))));
+    const apiURL = await compileSource(new URL('../../lib/server/email.ts', import.meta.url), temp);
+    const { emailAdminRequest } = await import(apiURL);
+    const { createSupabaseServerClient } = await import(serverURL);
+    const settingsURL = await compileSource(new URL('../../lib/email/settings.ts', import.meta.url), temp);
+    const { DEFAULT_EMAIL_SETTINGS } = await import(settingsURL);
+    const snapshot = { environment: 'staging', appOrigin: origin, source: 'vault', revision: 1, settings: DEFAULT_EMAIL_SETTINGS, keyConfigured: true, lastTestAt: '2026-11-22T12:00:00Z', apiKey: 're_synthetic-never-leak', testRecipient: 'private@example.test', rawProviderError: 'private-debug' };
+    globalThis.fetch = async (input, init) => {
+      const outgoing = new Request(input, init), url = new URL(outgoing.url);
+      assert.equal(url.origin, 'https://tlwfpivafcokcjyjwgmq.supabase.co', 'Every provider request is intercepted before any network use');
+      assert.equal(outgoing.headers.get('apikey'), process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY);
+      calls.push(url.pathname);
+      if (url.pathname === '/auth/v1/user') return Response.json(user);
+      if (url.pathname === '/rest/v1/content_admins') return Response.json(admin ? { user_id: user.id } : null);
+      assert.equal(url.pathname, '/functions/v1/email-admin');
+      assert.equal(outgoing.headers.get('authorization'), `Bearer ${jwt}`);
+      assert.ok(calls.indexOf('/auth/v1/user') < calls.indexOf('/functions/v1/email-admin'));
+      assert.ok(calls.indexOf('/rest/v1/content_admins') < calls.indexOf('/functions/v1/email-admin'));
+      const body = await outgoing.json();
+      if (remoteError) return Response.json(remoteError.body, { status: remoteError.status, headers: remoteError.headers });
+      if (override) return Response.json(override);
+      if (body.action === 'preview') { assert.equal(body.apiKey, undefined); return Response.json({ html: '<h1>Voorbeeld</h1>', subject: 'Voorbeeld', apiKey: 'never' }); }
+      if (body.action === 'test') { assert.equal(body.baseRevision, 1); assert.equal(body.revision, undefined); return Response.json({ ...snapshot, testStatus: 'accepted' }); }
+      if (body.action === 'save') { assert.equal(body.apiKey, 're_synthetic-only-in-request'); return Response.json({ ...snapshot, testStatus: 'accepted' }); }
+      return Response.json(snapshot);
+    };
+    let response = await emailAdminRequest(request(), 'get');
+    assert.equal(response.status, 401); assert.deepEqual(calls, []);
+    const client = await createSupabaseServerClient();
+    await client.auth.setSession({ access_token: jwt, refresh_token: 'synthetic-refresh' }); calls = [];
+    admin = false;
+    response = await emailAdminRequest(request(), 'get');
+    assert.equal(response.status, 403); assert.ok(!calls.includes('/functions/v1/email-admin'), 'Editable user_metadata cannot authorize an admin');
+    admin = true; calls = [];
+    response = await emailAdminRequest(request(), 'get');
+    assert.equal(response.status, 200); assert.equal(response.headers.get('cache-control'), 'private, no-store');
+    const publicBody = await response.json(); assert.equal(publicBody.source, 'vault');
+    assert.equal(publicBody.apiKey, undefined); assert.equal(publicBody.testRecipient, undefined); assert.equal(publicBody.rawProviderError, undefined);
+    const save = { baseRevision: 1, requestId: crypto.randomUUID(), apiKey: 're_synthetic-only-in-request', settings: DEFAULT_EMAIL_SETTINGS };
+    calls = [];
+    process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://aptprpkosqctwrzeetgs.supabase.co';
+    assert.equal((await emailAdminRequest(request('', save, {}, 'PUT'), 'save')).status, 503);
+    assert.equal((await emailAdminRequest(request('/test', { revision: 1, requestId: crypto.randomUUID() }), 'test')).status, 503);
+    assert.deepEqual(calls, [], 'A swapped target is refused before Auth, JWT/key forwarding or sending');
+    process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://tlwfpivafcokcjyjwgmq.supabase.co';
+    calls = [];
+    response = await emailAdminRequest(request('', save, { origin: 'https://attacker.example.test' }, 'PUT'), 'save');
+    assert.equal(response.status, 403); assert.deepEqual(calls, []);
+    response = await emailAdminRequest(request('', { ...save, to: 'attacker@example.test' }, {}, 'PUT'), 'save');
+    assert.equal(response.status, 400); assert.ok(!calls.includes('/functions/v1/email-admin'));
+    response = await emailAdminRequest(request('', { ...save, settings: { ...save.settings, fromName: '<script>' } }, {}, 'PUT'), 'save');
+    assert.equal(response.status, 400); assert.ok(!calls.includes('/functions/v1/email-admin'));
+    response = await emailAdminRequest(request('', { ...save, apiKey: 'invalid-key' }, {}, 'PUT'), 'save');
+    assert.equal(response.status, 400); assert.ok(!calls.includes('/functions/v1/email-admin'));
+    response = await emailAdminRequest(request('', save, {}, 'PUT'), 'save');
+    assert.equal(response.status, 200); assert.equal((await response.json()).apiKey, undefined);
+    response = await emailAdminRequest(request('/test', { revision: 1, requestId: crypto.randomUUID() }), 'test');
+    assert.deepEqual(await response.json(), { accepted: true, acceptedAt: snapshot.lastTestAt });
+    response = await emailAdminRequest(request('/preview', { templateAction: 'magiclink', settings: DEFAULT_EMAIL_SETTINGS }), 'preview');
+    assert.deepEqual(await response.json(), { html: '<h1>Voorbeeld</h1>', subject: 'Voorbeeld' });
+    response = await emailAdminRequest(request('/preview?template=magiclink'), 'preview');
+    assert.match(response.headers.get('content-security-policy'), /sandbox/u); assert.equal(await response.text(), '<h1>Voorbeeld</h1>');
+    override = { ...snapshot, environment: 'production' };
+    assert.equal((await emailAdminRequest(request(), 'get')).status, 503);
+    override = { ...snapshot, appOrigin: 'https://attacker.example.test' };
+    assert.equal((await emailAdminRequest(request(), 'get')).status, 503);
+    override = null;
+    remoteError = { status: 502, body: { error: 'provider-secret', message: 're_do-not-display' } };
+    response = await emailAdminRequest(request(), 'get');
+    assert.equal(response.status, 502); assert.ok(!(await response.text()).includes('re_do-not-display'));
+    remoteError = { status: 409, body: { error: 'settings_changed', key: 're_private' } };
+    response = await emailAdminRequest(request('', save, {}, 'PUT'), 'save');
+    assert.equal(response.status, 409); assert.equal((await response.json()).error, 'settings_changed');
+    remoteError = { status: 429, body: { error: 'test_rate_limited' }, headers: { 'Retry-After': '30' } };
+    response = await emailAdminRequest(request('/test', { revision: 1, requestId: crypto.randomUUID() }), 'test');
+    assert.equal(response.status, 429); assert.equal(response.headers.get('retry-after'), '30');
+    remoteError = null; calls = [];
+    response = await emailAdminRequest(request('', save, { 'Content-Length': String(170 * 1024) }, 'PUT'), 'save');
+    assert.equal(response.status, 413); assert.ok(!calls.includes('/functions/v1/email-admin'));
+  } finally {
+    globalThis.fetch = originalFetch; globalThis[context] = previous;
+    for (const name of Object.keys(process.env)) if (!(name in originalEnvironment)) delete process.env[name];
+    Object.assign(process.env, originalEnvironment); await rm(temp, { recursive: true, force: true });
+  }
+});

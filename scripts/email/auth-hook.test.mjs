@@ -107,3 +107,33 @@ test('provider permanent failure is not acknowledged as success or an automatic 
   const response = await handler(async () => Response.json({ message: 'not authorized' }, { status: 401 }))(signed());
   assert.equal(response.status, 502); assert.equal(response.headers.has('retry-after'), false);
 });
+
+test('Vault configuration is fetched only after valid signature and project-bound payload, without legacy secrets', async () => {
+  let reads = 0, sends = 0;
+  const { DEFAULT_EMAIL_SETTINGS } = await import(await compileSource(new URL('../../lib/email/settings.ts', import.meta.url), temporary));
+  const app = createAuthEmailHandler({ ...environment, RESEND_API_KEY: '', FABELPAD_EMAIL_FROM: '', FABELPAD_EMAIL_REPLY_TO: '' }, {
+    now: () => now,
+    loadDeliveryConfiguration: async () => { reads++; return { revision: 1, settings: { ...DEFAULT_EMAIL_SETTINGS, fromName: 'Fabelpad Ouders', supportEmail: 'hulp@example.test', templates: { magiclink: { subject: 'Een nieuwe code', title: 'Je code', intro: 'Lees verder.' } } }, apiKey: 're_vault_synthetic_only' }; },
+    fetch: async (_, options) => { sends++; const body = JSON.parse(options.body); assert.equal(body.from, 'Fabelpad Ouders <noreply@fabelpad.nl>'); assert.equal(body.subject, 'Een nieuwe code'); assert.match(body.html, /hulp@example.test/u); assert.equal(options.headers.Authorization, 'Bearer re_vault_synthetic_only'); return goodResponse(); },
+  });
+  assert.equal((await app(signed(undefined, { headers: { 'webhook-signature': '' } }))).status, 401);
+  assert.equal((await app(signed(JSON.stringify(payload({ site_url: 'https://other.example.test' }))))).status, 400);
+  assert.equal(reads, 0); assert.equal(sends, 0);
+  assert.equal((await app(signed())).status, 200); assert.equal(reads, 1); assert.equal(sends, 1);
+});
+test('an absent Vault row may use legacy settings, but database failure or malformed saved settings never do', async () => {
+  let sends = 0;
+  const options = { now: () => now, fetch: async () => { sends++; return goodResponse(); } };
+  assert.equal((await createAuthEmailHandler(environment, { ...options, loadDeliveryConfiguration: async () => null })(signed())).status, 200);
+  assert.equal(sends, 1);
+  for (const load of [async () => { throw new Error('private-vault-diagnostic'); }, async () => ({ revision: 1, settings: {}, apiKey: 're_broken_vault_only' }), async () => undefined]) {
+    const response = await createAuthEmailHandler(environment, { ...options, loadDeliveryConfiguration: load })(signed());
+    assert.equal(response.status, 503); assert.doesNotMatch(await response.text(), /private|re_broken|123456/u);
+  }
+  assert.equal(sends, 1);
+});
+test('Vault lookup has an 800ms budget and cancels its request before any delivery', async () => {
+  let signal, sends = 0; const started = Date.now();
+  const app = createAuthEmailHandler(environment, { now: () => now, loadDeliveryConfiguration: value => { signal = value; return new Promise(() => {}); }, fetch: async () => { sends++; return goodResponse(); } });
+  assert.equal((await app(signed())).status, 503); assert.equal(signal.aborted, true); assert.equal(sends, 0); assert.ok(Date.now() - started < 1400);
+});

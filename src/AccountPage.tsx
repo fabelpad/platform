@@ -5,8 +5,8 @@ import type { ParentIdentity } from './cloudSync';
 import { safeNext } from '../lib/authNavigation';
 
 export type AccountSession = { configured: boolean; parent: ParentIdentity | null; admin: boolean; providers?: { email: boolean; google: boolean }; message?: string };
-export function PageShell({ children }: { children: ReactNode }) {
-  return <div className="simple-page"><header><a href="/" aria-label="Fabelpad startpagina"><img src="/brand/logo.webp" alt="Fabelpad" /></a><nav><a href="/lezen">Probeer de verhalen</a><a href="/gezin">Mijn gezin</a><a href="/support">Hulp</a></nav></header><main>{children}</main></div>;
+export function PageShell({ children, adminNavigation = false }: { children: ReactNode; adminNavigation?: boolean }) {
+  return <div className="simple-page"><header><a href="/" aria-label="Fabelpad startpagina"><img src="/brand/logo.webp" alt="Fabelpad" /></a><nav aria-label="Hoofdnavigatie"><a href="/lezen">Probeer de verhalen</a><a href="/gezin">Mijn gezin</a><a href="/support">Hulp</a>{adminNavigation && <a href="/studio">Beheer</a>}</nav></header><main>{children}</main></div>;
 }
 export async function accountRequest(path: string, body: unknown = {}) {
   const response = await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });

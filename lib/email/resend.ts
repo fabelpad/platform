@@ -22,10 +22,10 @@ const mailbox = (value: string) => typeof value === 'string' && value.length <= 
 export async function sendFabelpadEmail(delivery: ResendDelivery, fetcher: typeof fetch = fetch): Promise<{ providerId: string }> {
   // Deno 1 also exposes window; only a real DOM marks a browser runtime.
   if (typeof document !== 'undefined') throw new EmailDeliveryError(403);
-  const from = /^Fabelpad(?: Staging)? <([^<>]+)>$/u.exec(delivery.from);
+  const from = /^[^<>\r\n\u0000-\u001f\u007f]{1,88} <([^<>]+)>$/u.exec(delivery.from);
   if (!/^re_[A-Za-z0-9_-]{8,}$/u.test(delivery.apiKey) || !from || !mailbox(from[1]) || !mailbox(delivery.to) || (delivery.replyTo !== undefined && !mailbox(delivery.replyTo))) throw new EmailDeliveryError(422);
   if (!/^[A-Za-z0-9][A-Za-z0-9._:/-]{7,199}$/u.test(delivery.idempotencyKey)) throw new EmailDeliveryError(422);
-  if (/[\r\n]/u.test(delivery.message.subject) || !delivery.message.subject || delivery.message.subject.length > 200 || delivery.message.html.length > 200_000 || delivery.message.text.length > 50_000) throw new EmailDeliveryError(422);
+  if (/[\r\n]/u.test(delivery.message.subject) || !delivery.message.subject || Array.from(delivery.message.subject).length > 200 || delivery.message.html.length > 200_000 || delivery.message.text.length > 50_000) throw new EmailDeliveryError(422);
   const controller = new AbortController();
   let activeReader: ReadableStreamDefaultReader<Uint8Array> | null = null;
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -34,7 +34,7 @@ export async function sendFabelpadEmail(delivery: ResendDelivery, fetcher: typeo
     try {
       response = await fetcher('https://api.resend.com/emails', {
         method: 'POST', redirect: 'error', signal: controller.signal,
-        headers: { Authorization: `Bearer ${delivery.apiKey}`, 'Content-Type': 'application/json', 'Idempotency-Key': delivery.idempotencyKey },
+        headers: { Authorization: `Bearer ${delivery.apiKey}`, 'Content-Type': 'application/json', 'Idempotency-Key': delivery.idempotencyKey, 'User-Agent': 'Fabelpad/1.0 (transactional-mail)' },
         body: JSON.stringify({ from: delivery.from, to: [delivery.to], subject: delivery.message.subject, html: delivery.message.html, text: delivery.message.text, ...(delivery.replyTo ? { reply_to: delivery.replyTo } : {}) }),
       });
     } catch { throw new EmailDeliveryError(); }

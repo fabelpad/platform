@@ -1,5 +1,6 @@
 import { buildSupabaseAuthMessages, type AuthHookPayload, type EmailContext } from './templates.ts';
 import { EmailDeliveryError, sendFabelpadEmail } from './resend.ts';
+import { parseEmailSettings, parseResendApiKey, type EmailSettings } from './settings.ts';
 
 /** Standard Webhooks v1.0.0 HMAC-SHA256 profile. The exact raw UTF-8 request
  * body, webhook ID and original timestamp are verified using Web Crypto's
@@ -10,7 +11,8 @@ const BODY_LIMIT = 20 * 1024;
 const TIMESTAMP_TOLERANCE_SECONDS = 300;
 const encoder = new TextEncoder();
 type Environment = Record<string, string | undefined>;
-type HookConfiguration = { context: EmailContext; apiKey: string; from: string; replyTo: string; secret: Uint8Array };
+type HookConfiguration = { context: EmailContext; secret: Uint8Array };
+export type HookDeliveryConfiguration = { revision: number; settings: EmailSettings; apiKey: string };
 const mailbox = (value: unknown): value is string => typeof value === 'string' && value.length <= 254 && /^[^\s<>@]+@[^\s<>@]+\.[^\s<>@]+$/u.test(value);
 function decodeBase64(value: string) {
   if (!/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/u.test(value)) throw new Error('Invalid signature configuration.');
@@ -20,16 +22,20 @@ function configuration(environment: Environment): HookConfiguration {
   const origin = environment.FABELPAD_APP_ORIGIN ?? '', stage = environment.FABELPAD_ENVIRONMENT;
   const url = new URL(origin);
   if (url.protocol !== 'https:' || url.username || url.password || url.origin !== origin || (stage !== 'staging' && stage !== 'production')) throw new Error('Invalid email configuration.');
-  const from = environment.FABELPAD_EMAIL_FROM ?? '', fromMatch = /^Fabelpad(?: Staging)? <([^<>]+)>$/u.exec(from);
-  const replyTo = environment.FABELPAD_EMAIL_REPLY_TO ?? '';
-  if (!fromMatch || !mailbox(fromMatch[1]) || !mailbox(replyTo) || (stage === 'staging' && !from.startsWith('Fabelpad Staging <')) || (stage === 'production' && !from.startsWith('Fabelpad <'))) throw new Error('Invalid email configuration.');
-  const apiKey = environment.RESEND_API_KEY ?? '';
-  if (!/^re_[A-Za-z0-9_-]{8,}$/u.test(apiKey)) throw new Error('Invalid email configuration.');
   const suppliedSecret = environment.SEND_EMAIL_HOOK_SECRET ?? '';
   if (suppliedSecret.length > 200 || !/^(?:v1,)?whsec_/u.test(suppliedSecret)) throw new Error('Invalid signature configuration.');
   const secret = decodeBase64(suppliedSecret.replace(/^(?:v1,)?whsec_/u, ''));
   if (secret.length < 32 || secret.length > 64) throw new Error('Invalid signature configuration.');
-  return { context: { siteUrl: origin, environment: stage }, apiKey, from, replyTo, secret };
+  return { context: { siteUrl: origin, environment: stage }, secret };
+}
+function legacyDelivery(environment: Environment) {
+  const from = environment.FABELPAD_EMAIL_FROM ?? '', fromMatch = /^Fabelpad(?: Staging)? <([^<>]+)>$/u.exec(from);
+  const replyTo = environment.FABELPAD_EMAIL_REPLY_TO ?? '', stage = environment.FABELPAD_ENVIRONMENT;
+  if (!fromMatch || !mailbox(fromMatch[1]) || !mailbox(replyTo) || (stage === 'staging' && !from.startsWith('Fabelpad Staging <')) || (stage === 'production' && !from.startsWith('Fabelpad <'))) throw new Error('Invalid email configuration.');
+  return { from, replyTo, apiKey: parseResendApiKey(environment.RESEND_API_KEY) };
+}
+export function formatEmailSender(settings: EmailSettings, environment: string) {
+  return `${settings.fromName}${environment === 'staging' ? ' Staging' : ''} <${settings.fromEmail}>`;
 }
 const json = (status: number, retry = false) => Response.json(status === 200 ? {} : { error: { http_code: status, message: 'Email delivery could not be completed.' } }, {
   status, headers: { 'Cache-Control': 'no-store', ...(retry ? { 'Retry-After': 'true' } : {}), ...(status === 405 ? { Allow: 'POST' } : {}) },
@@ -81,7 +87,10 @@ async function deliveryKey(id: string, slot: string, action: string, environment
  * JWT (Auth calls it before a user session exists). This function never logs.
  * An HTTP 200 means Resend accepted all sends; it does not prove inbox delivery.
  */
-export function createAuthEmailHandler(environment: Environment, options: { fetch?: typeof fetch; now?: () => number } = {}) {
+export function createAuthEmailHandler(environment: Environment, options: {
+  fetch?: typeof fetch; now?: () => number;
+  loadDeliveryConfiguration?: (signal: AbortSignal) => Promise<HookDeliveryConfiguration | null>;
+} = {}) {
   let config: HookConfiguration | null = null;
   try { config = configuration(environment); } catch { /* Fail closed without exposing which value is absent. */ }
   return async (request: Request): Promise<Response> => {
@@ -96,8 +105,27 @@ export function createAuthEmailHandler(environment: Environment, options: { fetc
     let payload: AuthHookPayload, messages: ReturnType<typeof buildSupabaseAuthMessages>;
     try { payload = JSON.parse(body); messages = buildSupabaseAuthMessages(payload, config.context); } catch { return json(400); }
     try {
+      // A Vault lookup happens only after signature and payload/project checks.
+      // A missing row may use the original deployment secrets; a failed lookup
+      // or malformed saved row must never silently reuse stale credentials.
+      let saved: HookDeliveryConfiguration | null = null;
+      if (options.loadDeliveryConfiguration) {
+        const controller = new AbortController(); let timer: ReturnType<typeof setTimeout> | undefined;
+        try {
+          saved = await Promise.race([options.loadDeliveryConfiguration(controller.signal), new Promise<never>((_, reject) => {
+            timer = setTimeout(() => { controller.abort(); reject(new Error('Delivery configuration unavailable.')); }, 800);
+          })]);
+        } finally { if (timer) clearTimeout(timer); }
+      }
+      let delivery: { from: string; replyTo: string; apiKey: string };
+      if (saved !== null) {
+        if (!Number.isSafeInteger(saved.revision) || saved.revision < 1) throw new Error('Invalid delivery configuration.');
+        const settings = parseEmailSettings(saved.settings);
+        delivery = { from: formatEmailSender(settings, config.context.environment), replyTo: settings.replyTo, apiKey: parseResendApiKey(saved.apiKey) };
+        messages = buildSupabaseAuthMessages(payload, { ...config.context, settings });
+      } else delivery = legacyDelivery(environment);
       const settled = await Promise.allSettled(messages.map(async message => sendFabelpadEmail({
-        apiKey: config!.apiKey, from: config!.from, replyTo: config!.replyTo, to: message.to, message: message.message,
+        ...delivery, to: message.to, message: message.message,
         idempotencyKey: await deliveryKey(id!, message.recipientSlot, payload.email_data.email_action_type, config!.context.environment),
       }, options.fetch)));
       const failed = settled.filter((result): result is PromiseRejectedResult => result.status === 'rejected');
