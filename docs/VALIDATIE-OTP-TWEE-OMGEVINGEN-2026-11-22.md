@@ -4,7 +4,7 @@ Uitgevoerd op **22 november 2026** op de development-VPS. Geteste applicatiebron
 
 ## Schone lokale builds
 
-Elke werkmap is uit `git archive` van die volledige SHA gemaakt, zonder `.env.local`, oude `.next` of overgenomen `node_modules`. Installatie: **`pnpm install --frozen-lockfile`**. Toolchain: **Node24.18.0 / pnpm11.25.0 / Next16.3.4**.
+Elke werkmap is uit `git archive` van die volledige SHA gemaakt, zonder `.env.local`, oude `.next` of overgenomen `node_modules`. Installatie: **`pnpm install --frozen-lockfile`**. Toolchain: **Node 24.18.0 / pnpm 11.25.0 / Next 16.3.4**.
 
 | Werkmap / configuratie | Uitgevoerd | Resultaat |
 | --- | --- | --- |
@@ -20,29 +20,31 @@ Buildoutput: `.next/server`, `.next/static`, `public` en benodigde packagebestan
 
 | Controle | Resultaat / grens |
 | --- | --- |
-| Preflight, configuratie, TypeScript | Geslaagd onder gepinde toolchain; lokale preflight22.55GB vrij en ruim14miljoen inodes |
-| Content-/profiel-/synchronisatiecontracten | Geslaagd, waaronder13verhalen/403scènes/416eindroutes en versiebehoud |
+| Preflight, configuratie, TypeScript | Geslaagd onder gepinde toolchain; lokale preflight 22,55 GB vrij en ruim 14 miljoen inodes |
+| Content-/profiel-/synchronisatiecontracten | Geslaagd, waaronder 13 verhalen / 403 scènes / 416 eindroutes en versiebehoud |
 | PostgreSQL/PGlite | Beide echte migraties, RLS/RPC/CAS, publicatie, bootstrapbevestiging/intrekking en behoud handmatige rollen geslaagd |
 | Auth/SSR-SDK | 25 geïsoleerde scenario's geslaagd met geïnstalleerde Supabase-SDK en synthetische provider |
 | E-mail | 33 Node-tests geslaagd: templates, HMAC, tijdvenster, ontvangers, cross-environmentweigering, idempotentie, timeouts, standalone OTP-tool |
 | Mailconfiguratie | 17 nagebootste HTTP-tests geslaagd, inclusief bescherming actieve secrets en herstel bij Auth-updatefouten |
-| Deployroute | 86 Node-tests +19 installer-/upgradetests geslaagd |
+| Deployroute | 86 Node-tests + 19 installer-/upgradetests geslaagd |
 | Native runtimecontract | Geslaagd; geen nieuwe APK/AAB gebouwd voor deze webwijziging |
-| Deno2.9.8 | `deno check --config supabase/functions/auth-email/deno.json supabase/functions/auth-email/index.ts` geslaagd |
-| Browser | Alle9 Playwright/Chromium-scenario's geslaagd tegen de gebouwde lokale Next-server;10.2seconden |
+| Deno 2.9.8 | `deno check --config supabase/functions/auth-email/deno.json supabase/functions/auth-email/index.ts` geslaagd |
+| Browser | Alle 9 Playwright/Chromium-scenario's geslaagd tegen de gebouwde lokale Next-server; 10,2 seconden |
 | Lokale HTTP | `/api/health` geeft200 met exacte bron-SHA en lokale modus; `/privacy` geeft200 |
 
 De browserscenario's omvatten bestaande lees-/opslag-/gezins-/studioflows, OTP met veilige studioterugkeer, bevestigingslinks die geen token op GET gebruiken, opgeschoonde URL en correcte beschikbaarheidsfout bij een mislukte sessieaanvraag. Auth-/cloudscenarios gebruiken synthetische, onderschepte providerantwoorden. Er is geen echte mail verzonden en geen echte mailboxcode gebruikt.
 
+De configuratietool kreeg daarna expliciete startlimieten van 30 Auth-mails per uur en 60 seconden per gebruiker, zodat een nieuw project niet op de ingebouwde testlimiet blijft staan. De 17 configuratietests zijn opnieuw geslaagd, inclusief terugzetten van oorspronkelijke limieten bij fouten. De 33 Node-mailtests zijn opnieuw geslaagd. Dit wijzigt geen appcode of Next-buildinvoer en voert geen live providerwijziging uit. Resend-dag-/maandquota en latere gewenste capaciteit blijven afzonderlijk te controleren.
+
 ## Live database en host
 
-[Supabase-bewijs](deploy-evidence/supabase-2026-11-22.json): beide schema's en13 bronreleases toegepast, RLS aan, catalogusHTTP200, anonieme afgeschermde tabellenHTTP401, securityadvisors zonder meldingen,0Auth-gebruikers. `auth-email`v1 deployed maar ongeconfigureerd; POST retourneert503 zonder te verzenden.
+[Supabase-bewijs](deploy-evidence/supabase-2026-11-22.json): beide schema's en 13 bronreleases toegepast, RLS aan, catalogus HTTP 200, anonieme afgeschermde tabellen HTTP 401, securityadvisors zonder meldingen, 0 Auth-gebruikers. `auth-email` v1 deployed maar ongeconfigureerd; POST retourneert 503 zonder te verzenden.
 
-[Hostbewijs](deploy-evidence/dg-vps-08-2026-11-22.json): twee eigen doelen voorbereid,4188/4189 vrij, rechten gescheiden, runners ongeregistreerd en alle eigen app-/runnerdiensten disabled/inactive. Relevante bestaande diensten/configuraties/healthresponses/currentlinks vóór en na gelijk. Geen doelkandidaat of actieve Fabelpad-release.
+[Hostbewijs](deploy-evidence/dg-vps-08-2026-11-22.json): twee eigen doelen voorbereid, 4188/4189 vrij, rechten gescheiden, runners ongeregistreerd en alle eigen app-/runnerdiensten disabled/inactive. Relevante bestaande diensten/configuraties/healthresponses/currentlinks vóór en na gelijk. Geen doelkandidaat of actieve Fabelpad-release.
 
 ## Open acceptatie
 
-De eerste PR-verificatie stopte bij de capaciteitspreflight: de tijdelijke GitHub-runner had12.884.598.784 bytes vrij, net onder12GiB. De workflow ruimt nu, na controle op `RUNNER_ENVIRONMENT=github-hosted`, uitsluitend de ongebruikte `/usr/share/dotnet` en `/opt/ghc` op. Dit is dezelfde bestaande stap als in Android-CI, zonder verlaging van de capaciteitsdrempel of wijziging op de VPS. De opvolgende GitHub-run is het verificatiebewijs voor deze CI-wijziging.
+De eerste PR-verificatie stopte bij de capaciteitspreflight: de tijdelijke GitHub-runner had 12.884.598.784 bytes vrij, net onder 12 GiB. De workflow ruimt nu, na controle op `RUNNER_ENVIRONMENT=github-hosted`, uitsluitend de ongebruikte `/usr/share/dotnet` en `/opt/ghc` op. Dit is dezelfde bestaande stap als in Android-CI, zonder verlaging van de capaciteitsdrempel of wijziging op de VPS. De opvolgende GitHub-run is het verificatiebewijs voor deze CI-wijziging.
 
 Afgeschermde Resend-key, geverifieerd verzenddomein en Supabase Auth-/secretbeheer ontbreken. Daardoor zijn echte OTP-bezorging, accountaanmaak van de aangewezen beheerder en root-readiness nog niet uitgevoerd. Runnergroepbeheer ontbreekt eveneens. Main-integratie vereist daarnaast controle van geërfde organisatie-Playflags en eventuele Supabase-GitHub-integratie; de huidige toegang toont die niet volledig.
 

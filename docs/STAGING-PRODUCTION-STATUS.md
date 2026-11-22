@@ -18,7 +18,7 @@ Controledatum: **22 november 2026**. De eigenaar autoriseert inrichting van beid
 | Auth-mailfunctie | `auth-email` v1 deployed | `auth-email` v1 deployed |
 | Ongeconfigureerde hook weigert mail | HTTP503, geen verzending | HTTP503, geen verzending |
 | HTML-exports | 13 templates met TEST-label | 13 productie-templates |
-| VPS-inrichting | Eigen rollen/paden, poort4188 | Eigen rollen/paden, poort4189 |
+| VPS-inrichting | Eigen rollen/paden, poort 4188 | Eigen rollen/paden, poort 4189 |
 | App- en runnerdiensten | Disabled/inactive, runner ongeregistreerd | Disabled/inactive, runner ongeregistreerd |
 | Kandidaat / actieve release | Geen | Geen |
 
@@ -42,7 +42,7 @@ Keys/tokens niet in chat sturen. Gebruik een afgeschermd secretpad of voer de to
 
 ## Instructies en bewijs
 
-- [Schone lokale builds en9 geslaagde browsertests](VALIDATIE-OTP-TWEE-OMGEVINGEN-2026-11-22.md): volledige normale buildroute en afzonderlijke staging-/productionconfiguratiebuilds uit commit `070a039e1de4c39fac12d79d293104a0e89c8f00` geslaagd. Dit zijn lokale builds, geen doelkandidaten of mailacceptatie.
+- [Schone lokale builds en 9 geslaagde browsertests](VALIDATIE-OTP-TWEE-OMGEVINGEN-2026-11-22.md): volledige normale buildroute en afzonderlijke staging-/productionconfiguratiebuilds uit commit `070a039e1de4c39fac12d79d293104a0e89c8f00` geslaagd. Dit zijn lokale builds, geen doelkandidaten of mailacceptatie.
 - [Gegevensbronnen en vier GitHub-variabelen](INRICHTING.md)
 - [Mailconfiguratie per account, verborgen terminalinvoer](EMAIL-CONFIGURATIE.md)
 - [HTML-templates en Supabase-schermvolgorde](EMAIL-TEMPLATES.md)

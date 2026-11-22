@@ -29,6 +29,8 @@ class FakeApi:
         self.auth = {**mail.auth_configuration(environment), 'site_url': 'http://localhost:3000',
                      'uri_allow_list': '', 'external_google_enabled': False, 'hook_send_email_enabled': False,
                      'hook_send_email_uri': '', 'hook_send_email_secrets': None, 'mailer_otp_length': 6,
+                     'rate_limit_email_sent': 2, 'smtp_max_frequency': 120,
+                     'rate_limit_otp': 777, 'rate_limit_verify': 888,
                      'existing_unrelated_setting': 'unchanged'}
         for key in self.auth:
             if key.startswith('mailer_subjects_'):
@@ -135,6 +137,10 @@ class MailConfigurationTests(unittest.TestCase):
                 self.assertEqual(edge['FABELPAD_EMAIL_FROM'], mail.sender(environment, 'noreply@fabelpad.nl'))
                 self.assertEqual(api.auth['mailer_otp_length'], 8)
                 self.assertEqual(api.auth['mailer_otp_exp'], 600)
+                self.assertEqual(api.auth['rate_limit_email_sent'], 30)
+                self.assertEqual(api.auth['smtp_max_frequency'], 60)
+                self.assertEqual(api.auth['rate_limit_otp'], 777)
+                self.assertEqual(api.auth['rate_limit_verify'], 888)
                 self.assertEqual(api.auth['external_google_enabled'], False)
                 self.assertEqual(api.auth['existing_unrelated_setting'], 'unchanged')
                 self.assertEqual(sum(key.startswith('mailer_templates_') for key in api.auth), 13)
@@ -224,6 +230,8 @@ class MailConfigurationTests(unittest.TestCase):
             self.assertIn('hersteld en gecontroleerd', str(caught.exception))
             self.assertEqual(api.auth, previous)
             self.assertEqual(api.auth['hook_send_email_enabled'], False)
+            self.assertEqual(api.auth['rate_limit_email_sent'], 2)
+            self.assertEqual(api.auth['smtp_max_frequency'], 120)
             self.assertEqual([method for method, *_ in api.writes], ['POST', 'PATCH', 'PATCH'])
             self.assertNotIn(KEY, str(caught.exception))
             self.assertNotIn(PAT, str(caught.exception))
@@ -253,6 +261,8 @@ class MailConfigurationTests(unittest.TestCase):
     def test_active_hook_auth_readback_failure_restores_working_settings_without_secret_writes(self):
         api = FakeApi(); self.run_config(api, apply=True)
         api.auth['mailer_subjects_magic_link'] = 'Previous healthy subject'
+        api.auth['rate_limit_email_sent'] = 12
+        api.auth['smtp_max_frequency'] = 90
         previous_auth = copy.deepcopy(api.auth); previous_secrets = copy.deepcopy(api.secrets)
         api.calls = []; api.patch_count = 0; api.bad_readback = True
         with self.assertRaises(mail.PreparationError) as caught:
@@ -262,6 +272,8 @@ class MailConfigurationTests(unittest.TestCase):
         self.assertEqual(api.secrets, previous_secrets)
         self.assertEqual([method for method, *_ in api.writes], ['PATCH', 'PATCH'])
         self.assertEqual(api.auth['hook_send_email_enabled'], True)
+        self.assertEqual(api.auth['rate_limit_email_sent'], 12)
+        self.assertEqual(api.auth['smtp_max_frequency'], 90)
 
     def test_failed_restore_requires_manual_recovery_and_never_exposes_provider_details(self):
         for failure in ('fail_patch', 'fail_recovery'):
@@ -272,11 +284,12 @@ class MailConfigurationTests(unittest.TestCase):
             self.assertNotIn(KEY, str(caught.exception)); self.assertNotIn(PAT, str(caught.exception))
 
     def test_missing_previous_auth_value_blocks_before_any_change(self):
-        api = FakeApi(); del api.auth['mailer_otp_exp']
-        with self.assertRaises(mail.PreparationError) as caught:
-            self.run_config(api, apply=True)
-        self.assertIn('eerdere instellingen', str(caught.exception))
-        self.assertEqual(api.writes, [])
+        for field in ['mailer_otp_exp', 'rate_limit_email_sent', 'smtp_max_frequency']:
+            api = FakeApi(); del api.auth[field]
+            with self.subTest(field=field), self.assertRaises(mail.PreparationError) as caught:
+                self.run_config(api, apply=True)
+            self.assertIn('eerdere instellingen', str(caught.exception))
+            self.assertEqual(api.writes, [])
 
     def test_terminal_echo_fallback_is_refused_without_api_calls(self):
         with patch.object(mail.sys.stdin, 'isatty', return_value=True), patch.object(mail.getpass, 'getpass', side_effect=mail.getpass.GetPassWarning('synthetic-private-terminal-detail')), patch.object(mail, 'Api', side_effect=AssertionError('No API')):

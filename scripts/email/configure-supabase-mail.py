@@ -138,6 +138,9 @@ def auth_configuration(environment, root=ROOT):
         'mailer_secure_email_change_enabled': True,
         'mailer_otp_exp': 600,
         'mailer_otp_length': 8,
+        # Conservative initial capacity; unrelated IP/verification limits stay.
+        'rate_limit_email_sent': 30,
+        'smtp_max_frequency': 60,
         'hook_send_email_enabled': True,
         'hook_send_email_uri': f'https://{destination["ref"]}.supabase.co/functions/v1/auth-email',
     }

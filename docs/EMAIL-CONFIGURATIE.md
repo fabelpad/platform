@@ -2,6 +2,10 @@
 
 Gecontroleerd op 22 november 2026. De applicatie gebruikt wachtwoordloze e-mailcodes. Een code bevat **8 cijfers** en verloopt na **600 seconden**. Kinderen krijgen geen eigen e-mailadres. Google-inloggen blijft uit zolang daarvoor geen afzonderlijk gecontroleerde inrichting bestaat.
 
+Voor beide doelen stelt de tool als bescheiden **startcapaciteit** `rate_limit_email_sent=30` en `smtp_max_frequency=60` in: maximaal 30 Auth-mails per uur per project, met minstens 60 seconden tussen nieuwe verzendaanvragen voor dezelfde gebruiker. Dit is geen SLA of capaciteitsgarantie. Andere bestaande IP-, OTP-verzoek- en verificatielimieten blijven staan. Bij overschrijding kan Auth HTTP 429 teruggeven; wacht dan tot de betreffende teller opnieuw ruimte heeft. De ingebouwde Supabase-maildienst heeft een afzonderlijke standaardlimiet van twee mails per uur; met de eigen Send Email Hook moet de gewenste Auth-limiet expliciet worden ingesteld. Zie de [actuele Supabase-limieten](https://supabase.com/docs/guides/auth/rate-limits).
+
+Controleer daarnaast in het eigen Resend-dashboard het dag-/maandquotum, eventuele verzendlimieten en resterende ruimte. Dat zijn afzonderlijke beperkingen; 30 Auth-mails per uur garandeert geen Resend-capaciteit. De tool wijzigt geen Resend-abonnement, betaalinstelling of quotum. Schaal deze startinstellingen later alleen via een beoordeelde configuratiewijziging na gebruiks- en misbruikcontrole.
+
 De tool in deze handleiding is voorbereid en lokaal getest met nagebootste HTTP-antwoorden. Dat bewijst geen echte bezorging, werkende productie-login of publicatie. De actuele uitvoeringsstatus en eventuele al uitgevoerde providerwijzigingen staan in het projectrunbook. Voer deze stappen uit in een eigen, vertrouwde terminal; deel geen sleutels, codes of inloggegevens in de chat.
 
 ## 1. Controleer de twee vaste doelen
@@ -89,7 +93,7 @@ De tool doet in volgorde het volgende:
 3. Plaatst bij eerste inrichting uitsluitend deze zes Edge-secrets: `RESEND_API_KEY`, `SEND_EMAIL_HOOK_SECRET`, `FABELPAD_EMAIL_FROM`, `FABELPAD_EMAIL_REPLY_TO`, `FABELPAD_APP_ORIGIN`, `FABELPAD_ENVIRONMENT`. Bestaande andere Edge-secrets blijven staan. Een actieve route met overeenkomende digests krijgt geen Edge-secret-schrijfactie.
 4. Controleert intern de zes SHA-256-digests tegen de bedoelde waarden. Dit leest geen geheimwaarden of digests terug naar de uitvoer.
 5. Zet de vaste Site URL en de drie exacte redirect-URL's `/inloggen`, `/auth/callback` en `/auth/confirm`; activeert e-mailaccounts met bevestiging, laat onbevestigde e-mailadressen niet inloggen en zet veilige e-mailwijziging aan.
-6. Zet OTP op 8 cijfers/600 seconden, schrijft alle 13 Fabelpad-onderwerpen en HTML-templates plus zeven beveiligingsmeldingen en stelt de Send Email Hook in met hetzelfde geheim als de Edge Function.
+6. Zet OTP op 8 cijfers/600 seconden en de Auth-startlimieten op 30 mails per uur/60 seconden per gebruiker, schrijft alle 13 Fabelpad-onderwerpen en HTML-templates plus zeven beveiligingsmeldingen en stelt de Send Email Hook in met hetzelfde geheim als de Edge Function. Andere bestaande IP- en verificatielimieten blijven behouden.
 7. Leest de Auth-configuratie terug en vergelijkt die intern met de bedoelde configuratie. Er wordt **geen testmail verstuurd**.
 
 Er bestaat geen transactie over Edge-secrets en Auth samen. Bij een mislukte Auth-update of afwijkende readback probeert de tool eenmaal de vooraf in het geheugen bewaarde Auth-instellingen terug te zetten en controleert die terugkeer. Een oorspronkelijk uitgeschakelde hook blijft daarmee uit; een actieve hook houdt zijn eerdere instellingen en ongewijzigde geheimen. Voorbereide Edge-secrets van een eerste, inactieve inrichting kunnen blijven staan. Een herhaling genereert daarvoor opnieuw een vers hookgeheim.

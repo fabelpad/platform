@@ -63,7 +63,7 @@ bash scripts/local-build.sh
 
 Een lokale productiebundel is geen kandidaat op de doel-VPS. Pas wanneer de doelrunner, exacte main-SHA met geslaagde vereiste CI, veilige doelconfiguratie en capaciteit beschikbaar zijn, kan de afzonderlijke kandidaatworkflow bouwen. De buildroute activeert geen app.
 
-De daadwerkelijk uitgevoerde schone lokale builds van22november en9 geslaagde browserscenario's zijn vastgelegd in [het verificatieverslag](VALIDATIE-OTP-TWEE-OMGEVINGEN-2026-11-22.md), inclusief exacte bron-SHA en grenzen van de provider-/doelacceptatie.
+De daadwerkelijk uitgevoerde schone lokale builds van 22 november en 9 geslaagde browserscenario's zijn vastgelegd in [het verificatieverslag](VALIDATIE-OTP-TWEE-OMGEVINGEN-2026-11-22.md), inclusief exacte bron-SHA en grenzen van de provider-/doelacceptatie.
 
 ## Native Android
 
