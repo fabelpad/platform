@@ -1,4 +1,5 @@
 import { BackendConfigurationError, getSupabaseConfig } from '../supabase/config';
+import { AccountDeletedError } from '../supabase/errors';
 export { safeNext } from '../authNavigation';
 
 export function privateJson(body: unknown, status = 200, extra: Record<string, string> = {}): Response {
@@ -28,6 +29,7 @@ export async function readJson(request: Request, limit = 8 * 1024): Promise<unkn
 }
 export function object(value: unknown): value is Record<string, unknown> { return !!value && typeof value === 'object' && !Array.isArray(value); }
 export function handleApiError(error: unknown): Response {
+  if (error instanceof AccountDeletedError) return privateJson({ error: 'account_deleted', message: error.message, ...(error.cleanupParentId ? { cleanupParentId: error.cleanupParentId } : {}) }, 410);
   if (error instanceof BackendConfigurationError) return privateJson({ error: 'backend_not_configured', message: error.message }, 503);
   if (error instanceof RequestError) return privateJson({ error: error.code, message: error.message }, error.status);
   return privateJson({ error: 'backend_unavailable', message: 'De gezinsomgeving is tijdelijk niet bereikbaar. Lokale wijzigingen blijven op dit apparaat.' }, 503);

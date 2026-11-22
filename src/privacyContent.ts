@@ -1,68 +1,147 @@
-/** Native and web scopes are stated separately; provider acceptance is tracked in the runbook. */
+/** Native and web scopes are deliberately described separately. */
 export const privacy = {
-  title: 'Privacy en gegevens verwijderen',
-  updated: '22 november 2026',
-  introduction: 'Fabelpad is een verhalenapp voor samen lezen en kiezen. Deze verklaring beschrijft de lokale Android-app Fabelpad (pakket nl.fabelpad.app), de website, de afzonderlijke webfuncties voor ouderaccounts en contact via support@fabelpad.nl. De gratis Android-app werkt zonder online account, advertenties, abonnementen of cloudsynchronisatie. Een ouderaccount op de website staat los van de lokale Android-profielen.',
-  sections: [
-    { id: 'contact', title: 'Wie je kunt benaderen', paragraphs: [
-      'Fabelpad wordt aangeboden onder de ontwikkelaarsnaam DG Webservices. Voor vragen over privacy, inzage, correctie of verwijdering kun je terecht bij support@fabelpad.nl. Vermeld Fabelpad in het onderwerp. Ouders en verzorgers kunnen namens hun kind contact opnemen.',
-      'Stuur geen wachtwoorden, identiteitsbewijs, betaalgegevens of onnodige gegevens over kinderen mee. Gebruik bij voorkeur een bijnaam in de app. Als we je identiteit moeten controleren voor een verzoek, vragen we alleen wat daarvoor noodzakelijk is via een passende route.',
-    ] },
-    { id: 'lokaal', title: 'Wat de Android-app op je apparaat bewaart', paragraphs: [
-      'De app bewaart maximaal vijf lokale profielen met een zelfgekozen naam of bijnaam, een avatar, een lokaal profielnummer, favorieten, verhaalkeuzes, leesvoortgang, verzamelde herinneringen en voorkeuren voor tekstgrootte en beweging. Zoekopdrachten worden alleen in het werkgeheugen gebruikt. Verhalen en illustraties worden met de app meegeleverd.',
-      'Deze gegevens dienen om het gekozen profiel, verhalen en instellingen op hetzelfde apparaat te laten werken. De app verstuurt deze profielgegevens niet naar een Fabelpad-server. Er is geen ouderlogin, kindaccount, e-mailregistratie of online koppeling. Het lokale profielnummer is geen advertentie-ID.',
-      'De lokale opslag is niet afzonderlijk door Fabelpad versleuteld. Beveilig je apparaat met een schermvergrendeling en houd Android actueel. Iemand die toegang tot je ontgrendelde apparaat of een door jou gemaakte kopie heeft, kan mogelijk ook lokale gegevens bekijken. De productie-app schakelt automatische Android-appback-ups van haar eigen gegevens uit; een eigen apparaatkopie of schermafbeelding valt onder jouw beheer.',
-    ] },
-    { id: 'oudercontrole', title: 'Oudercontrole bij externe links', paragraphs: [
-      'Voordat je vanuit de app een privacy- of supportlink opent, vraagt de oudercontrole om een geboortejaar. Deze controle gebeurt alleen in het werkgeheugen. Het geboortejaar wordt niet opgeslagen, verstuurd of als leeftijdsprofiel gebruikt. De controle is geen identiteitsverificatie.',
-    ] },
-    { id: 'voorlezen', title: 'Voorlezen met een lokale apparaatstem', paragraphs: [
-      'Voorlezen start alleen wanneer je zelf op de voorleesknop tikt. De Android-app kiest alleen een geïnstalleerde Nederlandse stem die door Android als zonder netwerk te gebruiken wordt aangemerkt. Is zo’n stem niet beschikbaar, dan blijft samen of zelf lezen mogelijk en verschijnt een uitleg. De app schakelt niet automatisch over op een online stem.',
-      'Voor de voorleesfunctie vervangt de app de zelfgekozen profielnaam door Avonturier. De profielnaam wordt dus niet als voorleestekst aan de spraakdienst gegeven. De geselecteerde spraakdienst verwerkt de verhaaltekst op het apparaat. Een spraakdienst is onderdeel van Android of een door jou gekozen leverancier en heeft eigen instellingen en voorwaarden. Het installeren of bijwerken van stemgegevens via Android kan wel een netwerkverbinding gebruiken.',
-      'Verlaat je het verhaal, wissel je van profiel of gaat de app naar de achtergrond, dan stopt het voorlezen. Fabelpad gebruikt geen microfoon, neemt geen stem op en heeft geen spraakherkenning.',
-    ] },
-    { id: 'geen-tracking', title: 'Advertenties, analyse en externe diensten', paragraphs: [
-      'De lokale Android-versie bevat geen advertenties, advertentie-ID, eigen analyse-SDK, chat, pushberichten, betaalfunctie of automatische crashrapportage aan Fabelpad. Fabelpad verkoopt geen lokale profielgegevens en gebruikt die niet voor marketing of profilering.',
-      'Google Play verwerkt de gegevens die nodig zijn om apps aan te bieden, te beveiligen, te installeren en bij te werken volgens het privacybeleid en de instellingen van Google. Dat staat los van de lokale profielopslag van Fabelpad. Als je een privacy- of supportlink opent, verlaat je de app en gebruik je je browser of e-mailapp. Die toepassing en je internet- of mailprovider verwerken gegevens volgens hun eigen voorwaarden.',
-    ] },
-    { id: 'website', title: 'Website, browseropslag en technische gegevens', paragraphs: [
-      'Als je deze webpagina bezoekt, ontvangt de webhosting de technische gegevens die nodig zijn om de pagina af te leveren en de verbinding te beveiligen, zoals je IP-adres, tijdstip, opgevraagde URL en browserinformatie. Deze gegevens kunnen in beveiligings- en serverlogboeken voorkomen. De precieze bewaartermijn en hostingpartij kun je opvragen via support@fabelpad.nl; deze webgegevens zijn geen kopie van de lokale Android-profielen.',
-      'Deze privacy-, hulp- en verwijderpagina vragen geen login of kindgegevens. De browserversie van de verhalen is een afzonderlijke toepassing met eigen lokale browseropslag. Als je die gebruikt, kunnen namen, verhaalkeuzes en instellingen in die browser worden bewaard. Wis die gegevens via de sitegegevens van fabelpad.nl in je browser. Alleen het verwijderen van de Android-app wist geen browseropslag.',
-    ] },
-    { id: 'webaccount', title: 'Ouderaccounts en synchronisatie op de website', paragraphs: [
-      'Als je de online gezinsfuncties op de website gebruikt, meld je je als ouder of verzorger aan met een e-mailadres en een eenmalige e-mailcode. Supabase verzorgt de aanmelding en bewaart het accountnummer, e-mailadres en de noodzakelijke sessie- en beveiligingsgegevens. De website gebruikt beveiligde sessiecookies om je ingelogd te houden. Deel een inlogcode nooit en laat een kind geen eigen ouderaccount aanmaken.',
-      'Bij gebruik van je online gezin worden de door jou gekozen profielnamen of bijnamen, avatars, favorieten, verhaalkeuzes, voortgang, herinneringen en voorkeuren aan je ouderaccount gekoppeld. Deze gegevens worden gebruikt om je gezin op de website te bewaren en tussen aangemelde browsers te synchroniseren. Ze zijn via toegangsregels afgeschermd voor andere gezinnen. Gebruik bijnamen en neem geen gevoelige gegevens op. Dit uploadt niet automatisch de lokale gegevens uit de afzonderlijke Android-app.',
-      'De online account- en gezinsopslag gebruikt Supabase in de Europese regio eu-west-1. Voor aangevraagde inlogcodes en noodzakelijke accountberichten gebruiken we Resend als e-mailverzender. Daarbij worden het ontvangstadres, de berichtinhoud en technische bezorggegevens verwerkt. Wij gebruiken deze serviceberichten niet voor advertenties en schakelen geen open- of kliktracking in voor inlogberichten. Supportmail wordt afzonderlijk via onze support-inbox behandeld.',
-      'Account- en gezinsgegevens blijven bewaard zolang je account bestaat of totdat een geverifieerd verwijderverzoek is uitgevoerd. Alleen uitloggen of browsergegevens wissen verwijdert geen cloudaccount. Mail vanaf je accountadres naar support@fabelpad.nl om verwijdering van je webaccount en de bijbehorende gezinsgegevens te vragen. Na noodzakelijke controle verwijderen we de gegevens die wij beheren, of leggen we uit welke beperkte wettelijke uitzondering geldt. Voor beveiligingslogboeken, bezorggegevens en eventuele back-ups gelden afzonderlijke termijnen van de betrokken dienstverlening; informatie hierover kun je bij ons opvragen.',
-    ] },
-    { id: 'support', title: 'Wanneer je ons e-mailt', paragraphs: [
-      'Als je support@fabelpad.nl mailt, ontvangen we je e-mailadres, de inhoud van je bericht en eventuele bijlagen. Gebruik synthetische voorbeelden en deel zo weinig mogelijk persoonsgegevens. We gebruiken deze gegevens om je vraag te behandelen, een probleem op te lossen of je privacyverzoek uit te voeren. We gebruiken supportberichten niet als mailinglijst of voor advertenties.',
-      'De maildienst en eventuele noodzakelijke technische hulp verwerken informatie om het bericht af te leveren, te beveiligen en de vraag te behandelen. Alleen bevoegde personen mogen de gegevens gebruiken voor dat doel. We bewaren correspondentie zolang de afhandeling en eventuele noodzakelijke opvolging dat vragen. Een concrete bewaartermijn, eventuele wettelijke uitzondering en de betrokken maildienst kunnen via het privacycontact worden opgevraagd. Bij een verwijderverzoek beoordelen we welke gegevens direct kunnen worden verwijderd en lichten we een noodzakelijke uitzondering toe.',
-    ] },
-    { id: 'grondslagen', title: 'Doelen en grondslagen', paragraphs: [
-      'Lokale instellingen en voortgang zijn nodig om de door jou gekozen appfunctie op je eigen apparaat uit te voeren. Waar wij persoonsgegevens ontvangen, verwerken we die voor het beantwoorden van een verzoek, het leveren van gevraagde ondersteuning en het beschermen van onze dienstverlening. Afhankelijk van de situatie gaat het om uitvoering van een overeenkomst of stappen op jouw verzoek, een gerechtvaardigd belang bij ondersteuning en beveiliging, of een wettelijke verplichting.',
-      'Als een toekomstige functie toestemming vereist, vragen we die voordat die verwerking begint. De huidige lokale Android-versie vraagt geen toestemming voor advertenties, locatie, microfoon, contacten of het uploaden van kinderprofielen.',
-    ] },
-    { id: 'verwijderen', title: 'Profielen en lokale appgegevens verwijderen', paragraphs: [
-      'Open in de Android-app Ouders en kies Alle gegevens op dit apparaat wissen. Bevestig daarna Wissen. Hiermee worden de opgeslagen profielen, favorieten, verhaalroutes en instellingen uit de lokale appopslag verwijderd. De app toont vervolgens een nieuw leeg startprofiel. Bewaar eerst zelf wat je wilt houden; gewiste voortgang kan Fabelpad niet terughalen.',
-      'Je kunt ook via Android-instellingen → Apps → Fabelpad → Opslag en cache → Opslag wissen alle lokale gegevens wissen. De exacte namen kunnen per toestel verschillen. Alleen de app sluiten of cache wissen verwijdert niet noodzakelijk de profielopslag. De app verwijderen verwijdert de bijbehorende lokale appgegevens volgens de werking van Android.',
-      'Omdat deze Android-versie geen online account of centrale kopie van je profielgegevens heeft, kunnen wij lokale gegevens niet op afstand inzien, exporteren of wissen. Mail support@fabelpad.nl als je hulp nodig hebt bij de stappen. Stuur geen echt kindprofiel mee om te bewijzen dat je de app gebruikt.',
-    ] },
-    { id: 'mail-verwijderen', title: 'Een verwijderverzoek zonder de app indienen', paragraphs: [
-      'Mail support@fabelpad.nl met als onderwerp Fabelpad – verzoek om gegevensverwijdering. Vermeld of het gaat om een webaccount met gezinsgegevens, eerdere supportcorrespondentie, een privacyverzoek of hulp bij het wissen van lokale gegevens. Gebruik voor een webaccount bij voorkeur het bijbehorende e-mailadres. Noem bij eerder contact zo mogelijk de periode. Je hoeft de app niet geïnstalleerd te hebben.',
-      'We zoeken alleen in de gegevens die wij daadwerkelijk beheren. We laten weten wat verwijderd is en welke gegevens eventueel nog noodzakelijk worden bewaard, met de reden en termijn. Een wettelijke bewaarplicht of een lopend geschil kan een uitzondering vormen. We bewaren dan alleen de gegevens die daarvoor nodig zijn. Er is geen online Android-account om op te zeggen en er zijn in deze versie geen abonnementen om afzonderlijk te beëindigen.',
-    ] },
-    { id: 'rechten', title: 'Je privacyrechten', paragraphs: [
-      'Voor persoonsgegevens die wij beheren kun je, voor zover van toepassing, vragen om inzage, een kopie, correctie, verwijdering, beperking, overdraagbaarheid of bezwaar maken tegen de verwerking. Als verwerking op toestemming berust, kun je die intrekken zonder dat dit eerdere rechtmatige verwerking aantast. Neem hiervoor contact op via support@fabelpad.nl.',
-      'Wij reageren in beginsel binnen één maand op je verzoek. Bij een ingewikkeld of groot aantal verzoeken kan de wettelijke termijn worden verlengd; dan laten we binnen de eerste maand weten waarom en hoe lang dat duurt. Deze rechten geven ons geen toegang tot gegevens die alleen op jouw apparaat staan. Je kunt een klacht indienen bij de Autoriteit Persoonsgegevens via autoriteitpersoonsgegevens.nl of bij je bevoegde privacytoezichthouder.',
-    ] },
-    { id: 'kinderen', title: 'Kinderen, beveiliging en doorgifte', paragraphs: [
-      'Fabelpad is bedoeld om kinderen samen met hun ouder of verzorger verhalen te laten ontdekken. Gebruik een bijnaam in plaats van een volledige naam. Er zijn geen openbare profielen, gebruikersberichten of contactmogelijkheden tussen kinderen in deze app. Contact met support en privacyverzoeken laat je bij voorkeur door een volwassene doen.',
-      'De Android-app uploadt lokale profielen niet naar een externe database. Voor support- of websitegegevens kunnen hosting- en maildiensten worden gebruikt. Waar daarbij persoonsgegevens buiten de Europese Economische Ruimte worden verwerkt, moeten daarvoor passende wettelijke waarborgen gelden. Je kunt via het privacycontact informatie vragen over de betrokken partijen en waarborgen.',
-    ] },
-    { id: 'wijzigingen', title: 'Wijzigingen en contact', paragraphs: [
-      'Nieuwe functies kunnen andere gegevensverwerking meebrengen. Bij wijzigingen passen we deze verklaring en waar nodig de informatie in de app aan. De webaccountfuncties en de lokale Android-uitgave hebben een verschillende gegevensverwerking, zoals hierboven afzonderlijk beschreven. Een vermelding van een toekomstige functie betekent niet dat die nu actief is.',
-      'Vragen over deze verklaring of een onjuiste vermelding? Mail support@fabelpad.nl. Bovenaan staat wanneer de tekst voor het laatst is bijgewerkt. Deze verklaring beperkt je wettelijke rechten niet.',
-    ] },
-  ],
+  "title": "Privacyverklaring Fabelpad",
+  "version": "2026-11-22",
+  "updated": "22 november 2026",
+  "introduction": "DG Webservices heeft Fabelpad gemaakt, levert de dienst en is verantwoordelijk voor de verwerking van persoonsgegevens in deze verklaring. Fabelpad is een lees- en vertelomgeving voor kinderen van 0 tot en met 12 jaar. Een ouder met gezag of voogd van 18 jaar of ouder beheert het online gezinsaccount. De gratis Android-app (nl.fabelpad.app) werkt afzonderlijk en lokaal, zonder online account, cloudsynchronisatie, advertenties of abonnement. Deze verklaring legt dat verschil uit.",
+  "sections": [
+    {
+      "id": "contact",
+      "title": "1. Wie is verantwoordelijk?",
+      "paragraphs": [
+        "DG Webservices is gevestigd in Den Haag ('S-Gravenhage) en staat bij de Kamer van Koophandel ingeschreven onder nummer 88135713. Algemene contactgegevens: info@dgwebservices.nl en www.dgwebservices.nl. Voor Fabelpad-support en alle privacyvragen gebruik je support@fabelpad.nl. De pagina Bedrijfsgegevens bevat dezelfde contactinformatie.",
+        "Ouders en voogden kunnen namens hun kind contact opnemen. Ben je 12 jaar, dan mag je zelf schrijven over je eigen gegevens of toestemming. Je hoeft daarvoor niet in te loggen in het oudergedeelte. Stuur in het eerste bericht geen identiteitsbewijs, wachtwoord, inlogcode of onnodige gegevens over kinderen."
+      ]
+    },
+    {
+      "id": "kinderen",
+      "title": "2. Voor kinderen en hun ouders",
+      "paragraphs": [
+        "Bij Fabelpad lees je verhalen en kies je hoe ze verdergaan. Je ouder of voogd regelt een online profiel. Je mag een bijnaam gebruiken. Alleen als je ouder of voogd apart toestemming geeft, bewaren we je online profiel en leesgegevens zodat je later verder kunt lezen. Je kunt ook verhalen ontdekken zonder online kinderprofiel.",
+        "Voor een online kinderprofiel volstaan een bijnaam en een gekozen avatar. We vragen in de standaardflow geen volledige geboortedatum, adres, foto of identiteitsdocument. Het e-mailadres voor inloggen en contact hoort bij de volwassene. Er zijn geen openbare kinderprofielen, chat of contactmogelijkheden tussen kinderen.",
+        "Het oudergedeelte toont de toestemming per online kinderprofiel. De ouder of voogd kan die daar even eenvoudig intrekken. We stoppen de bijbehorende synchronisatie en verwijderen het betreffende profiel en de leesgegevens, tenzij een geldige wettelijke verplichting voor beperkte gegevens geldt. Andere profielen en het gezinsaccount blijven bestaan. Intrekking verandert eerder rechtmatig gebruik niet. Vanaf 12 jaar kan het kind ook zelf toestemming intrekken via support@fabelpad.nl.",
+        "Een bevestigde e-mailcode of Google-login bewijst toegang tot een account. Het is geen controle van gezag, voogdij of leeftijd. Daarom vragen we afzonderlijk om de ouderverklaring en de toestemming voor elk online kinderprofiel. Bij een gericht verzoek of concrete twijfel doen we een proportionele aanvullende controle. De eenvoudige uitleg staat op Privacy voor kinderen."
+      ]
+    },
+    {
+      "id": "account",
+      "title": "3. Ouderaccount, OTP en Google-login",
+      "paragraphs": [
+        "Voor een online gezinsaccount verwerken we het e-mailadres, een technisch accountnummer en de noodzakelijke aanmeld-, sessie- en beveiligingsgegevens. Supabase verzorgt de aanmelding. Je kunt een eenmalige e-mailcode van zes cijfers aanvragen of kiezen voor Inloggen met Google. Bij Google ontvangen Supabase en Fabelpad de door Google voor deze aanmelding verstrekte identificatiegegevens, waaronder het e-mailadres en eventueel de weergegeven naam en profielfoto. Fabelpad vraagt geen toegang tot Gmail, agenda of contacten.",
+        "Google verwerkt de door jou gekozen Google-aanmelding ook volgens het eigen privacybeleid. Je kunt de koppeling beheren via je Google-account. Google uitloggen of de koppeling verwijderen is niet hetzelfde als je Fabelpad-account verwijderen.",
+        "Voordat online gezinsfuncties beschikbaar worden, vragen we actief te verklaren dat je 18 jaar of ouder bent en als ouder met gezag of voogd handelt. Je aanvaardt de algemene voorwaarden apart. We leggen het accountnummer, de vastgelegde ouderverklaring, de versie van de voorwaarden, de getoonde privacyversie, het UTC-tijdstip en de aanmeldmethode vast. De privacyverklaring is informatie: daarvoor vragen we geen verplicht akkoord. Een onafgeronde aanmelding geeft geen toegang tot gezinsgegevens en wordt na zeven dagen opgeruimd."
+      ]
+    },
+    {
+      "id": "gezin",
+      "title": "4. Welke online gezinsgegevens we bewaren",
+      "paragraphs": [
+        "Na afzonderlijke toestemming voor een kinderprofiel bewaren we de gekozen bijnaam, avatar, een technisch profielnummer, favorieten, verhaalkeuzes, leesvoortgang, verzamelde herinneringen en leesvoorkeuren. Deze gegevens zijn gekoppeld aan het ouderaccount en afgeschermd voor andere gezinnen. Gebruik een bijnaam en voeg geen gevoelige informatie toe.",
+        "Leesvoortgang en verhaalkeuzes ontstaan door daadwerkelijk gebruik. We gebruiken die gegevens om het juiste verhaal, de gekozen route en de bewaarde plek terug te geven. De website kan daarnaast een lokale kopie in je browser bewaren. Gegevens uit de afzonderlijke Android-app worden niet automatisch geüpload of met het webaccount gekoppeld.",
+        "Bij het aanmaken van een online profiel bewaren we minimaal bewijs van de gegeven toestemming: het betrokken account- en profielnummer, de getoonde toestemmingsversie en verklaring, de vastleggingsmethode en het tijdstip. We bewaren daarvoor geen kopie van een identiteitsbewijs."
+      ]
+    },
+    {
+      "id": "grondslagen",
+      "title": "5. Waarom we gegevens gebruiken",
+      "paragraphs": [
+        "We gebruiken ouderaccount- en sessiegegevens om de gevraagde online dienst uit te voeren, je aan te melden, het account te beveiligen en noodzakelijke serviceberichten te sturen. De grondslag is de uitvoering van de overeenkomst of stappen op jouw verzoek. Voor een optioneel online kinderprofiel en de bijbehorende leesgegevens vragen we afzonderlijke toestemming aan de ouder met gezag of voogd.",
+        "Voor het beveiligen van de website, het tegengaan van misbruik, het behandelen van ondersteuning en het minimaal aantonen van afspraken hebben we een gerechtvaardigd belang. We beperken de gegevens en wegen daarbij de belangen van kinderen mee. Als de wet bewaring of verstrekking verplicht, verwerken we alleen wat die wettelijke verplichting vraagt. Privacyverzoeken behandelen we om aan onze wettelijke verplichtingen te voldoen.",
+        "We verkopen geen gezinsgegevens. We gebruiken de leesomgeving niet voor gepersonaliseerde reclame of advertentietracking en nemen geen geautomatiseerde besluiten met rechtsgevolgen over kinderen. De huidige uitgave bevat geen betaalfunctie, marketingmailinglijst of eigen analyse- of crashrapportage-SDK."
+      ]
+    },
+    {
+      "id": "cookies",
+      "title": "6. Cookies, browseropslag en websitebezoek",
+      "paragraphs": [
+        "De website ontvangt technische verbindingsgegevens, zoals IP-adres, tijdstip, de opgevraagde pagina en browserinformatie, om pagina’s af te leveren en de dienst te beveiligen. De server en onze technische dienstverleners kunnen deze gegevens in operationele en beveiligingslogboeken verwerken. De door DG Webservices beheerde Fabelpad-applicatielogs worden maximaal 30 dagen bewaard. Providerlogboeken en een noodzakelijk specifiek beveiligingsonderzoek vallen onder afzonderlijke, beperkte bewaartermijnen of beoordelingscriteria. Zet geen gevoelige informatie in een URL of supportbijlage.",
+        "Voor online aanmelding gebruikt de website noodzakelijke sessiecookies van Supabase. Op de publieke juridische pagina’s is geen ouderlogin nodig. Voor lokale leesprofielen, instellingen, verhaalversies en eventuele synchronisatie gebruikt Fabelpad browseropslag. De PWA bewaart openbare appbestanden en illustraties lokaal om de website bruikbaar te houden. Een opgeslagen browserprofiel is geen Google-account en geen lokale Android-profielopslag.",
+        "Wij plaatsen geen advertentie- of analysecookies. Er is daarom geen toestemming voor dergelijke cookies nodig in de huidige uitgave. Als een toekomstige functie niet-noodzakelijke cookies inzet, vragen we vooraf apart toestemming en bieden we een even eenvoudige manier om die in te trekken. Je kunt lokale browsergegevens wissen via de sitegegevens van fabelpad.nl of staging.fabelpad.nl in je browser. Alleen browsergegevens wissen verwijdert geen cloudaccount."
+      ]
+    },
+    {
+      "id": "ontvangers",
+      "title": "7. Ontvangers, landen en doorgifte",
+      "paragraphs": [
+        "DG Webservices beheert de Fabelpad-webdienst op een eigen afgeschermde serveromgeving. Supabase levert authenticatie, database en technische platformfuncties; de online gezinsdatabase staat in de Europese regio eu-west-1 (Ierland). Resend (Plus Five Five, Inc.) verwerkt het ontvangstadres, de noodzakelijke berichtinhoud en technische bezorggegevens voor inlogcodes en serviceberichten. We nemen geen kindnamen of leesinhoud op in herinnerings- en accountverwijderberichten. Supportmail wordt via onze support-inbox behandeld.",
+        "Supabase en Resend kunnen voor infrastructuur, beveiliging en ondersteuning subverwerkers inzetten. Daarbij kan verwerking of toegang vanuit landen buiten de Europese Economische Ruimte plaatsvinden, onder meer de Verenigde Staten. Een Europese databaseregio betekent dus niet dat elke ondersteunende verwerking uitsluitend in Europa plaatsvindt. Hun verwerkersvoorwaarden bevatten toepasselijke afspraken over internationale doorgifte, waaronder de Europese standaardcontractbepalingen voor zover die nodig zijn. Je kunt via support@fabelpad.nl informatie en een kopie van de voor jouw verwerking toepasselijke waarborgen vragen.",
+        "Bij de gekozen Google-login treedt Google voor eigen account- en beveiligingsverwerkingen op als zelfstandige verwerkingsverantwoordelijke. Ook Google Play verwerkt installatie-, update- en beveiligingsgegevens onder het eigen beleid. We geven verder alleen gegevens aan andere partijen als dat noodzakelijk is voor de gevraagde dienst, een specifieke door jou gevraagde handeling of een geldige wettelijke verplichting. We geven geen kinderprofielen aan advertentienetwerken."
+      ]
+    },
+    {
+      "id": "mail",
+      "title": "8. Inlogcodes, servicemails en support",
+      "paragraphs": [
+        "We sturen alleen gevraagde inlogcodes en noodzakelijke berichten over je account, beveiliging, verwijdering en de dienstverlening. Inlogcodes en noodzakelijke Auth-accountberichten worden door Supabase via de ingestelde Resend-mailverbinding (custom SMTP) verzonden. Andere noodzakelijke Fabelpad-serviceberichten gebruiken de Resend-API wanneer die afzonderlijke koppeling voor de omgeving is geactiveerd. Inlogcodes horen alleen in het Fabelpad-inlogscherm. Wij vragen je nooit om een code per e-mail aan support door te geven. Voor deze berichten gebruiken we geen open- of kliktracking.",
+        "Als je support@fabelpad.nl mailt, ontvangen we je e-mailadres, de inhoud van je bericht en eventuele bijlagen. We gebruiken dit voor het behandelen van je vraag, technische hulp of een privacyverzoek. Deel zo weinig mogelijk persoonsgegevens en gebruik bij technische voorbeelden verzonnen namen. Supportberichten worden niet aan een marketinglijst toegevoegd.",
+        "Alleen bevoegde personen krijgen toegang voor het afhandelen van support en privacyverzoeken. Bewijs en een noodzakelijk juridisch dossier worden gescheiden van de leesomgeving gebruikt en bevatten geen kindgegevens die voor dat doel niet nodig zijn."
+      ]
+    },
+    {
+      "id": "bewaren",
+      "title": "9. Hoelang we gegevens bewaren",
+      "paragraphs": [
+        "We bewaren online account- en gezinsgegevens zolang het account actief is en de betreffende toestemming geldt. Bij een handmatige accountverwijdering geldt de beveiligde hersteltermijn van 30 dagen. Een afzonderlijk geldig AVG-wisverzoek behandelen we zo snel mogelijk en zonder die vaste hersteltermijn. Een ingetrokken toestemming voor één kinderprofiel is geen verzoek om het hele gezin te verwijderen.",
+        "Na 90 opeenvolgende dagen zonder bewuste gezinsactiviteit komen online accounts met hun profielgegevens voor automatische verwijdering in aanmerking. We waarschuwen de accounthouder vooraf, bijvoorbeeld 14 en 3 dagen voor de concrete verwijderdatum. Actief gebruik vóór die datum voorkomt verwijdering wegens inactiviteit. Voor bestaande accounts zonder betrouwbare gebruikshistorie geven we eerst een aankondiging en een gelegenheid de dienst opnieuw te gebruiken. Die overgang is geen verzonnen leesactiviteit.",
+        "Bewuste activiteit is bijvoorbeeld een afgeronde ouderlogin naar het oudergedeelte, een bewuste ouderactie of daadwerkelijk een verhaal openen of verder lezen onder een gekoppeld profiel. Offline leesactiviteit telt alleen mee zodra aantoonbare, geldige activiteit vóór de verwijderdatum is gesynchroniseerd. Tokenverversing, achtergrondprocessen, betalingen en het openen van een e-mail houden het account niet actief.",
+        "Afgebroken aanmeldingen zonder afgerond ouderaccount worden na zeven dagen opgeruimd. Operationele verwijderopdrachten en noodzakelijke bezorgbewijzen bewaren we zolang nodig om de uitvoering te controleren en een fout te herstellen. Voor een werkelijk geschil bewaren we alleen aantoonbaar relevante gegevens zolang de afhandeling of rechtsvordering dat noodzakelijk maakt. Als er later betalingen zijn, houden we wettelijk verplichte administratie gescheiden van de kinderprofielen.",
+        "Een verwijdering geldt voor de actieve dienst. Resterende beveiligde herstelkopieën worden niet gebruikt om verwijderde profielen weer beschikbaar te maken. Een herstel van een omgeving moet de vastgelegde verwijderingen opnieuw uitvoeren voordat die omgeving gebruikersverkeer ontvangt. Je kunt bij support@fabelpad.nl informatie vragen over de op jouw gegevens toepasselijke rotatie van technische back-ups, providerlogboeken en supportbewaring."
+      ]
+    },
+    {
+      "id": "account-verwijderen",
+      "title": "10. Account verwijderen, herstellen of eerder wissen",
+      "paragraphs": [
+        "Als ouder of voogd ga je op de website naar Profiel → Account → Account verwijderen. Je ziet vooraf welke gegevens verdwijnen en de exacte uiterste hersteldatum. Na verse aanmelding en bevestiging zetten we het account meteen stil en krijg je een bevestiging. Je kunt alleen vóór de deadline en via de beveiligde herstelroute expliciet kiezen om het account terug te zetten. Gewoon opnieuw inloggen of de app opnieuw installeren herstelt de aanvraag niet.",
+        "Na 30 dagen verwijderen we het online gezinsaccount met de kinderprofielen, voortgang, favorieten, verhaalkeuzes, herinneringen, instellingen en operationele koppelingen. Valt de grens van 90 dagen in de herstelperiode, dan geldt de datum van de handmatige aanvraag. Een geldig afzonderlijk AVG-wisverzoek kan eerder uitgevoerd moeten worden.",
+        "Wil je gegevens eerder laten wissen of kun je niet meer inloggen? Open Account en gegevens verwijderen of Privacyverzoek en mail support@fabelpad.nl. Gebruik bij een accountverzoek bij voorkeur het adres van dat account. Benoem alleen wat nodig is om het verzoek te begrijpen. Een kind van 12 kan zonder ouderlogin over de eigen gegevens schrijven; we sluiten daardoor niet zonder grond het hele gezin.",
+        "Na verwijdering kan DG Webservices een beperkt, afgeschermd dossier bewaren als een wettelijke verplichting of een concrete rechtsvordering dat noodzakelijk maakt. We leggen uit welke gegevens dat zijn, waarom en welke termijn of beoordelingscriteria gelden. De huidige gratis uitgave heeft geen abonnement om op te zeggen. De algemene voorwaarden beschrijven afzonderlijk de bescherming bij eventuele toekomstige betaalde toegang."
+      ]
+    },
+    {
+      "id": "lokaal",
+      "title": "11. De afzonderlijke lokale Android-app",
+      "paragraphs": [
+        "De gratis Android-app bewaart maximaal vijf lokale profielen met een zelfgekozen naam of bijnaam, avatar, lokaal profielnummer, favorieten, verhaalkeuzes, leesvoortgang, herinneringen en tekst- en bewegingsvoorkeuren. Verhalen en illustraties worden meegeleverd. Zoekopdrachten worden alleen in het werkgeheugen gebruikt. Deze versie verstuurt de profielgegevens niet naar een Fabelpad-server en bevat geen ouderaccount, Google-login, OTP, cloudsynchronisatie of betaalfunctie.",
+        "De productie-app bevat geen advertentie-ID, analyse-SDK, automatische crashrapportage aan Fabelpad, chat, pushberichten, locatie-, microfoon- of contactentoegang. Automatische Android-back-ups van de eigen appgegevens zijn uitgeschakeld. De lokale opslag is niet afzonderlijk door Fabelpad versleuteld. Gebruik daarom een schermvergrendeling en houd je toestel actueel.",
+        "Voorlezen start alleen nadat je de knop gebruikt. De Android-app kiest alleen een geïnstalleerde Nederlandse stem die Android als zonder netwerk bruikbaar aanduidt. De zelfgekozen profielnaam wordt voor het voorlezen vervangen door Avonturier. Als geen geschikte offline stem beschikbaar is, kun je blijven lezen zonder dat de app op een online stem overschakelt. Het installeren of bijwerken van stemgegevens via Android kan wel internet gebruiken.",
+        "Voordat de Android-app een externe privacy- of supportlink opent, vraagt een lokale oudercontrole om een geboortejaar. Dat wordt niet opgeslagen of verstuurd en vormt geen identiteitscontrole. Buiten de app verwerken je browser, e-mailapp en hun leveranciers gegevens volgens hun eigen beleid."
+      ]
+    },
+    {
+      "id": "voorlezen-web",
+      "title": "12. Voorlezen in de webbrowser",
+      "paragraphs": [
+        "De voorleesknop op de website gebruikt alleen een Nederlandse stem die de browser expliciet als lokaal verwerkt aanduidt. De gekozen profielnaam wordt in de voorleestekst vervangen door Avonturier. Als zo’n stem ontbreekt, blijft lezen mogelijk en schakelt Fabelpad niet over op een online stem. Het installeren of bijwerken van een stem via je apparaat kan wel internet gebruiken. De spraakfunctie wordt pas gestart nadat je zelf de voorleesknop gebruikt.",
+        "Fabelpad gebruikt geen microfoon, spraakopname of spraakherkenning. Het stoppen van een verhaal, wisselen van profiel of naar de achtergrond gaan stopt het voorlezen."
+      ]
+    },
+    {
+      "id": "verwijderen",
+      "title": "13. Lokale gegevens zelf wissen",
+      "paragraphs": [
+        "Open in de Android-app Ouders → Alle gegevens op dit apparaat wissen → Wissen. Daarna verschijnt een nieuw leeg startprofiel. Je kunt ook via Android-instellingen → Apps → Fabelpad → Opslag en cache → Opslag wissen alle lokale appgegevens verwijderen. De precieze benamingen verschillen per toestel. Alleen de cache wissen is niet altijd voldoende.",
+        "Lokale browsergegevens wis je afzonderlijk in de browser via de sitegegevens van Fabelpad. Bij een online gekoppelde browser verwerkt de app een ingetrokken profiel of verwijderd account zodra zij de verwijdering vaststelt. Een toestel dat nooit meer online komt kan nog een lokale kopie bevatten; wis die zelf via de app- of browserinstellingen.",
+        "Fabelpad heeft geen centrale kopie van de profielen uit de lokale Android-app en kan die gegevens niet op afstand inzien, exporteren of verwijderen. Een cloudaccount verwijderen wist geen afzonderlijke lokale Android-profielen. Maak zelf een kopie van wat je wilt houden voordat je wist: gewiste lokale voortgang kan Fabelpad niet terughalen."
+      ]
+    },
+    {
+      "id": "rechten",
+      "title": "14. Jouw rechten en een privacyverzoek",
+      "paragraphs": [
+        "Je kunt, voor zover van toepassing, vragen om inzage, een kopie, correctie, verwijdering, beperking, overdracht van gegevens of bezwaar maken tegen verwerking op grond van een gerechtvaardigd belang. Toestemming kun je intrekken zonder dat dit eerdere rechtmatige verwerking verandert. Gebruik de openbare pagina Privacyverzoek of mail support@fabelpad.nl. De privacyverklaring beperkt je wettelijke rechten niet.",
+        "Voor kinderen jonger dan 12 jaar oefent de wettelijke vertegenwoordiger de rechten uit. Vanaf 12 jaar kan het kind dat zelf doen en kan de wettelijke vertegenwoordiger dat ook doen. Een eigen verzoek over kindgegevens geeft geen recht op de gegevens van andere gezinsleden. Bij twijfel controleren we op een passende, zo beperkt mogelijke manier of jij het verzoek mag doen.",
+        "We reageren zonder onnodige vertraging en uiterlijk binnen één kalendermaand na ontvangst. Bij een complex verzoek of meerdere verzoeken kan die termijn waar nodig met maximaal twee maanden worden verlengd. We informeren je dan binnen de eerste maand over de reden. Een geldig wisverzoek voeren we zo snel mogelijk uit; de reactietermijn is geen standaard wachttijd.",
+        "Denk je dat we onjuist met gegevens omgaan? Dan kun je ook een klacht indienen bij de Autoriteit Persoonsgegevens via autoriteitpersoonsgegevens.nl of bij je bevoegde privacytoezichthouder."
+      ]
+    },
+    {
+      "id": "beveiliging",
+      "title": "15. Beveiliging en wijzigingen",
+      "paragraphs": [
+        "We beperken toegang tot bevoegde personen en systemen, gebruiken beveiligde verbindingen voor de online dienst en scheiden de gegevens van gezinnen met toegangsregels. Resend-koppelsleutels worden serverzijdig bewaard en komen niet in de leesomgeving. Geen enkele technische beveiliging biedt een absolute garantie. Deel geen inlogcode en meld vermoedelijk misbruik via support@fabelpad.nl.",
+        "De nieuwste versie van deze verklaring staat op de website en is via de app bereikbaar. De bovenaan vermelde versie kun je als tekst bewaren. Bij een wezenlijke wijziging vertellen we vooraf wat verandert. Als nieuwe verwerking toestemming vereist, vragen we die afzonderlijk."
+      ]
+    }
+  ]
 } as const;

@@ -1,61 +1,67 @@
-# Fabelpad — status staging en production
+# Fabelpad — actuele status staging en production
 
-Controledatum: **22 november 2026**. De eigenaar autoriseert inrichting van beide Fabelpad-omgevingen en beide Supabase-accounts. Deze lijst geeft uitgevoerde controles weer; ze is geen verklaring dat de publieke dienst al werkt.
+Controledatum: **22 november 2026**. De eigenaar heeft wijzigingen en uitrol in beide Fabelpad-omgevingen toegestaan. De onderstaande status onderscheidt providerconfiguratie, getest gedrag en werkelijk uitgerolde releases. Oude controlebestanden blijven historische momentopnamen.
 
-## Uitgevoerd
+## Vastgesteld
 
 | Onderdeel | Staging | Production |
 | --- | --- | --- |
-| GitHub environment + exact vier afgesproken variabelen | Gecontroleerd | Gecontroleerd |
-| Supabase-account/project | **fabelpad** / `tlwfpivafcokcjyjwgmq` | **Duindorpdoet** / `aptprpkosqctwrzeetgs` |
-| Drie schemawijzigingen + overeenkomende migratiehistorie | Toegepast en geverifieerd | Toegepast en geverifieerd |
-| Immutable broncontent | 13 verhalen | 13 verhalen |
-| RLS op vier publieke + twee private applicatietabellen | Aan | Aan |
-| Publieke catalogus / afgeschermde tabellen | HTTP200 / HTTP401 | HTTP200 / HTTP401 |
-| Supabase security advisors | 0 waarschuwingen/fouten; 2 verklaarde INFO | 0 waarschuwingen/fouten; 2 verklaarde INFO |
-| Beheerderbootstrap voor aangewezen mailbox | Bevestigd adres vereist; trigger gereed | Bevestigd adres vereist; trigger gereed |
-| Auth-gebruikers / actieve beheerders | 0 / 0 | 0 / 0 |
-| Auth-mailfunctie | `auth-email` v2 deployed | `auth-email` v2 deployed |
-| Beheer-mailfunctie | `email-admin` v1 deployed | `email-admin` v1 deployed |
-| Vault-koppeling / 17 template-instellingen | Schema en rechten gereed, nog geen key opgeslagen | Schema en rechten gereed, nog geen key opgeslagen |
-| Beheerpagina's `/studio/email` en `/studio/email/templates` | Broncode gereed, nog geen app geactiveerd | Broncode gereed, nog geen app geactiveerd |
-| Ongeconfigureerde hook weigert mail | HTTP503, geen verzending | HTTP503, geen verzending |
-| HTML-exports | 13 templates met TEST-label | 13 productie-templates |
-| VPS-inrichting | Eigen rollen/paden, poort 4188 | Eigen rollen/paden, poort 4189 |
-| App- en runnerdiensten | Disabled/inactive, runner ongeregistreerd | Disabled/inactive, runner ongeregistreerd |
-| Kandidaat / actieve release | Geen | Geen |
+| GitHub environment; uitsluitend de vier afgesproken variabelen | `staging` | `production` |
+| Supabase-account / project | **fabelpad** / `tlwfpivafcokcjyjwgmq` | **Duindorpdoet** / `aptprpkosqctwrzeetgs` |
+| Bevestigde app-origin | `https://staging.fabelpad.nl` | `https://fabelpad.nl` |
+| Publieke Supabase Auth-settings | E-mail en Google aan; Auto Confirm uit | E-mail en Google aan; Auto Confirm uit |
+| Werkelijke SMTP-inrichting volgens eigenaar | Resend geconfigureerd; OTP met 6 cijfers | Resend geconfigureerd; OTP met 6 cijfers |
+| Lifecycle-migratie `20261122172905` | Toegepast | Toegepast |
+| Auth-gebruikers bij laatste controle | 0 | 0 |
+| Beheerderbootstrap | `info@dgwebservices.nl`; echte bevestiging en serveronboarding vereist | Dezelfde mailbox, afzonderlijke identiteit in dit project |
+| Broncontent | 13 verhalen behouden | 13 verhalen behouden |
+| Beheer van Resend API en templates | Eigen Vault-configuratie; nog een API-key voor applicatieservicemails nodig | Eigen Vault-configuratie; nog een API-key voor applicatieservicemails nodig |
+| Eigen runner | Repositoryscope `fabelpad/platform`, geregistreerd; ID 21 | Repositoryscope `fabelpad/platform`, geregistreerd; ID 22 |
+| Edge-beheer / accountworker | `email-admin` v2 / `account-maintenance` v1 actief | `email-admin` v2 / `account-maintenance` v1 actief |
+| Runnerdienst / GitHub-status | Inactive / offline | Inactive / offline |
+| Eigen appservice / loopbackpoort | Inactive; `127.0.0.1:4188` | Inactive; `127.0.0.1:4189` |
+| Doelkandidaat / actieve release | Geen | Geen |
 
-De database had vooraf geen applicatietabellen of gebruikers. Migraties en content zijn toegevoegd zonder bestaande gebruikersdata te wijzigen. De oorspronkelijke platformhelper is behouden, met onnodige publieke uitvoerrechten ingetrokken.
+De publieke Auth-settings zijn in beide projecten gecontroleerd op **22 november 2026, 17:50:30 UTC** (`2026-11-22T17:50:30.645511+00:00`). Ongesigneerde aanvragen naar de beheer- en accountworkerfunctie worden in beide projecten met HTTP401 geweigerd; deze controle verzond geen gebruikersmail.
 
-De nieuwe mailtabellen hebben RLS zonder toegangsbeleid en alle directe tabelrechten zijn ingetrokken. De twee INFO-meldingen [`rls_enabled_no_policy`](https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy) beschrijven hier de bewuste standaardweigering: alleen beperkte private functies werken als eigenaar; gewone gebruikers mogen deze tabellen niet benaderen. Ontsleutelde configuratie en opslag zijn bovendien service-only. Voor/na-tellingen, migratiehashes, functies en rechten staan in [email-admin-2026-11-22.json](deploy-evidence/email-admin-2026-11-22.json). Auth-gebruikers, beheerders, gezinnen, drafts en Vault-secrets blijven nul; de 13 verhalen zijn behouden.
+De bestaande drie applicatiemigraties zijn aangevuld met de ouder-, toestemmings- en verwijderlevenscyclus. Nieuwe accounts krijgen pas gezinsrechten na de afzonderlijke volwassen-ouderverklaring en aanvaarding van de actuele voorwaarden. Iedere online kindomgeving vereist daarnaast eigen toestemming. Gewone login herstelt een account met een verwijderaanvraag nooit automatisch. Zie [LIFECYCLE-IMPLEMENTATIE.md](LIFECYCLE-IMPLEMENTATIE.md).
 
-De domeinen `fabelpad.nl` en `staging.fabelpad.nl` wijzen bij controle naar `204.168.128.28`; dat adres is ook op eth0 van de geverifieerde VPS vastgesteld. Er is geen nieuwe DNS of publieke app-/HTTPS-route geactiveerd.
+De registratie van beide runners is nu voltooid met toegang uitsluitend voor de eigen repository. De eerdere ontbrekende organisatie-/runnergroeprechten zijn **geen actuele blokkade**. Registratie bewijst nog niet dat de runner online is of dat een doelbuild is geslaagd.
 
-## Nog te voltooien, in volgorde
+## Auth-mail en applicatieservicemails zijn twee routes
 
-| Stap | Wat klaarstaat | Wat concreet ontbreekt |
+**Auth-mail:** de door de eigenaar ingerichte **Supabase Custom SMTP via Resend** blijft de verzendroute voor e-mail-OTP en andere Supabase Auth-mails. De openbare providerinstellingen bevestigen dat e-mail en Google zijn ingeschakeld; zij bewijzen geen mailboxbezorging of geslaagde interactieve login. De OTP-lengte van zes cijfers en de SMTP-inrichting zijn door de eigenaar bevestigd. Activeer of vervang hiervoor **geen Send Email Hook**. De eerder gedeployde `auth-email`-functie is geen reden om SMTP over te nemen.
+
+De 31 geëxporteerde bestanden onder `supabase/email-templates/` bestaan uit 13 staging-HTML-templates, 13 productie-HTML-templates, vier synthetische previews en een manifest. De juiste HTML en onderwerpen worden in **Supabase Authentication → Email Templates** geplaatst. Bij SMTP worden deze Dashboard-templates gebruikt; wijzigingen in de Fabelpad-template-editor synchroniseren ze niet automatisch naar Supabase.
+
+**Applicatieservicemails:** de duurzame outbox voor waarschuwingen en verwijderbevestigingen gebruikt afzonderlijk de **Resend API**. Koppel deze per omgeving via **Beheer → E-mail**, met een beperkte Resend API-key in het eigen Supabase Vault. Werkende SMTP geeft de applicatie niet automatisch die API-key. Ontbreekt die koppeling, dan blijft servicemail onvoltooid in de outbox. Beheer → E-mailtemplates beheert de gedeelde app-opmaak en serviceberichten; een API-testontvangstbewijs is geen bewijs van aflevering in de inbox.
+
+Geen key, token, OTP of mailinhoud hoort in GitHub-variabelen, documentatie of testuitvoer. Er blijven uitsluitend `FABELPAD_APP_ORIGIN`, `FABELPAD_DATA_MODE`, `NEXT_PUBLIC_SUPABASE_URL` en `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` in elk GitHub environment.
+
+## Resterende stappen
+
+| Stap | Wat klaarstaat | Wat nog moet worden uitgevoerd of bevestigd |
 | --- | --- | --- |
-| 1. Afzender/Resend | Beheerpagina, Vault-opslag, testmail, 17 template-editors, API-transport en domein-/trackingcontrole | Afgeschermde API-key en geverifieerd Fabelpad-verzenddomein; DNS-toegang als verificatie ontbreekt |
-| 2. Eenmalige Auth/bootstrap en Edge secrets | Deployed hook/manager, veilige configuratietool, 26 HTML-bestanden | Supabase-beheertoegang per bedoelde account voor Auth/secrets; connector biedt deze API's niet. Eerste OTP moet werken vóór de eerste beheerlogin; daarna Resend/Vault beheren via de app |
-| 3. Echte aanmelding | OTP-UI, sessiecontrole, veilige links en rolbootstrap | OTP-bezorging en login van info@dgwebservices.nl in elk project; account is nu nog niet aangemaakt |
-| 4. Readinessbewijs | Exact eigen origin/project/omgeving wordt afgedwongen; zelfstandige OTP-proef vóór eerste build | Werkelijke configuratie-/bezorg-/OTP-/rolcontrole; daarna root-owned ontvangst. Gezins-/studioflow na kandidaatbouw |
-| 5. Doelrunner | Twee binaries, accounts, units en beperkte sudo | Organisatiebeheer voor beperkte runnergroep; huidige API mist admin:org / geeft403 |
-| 6. Main-CI en kandidaten | Zes handmatige workflows en hostadapters | Vrijgegeven main-SHA, vereiste geslaagde CI, online beperkte runner; echte doelbuild nog niet gedaan |
-| 7. Publieke dienst | Eigen systemd en inactieve Caddyconfiguratie | Gezonde kandidaat, afzonderlijke activering, Caddy/TLS en publieke kernflowacceptatie |
+| 1. Definitieve broncontrole | Google-knop onder OTP; juridische routes, serveronboarding, profieltoestemming, accountbeheer en privacyregister | Finale schone build en alle verplichte CI-controles op exact de geïntegreerde main-SHA |
+| 2. Configuratiebewijs op de VPS | V2-contract met vaste omgeving/origin/project; e-mail en Google worden beide ingeschakeld in de runtime | Rootbestand per doel met de werkelijke settingscontroletijd en eigenaarverklaring; dit is geen OTP-/OAuth-acceptatie |
+| 3. Doelkandidaten | Eigen paden, toolchains, beperkte runners en handmatige build-/activatieroutes | Eigen runner starten; exacte groene main-SHA op ieder doel bouwen en afzonderlijk beoordelen |
+| 4. Auth-acceptatie | Bestaande SMTP en Google-configuratie, 6-cijferige UI, gezamenlijke serverafronding | Interactieve e-mail- en Google-aanmelding per omgeving, onboarding, eerste beheerderrol en account-/leesflow testen; geen account als bevestigd voorwenden |
+| 5. Applicatiemail | Vault-beheer, gedeelde templates en duurzame outbox | Eigen API-key per omgeving, afzender/tracking controleren, testmail en echte outboxafhandeling verifiëren |
+| 6. Achtergrondtaken | Lifecycle-migratie toegepast; scheduleruitvoering wordt afzonderlijk voorbereid | Eigen worker/token/scheduler configureren en aantoonbaar testen; automatische 90-dagenwissing blijft uit tot stagingrapport, waarschuwingen en overgangscontrole |
+| 7. Productieprivacy | DPIA en feitelijke gegevensstroominventaris beschikbaar | Hosting-/supportleverancier, maximale back-upretentie, internationale toegang/doorgiftegrond en operationele bewaartermijnen onderbouwen; privacytekst en versie vóór productieaccountverwerking afronden |
+| 8. Activatie en HTTPS | Gescheiden systemd-, proxy- en rollbackroutes | Gezonde kandidaat en gesloten toepasselijke gates; loopback, certificaat, publieke health en volledige gebruikersflow controleren |
 
-Keys/tokens niet in chat sturen. Gebruik een afgeschermd secretpad of voer de tool uit in een eigen terminal zoals beschreven in [EMAIL-CONFIGURATIE.md](EMAIL-CONFIGURATIE.md). Deze toegangsvraag staat bij de eigenaar open; er wordt geen ontbrekende secret als ingevuld behandeld.
+De privacybeperking is inhoudelijk en wordt niet opgeheven door een groene build of toestemming om uit te rollen. Een gratis lokale leesroute kan onafhankelijk beschikbaar blijven. Er is geen betaalprovider aangesloten; betaalde checkout blijft uitgeschakeld.
 
-Na de eerste login staan alle verdere Resend-instellingen en templatewijzigingen in [Beheer → E-mail / E-mailtemplates](EMAIL-BEHEER.md). Een opgeslagen Vault-configuratie is leidend, ook voor de ondertekende OTP-hook. Geen extra GitHub-variabelen zijn nodig.
+## Bewijs en uitvoerinstructies
 
-## Instructies en bewijs
+- [VPS-doelen, configuratiebewijs v2, kandidaatbouw, activatie en rollback](DG-VPS-08-TWEE-OMGEVINGEN.md).
+- [Gegevensstromen en ontbrekende providerfeiten](PRIVACY-DATASTROMEN.md), [DPIA](PRIVACY-DPIA-2026-11-22.md), [afgeschermde behandeling van AVG-verzoeken](PRIVACY-SUPPORT-RUNBOOK.md).
+- [Lifecycle-contract en worker](LIFECYCLE-IMPLEMENTATIE.md), [onafhankelijke controle van de gewijzigde bron](REVIEW-PRIVACY-LIFECYCLE-2026-11-22.md).
+- [E-mailbeheer](EMAIL-BEHEER.md) en [HTML-exports](EMAIL-TEMPLATES.md): de actuele SMTP-keuze hierboven heeft voorrang op eerdere instructies om een hook te activeren.
+- Historisch bewijs: [eerste Supabase-inrichting](deploy-evidence/supabase-2026-11-22.json), [mailbeheer](deploy-evidence/email-admin-2026-11-22.json), [hostvoorbereiding](deploy-evidence/dg-vps-08-2026-11-22.json), [eerdere lokale builds](VALIDATIE-EMAIL-BEHEER-2026-11-22.md). Deze bestanden worden niet achteraf herschreven tot bewijs van nieuwe controles.
 
-De toevoeging voor Resend-beheer en alle 17 templates is afzonderlijk geverifieerd: [drie schone lokale builds en 18 geslaagde browsertests](VALIDATIE-EMAIL-BEHEER-2026-11-22.md), broncommit `511e39464544ca2c567181d8f19bbc6d66ed1fd6`. Staging en production zijn lokaal apart met hun eigen vier publieke configuratiewaarden gebouwd en op geïsoleerde loopbackpoorten gestart. Dit zijn geen doelkandidaten of operationele mailacceptaties.
+**Nog geen doelkandidaat of apprelease geactiveerd. Geen interactieve OTP-/OAuth-acceptatie of daadwerkelijke inboxbezorging geclaimd.** De native Android-productie-app blijft een afzonderlijke lokale leesapp zonder cloudaccounts.
 
-- [Schone lokale builds en 9 geslaagde browsertests](VALIDATIE-OTP-TWEE-OMGEVINGEN-2026-11-22.md): volledige normale buildroute en afzonderlijke staging-/productionconfiguratiebuilds uit commit `070a039e1de4c39fac12d79d293104a0e89c8f00` geslaagd. Dit zijn lokale builds, geen doelkandidaten of mailacceptatie.
-- [Gegevensbronnen en vier GitHub-variabelen](INRICHTING.md)
-- [Mailconfiguratie per account, verborgen terminalinvoer](EMAIL-CONFIGURATIE.md)
-- [HTML-templates en Supabase-schermvolgorde](EMAIL-TEMPLATES.md)
-- [Kandidaatbouw, activering en herstel op de VPS](DG-VPS-08-TWEE-OMGEVINGEN.md)
-- [Supabase-controles](deploy-evidence/supabase-2026-11-22.json) en [hostcontroles](deploy-evidence/dg-vps-08-2026-11-22.json)
 
-Er zijn geen echte mails verzonden, geen account als bevestigd voorgewend en geen doelkandidaat of publieke app geactiveerd. De lokale native Android-productie-app blijft een afzonderlijk product zonder cloudaccounts.
+Actuele hostaanvulling (22 november 2026, na bovenstaande controles): de twaalf root-owned adapters zijn voor beide doelen bijgewerkt; beide eigen runnerservices zijn gestart en de repository-API meldt runners **21** en **22** als **online**. Het v2-configuratiebewijs staat voor beide doelen in de eigen `email-readiness.json`, `root:root 0600`, met providercontroletijd `2026-11-22T17:50:30.645511+00:00`. Dit is geen interactieve OTP-/Google-acceptatie. Er is hiermee geen app of publieke route geactiveerd.

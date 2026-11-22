@@ -6,7 +6,7 @@ Bijgewerkt: **22 november 2026**. De eigenaar autoriseert inrichting van **beide
 | --- | --- |
 | Product | Fabelpad; webplatform en afzonderlijke lokale native Android-app |
 | Repository / integratiebranch | [fabelpad/platform](https://github.com/fabelpad/platform), `main`; Git-remote en bestaande CI |
-| Werkbranch | `codex/resend-admin-20261122`; voortzetting via bestaande PR 3, inclusief de nog niet samengevoegde VPS-voorbereiding |
+| Werkbranch | `codex/legal-google-release-20261122`; voortzetting via bestaande PR 3, inclusief de VPS-voorbereiding |
 | Werkcheckout | `/home/codex/repos/fabelpad` |
 | Toolchain | Node `24.18.0`, pnpm `11.25.0`, `pnpm-lock.yaml`; Next `16.3.4`, React `19.2.6` |
 | Installatie / build / start | `pnpm install --frozen-lockfile` / `pnpm build` / `pnpm start --port <poort>`; loopbackbinding |
@@ -34,11 +34,11 @@ Beide GitHub environments bestaan met exact de vier afgesproken variabelen. De d
 
 ## Authenticatie en mail
 
-De webapp gebruikt Supabase e-mail-OTP voor ouderaccounts; Google-login blijft uit. De eerste beheerder is **info@dgwebservices.nl**, uitsluitend nadat Supabase het bezit van dat adres heeft bevestigd. Beheerrechten komen uit de database, nooit uit clientmetadata of een lokaal demoaccount.
+De webapp gebruikt Supabase e-mail-OTP van zes cijfers en Google-login voor ouderaccounts. Beide providers zijn in beide projecten ingeschakeld. De eerste beheerder is **info@dgwebservices.nl**, uitsluitend nadat Supabase het bezit van dat adres heeft bevestigd en de ouderonboarding is afgerond. Beheerrechten komen uit de database, nooit uit clientmetadata of een lokaal demoaccount.
 
-De route is **Supabase Auth → ondertekende auth-email Edge Function → Resend API**. Alle Auth- en applicatieserviceberichten gebruiken `lib/email/` als gedeelde bron. Er zijn 13 HTML-templates per omgeving om ook in Supabase te plaatsen. Een actieve Send Email Hook gebruikt de renderer; dashboardtemplates alleen activeren geen hook.
+De bevestigde Auth-mailroute is **Supabase Auth → Custom SMTP → Resend**. Deze release behoudt die configuratie en activeert geen Send Email Hook. Auth- en applicatieserviceberichten hebben `lib/email/` als gedeelde opmaakbron. De 13 Auth-templates per omgeving moeten bij SMTP in Supabase Authentication → Email Templates staan; wijzigingen kunnen vanuit de template-editor als HTML worden overgenomen. De afzonderlijke applicatieservicemails gebruiken de Resend API met hun eigen Vault-koppeling.
 
-**Beheer → E-mail** beheert de Resend-key in de eigen Supabase Vault, afzender, antwoordadressen en gezamenlijke voettekst. **Beheer → E-mailtemplates** bevat alle 17 templates met bewerkbaar onderwerp, kop en introductie. Iedere opslag vereist een geaccepteerde test naar de bevestigde beheerder. De eigen Vault-configuratie wordt na de eerste opslag leidend; bootstrap blijft een eenmalige stap vóór de eerste login. Zie [EMAIL-BEHEER.md](EMAIL-BEHEER.md).
+**Beheer → E-mail** beheert de Resend API-key in de eigen Supabase Vault, afzender, antwoordadressen en gezamenlijke voettekst. **Beheer → E-mailtemplates** bevat alle 17 templates met bewerkbaar onderwerp, kop en introductie. Iedere opslag vereist een geaccepteerde test naar de bevestigde beheerder. Vault wordt leidend voor de applicatieservicemails; Supabase SMTP blijft afzonderlijk geconfigureerd. Zie [EMAIL-BEHEER.md](EMAIL-BEHEER.md).
 
 Zie [inrichting](INRICHTING.md), [templates](EMAIL-TEMPLATES.md), [mailconfiguratie](EMAIL-CONFIGURATIE.md) en [actuele acceptatie](STAGING-PRODUCTION-STATUS.md). Een functie zonder secrets bewijst geen werkende OTP of mailbezorging.
 

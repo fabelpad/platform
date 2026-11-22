@@ -65,7 +65,7 @@ function provisionPublicConfiguration(profile, configId, sha, rawConfig) {
   const config = validatePublicConfig(rawConfig);
   const readinessFile = `${profile.configRoot}/email-readiness.json`;
   assertRootPath(readinessFile, {privateFile:true});
-  validateEmailReadiness(profile, config, JSON.parse(readFileSync(readinessFile, 'utf8')));
+  const readiness = validateEmailReadiness(profile, config, JSON.parse(readFileSync(readinessFile, 'utf8')));
   const text = [...Object.keys(config).sort().map(name => `${name}=${config[name]}`), ''].join('\n');
   const writeImmutable = (file, content, gid) => {
     if (existsSync(file)) {
@@ -85,7 +85,7 @@ function provisionPublicConfiguration(profile, configId, sha, rawConfig) {
   const runtimeDirectory = `${profile.configRoot}/runtime-configs/${configId}`;
   if (!existsSync(runtimeDirectory)) makeDirectory(runtimeDirectory, 0, profile.app.gid);
   assertRootPath(runtimeDirectory, {directory: true});
-  const runtimeText = `${text}FABELPAD_DEPLOY_ENV=${profile.environment}\nFABELPAD_RELEASE_SHA=${sha}\nPORT=${profile.port}\nFABELPAD_AUTH_EMAIL_ENABLED=true\nFABELPAD_AUTH_GOOGLE_ENABLED=false\n`;
+  const runtimeText = `${text}FABELPAD_DEPLOY_ENV=${profile.environment}\nFABELPAD_RELEASE_SHA=${sha}\nPORT=${profile.port}\nFABELPAD_AUTH_EMAIL_ENABLED=true\nFABELPAD_AUTH_GOOGLE_ENABLED=${readiness.version === 2 && readiness.googleProviderConfigured === true}\n`;
   writeImmutable(`${runtimeDirectory}/${sha}.env`, runtimeText, profile.app.gid);
 }
 

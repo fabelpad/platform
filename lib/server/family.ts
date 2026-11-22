@@ -1,12 +1,14 @@
 import { MAX_FAMILY_BYTES, validPutBody, validateFamilySnapshot } from '../familyValidation';
 import { createSupabaseServerClient, getVerifiedParent } from '../supabase/server';
 import { checkMutationOrigin, handleApiError, privateJson, readJson, RequestError } from './http';
+import { parentRpcError, requireActiveParentAccount } from './parent';
 
 export async function handleSupabaseFamilyRequest(request: Request): Promise<Response> {
   try {
     const client = await createSupabaseServerClient();
     const parent = await getVerifiedParent(client);
     if (!parent) throw new RequestError(401, 'not_authenticated', 'Log opnieuw in om jouw gezin op te halen.');
+    await requireActiveParentAccount(client);
     if (!['GET', 'PUT'].includes(request.method)) return privateJson({ error: 'method_not_allowed' }, 405, { Allow: 'GET, PUT' });
     const expected = request.headers.get('x-fabelpad-parent');
     if ((request.method === 'PUT' && !expected) || (expected && expected !== parent.id)) throw new RequestError(401, 'account_changed', 'Het ouderaccount is gewijzigd. Log opnieuw in voordat je verdergaat.');
@@ -24,7 +26,8 @@ export async function handleSupabaseFamilyRequest(request: Request): Promise<Res
     const checked = validateFamilySnapshot(body.snapshot);
     if (!checked.ok) throw new RequestError(422, 'invalid_snapshot', checked.reason);
     const { data, error } = await client.rpc('save_family_snapshot', { p_base_revision: body.baseRevision, p_snapshot: checked.snapshot });
-    if (error || !data) throw error ?? new Error('Missing save outcome');
+    if (error) parentRpcError(error);
+    if (!data) throw new Error('Missing save outcome');
     if (!data.saved) return privateJson({ error: 'revision_conflict', revision: data.revision, snapshot: data.snapshot }, 409);
     return privateJson({ parent, revision: data.revision, snapshot: data.snapshot });
   } catch (error) { return handleApiError(error); }

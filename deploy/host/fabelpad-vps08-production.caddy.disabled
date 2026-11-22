@@ -3,5 +3,7 @@
 # later activation instruction before placing a rendered copy in that import.
 __VERIFIED_FABELPAD_DOMAIN__ {
     encode zstd gzip
+    header Referrer-Policy "no-referrer"
+    header X-Content-Type-Options "nosniff"
     reverse_proxy 127.0.0.1:4189
 }

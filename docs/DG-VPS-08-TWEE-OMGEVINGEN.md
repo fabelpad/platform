@@ -1,100 +1,136 @@
 # Fabelpad — staging en production op dg-vps-08
 
-Gecontroleerd op **22 november 2026**. Dit document vervangt voor deze twee doelen de uitgangspunten van de stagingvoorbereiding van 20 november. De eigenaar heeft wijzigingen in beide Fabelpad-omgevingen en bijbehorende Supabase-accounts toegestaan. Deze hostvoorbereiding heeft geen app of publieke route geactiveerd.
+Actuele overdracht: **22 november 2026**. De eigenaar heeft uitrol naar beide Fabelpad-omgevingen toegestaan. Dit document beschrijft de bestaande doelidentiteiten, de huidige configuratieroute en de uitvoeringsvolgorde; een opdrachtvoorbeeld is geen uitgevoerde deployment.
 
-**Feitelijke status:** beide doelen zijn op de VPS voorbereid; beide appservices en runnerservices zijn `disabled/inactive`. De runners zijn **niet geregistreerd**. Op beide doelen staan **nul kandidaten en nul releases**, zonder `current`-verwijzing. E-mail-OTP heeft nog geen geverifieerd readinessbewijs op de host. Een voorbereide host bewijst geen werkende Supabase-/Resend-koppeling of geslaagde doelbuild.
+**Huidige toestand:** beide eigen runners zijn geregistreerd voor uitsluitend repository `fabelpad/platform`, maar staan offline en hun diensten zijn inactief. Beide appservices zijn inactief. Er staan nog **geen doelkandidaten, geen releases en geen `current`-verwijzingen**. Auth gebruikt de bestaande Supabase Custom SMTP via Resend, met volgens de eigenaar zes OTP-cijfers. De publieke Auth-settings bevestigen in beide projecten e-mail en Google. Een interactieve OTP-/OAuth-proef is daarmee niet bewezen.
 
-Het gecommitteerde [controlebewijs](deploy-evidence/dg-vps-08-2026-11-22.json) bevat hostidentiteit, feitelijke accounts, versies, modulehashes, rechtencontroles en de vergelijking van bestaande omgevingen. Het bevat geen configuratiewaarden of credentials.
+## Vaste doelidentiteiten
 
-## Twee vaste identiteiten
-
-Repository: `https://github.com/fabelpad/platform.git`. Integratiebranch: **`main`**. SSH-doel: **`dg-vps-08`**, machine-id `05db94b99eca4c3d815f6585ef8ed517`. Strict host checking gebruikte de bestaande gepinde sleutel via `HostKeyAlias=100.65.51.108`.
+Repository: `https://github.com/fabelpad/platform.git`. Integratiebranch: **`main`**. SSH-doel: **`dg-vps-08`**, machine-id `05db94b99eca4c3d815f6585ef8ed517`. De bestaande SSH-hostkeypin gebruikt `HostKeyAlias=100.65.51.108`.
 
 | Onderdeel | Staging | Production |
 | --- | --- | --- |
-| Bestaande GitHub environment | **`staging`** | **`production`** |
+| GitHub environment | `staging` | `production` |
 | Doel-ID / exacte runnernaam | `fabelpad-vps08-staging` | `fabelpad-vps08-production` |
-| Supabase-account volgens eigenaar | `fabelpad` | `Duindorpdoet` |
-| Eigen runneraccount, UID/GID | `run-fab-v08-stg`, `993/983` | `run-fab-v08-prd`, `987/980` |
-| Eigen buildaccount, UID/GID | `build-fab-v08-stg`, `990/982` | `build-fab-v08-prd`, `986/979` |
-| Eigen appaccount, UID/GID | `app-fab-v08-stg`, `988/981` | `app-fab-v08-prd`, `985/978` |
-| Eigen loopbackpoort | `127.0.0.1:4188` | `127.0.0.1:4189` |
+| Runnerregistratie | Repositoryscope; ID 21 | Repositoryscope; ID 22 |
+| Supabase-account | `fabelpad` | `Duindorpdoet` |
+| Supabase-project | `tlwfpivafcokcjyjwgmq` | `aptprpkosqctwrzeetgs` |
+| App-origin | `https://staging.fabelpad.nl` | `https://fabelpad.nl` |
+| Supabase-origin | `https://tlwfpivafcokcjyjwgmq.supabase.co` | `https://aptprpkosqctwrzeetgs.supabase.co` |
+| Runneraccount, UID/GID | `run-fab-v08-stg`, `993/983` | `run-fab-v08-prd`, `987/980` |
+| Buildaccount, UID/GID | `build-fab-v08-stg`, `990/982` | `build-fab-v08-prd`, `986/979` |
+| Appaccount, UID/GID | `app-fab-v08-stg`, `988/981` | `app-fab-v08-prd`, `985/978` |
+| Loopbackpoort | `127.0.0.1:4188` | `127.0.0.1:4189` |
 | Appservice | `fabelpad-vps08-staging.service` | `fabelpad-vps08-production.service` |
 | Runnerservice | `fabelpad-vps08-staging-runner.service` | `fabelpad-vps08-production-runner.service` |
 
-Beide poorten zijn vóór en na voorbereiding daadwerkelijk met een tijdelijke loopback-bind gecontroleerd als vrij. Dit reserveert de poort niet permanent; controleer haar opnieuw vóór een eerste start.
+Runnerlabels: `self-hosted`, `Linux`, `X64`, `dg-vps-08` en exact de eigen doel-ID. Registratie is repositorygebonden; de oude ontbrekende organisatierechten/runnergroep vormen geen actuele blokkade. Een label op zichzelf bewijst geen beperking: controleer bij de start nog steeds de juiste repositoryscope, runnernaam en labels.
 
-De GitHub-environments **`staging`** en **`production`** bestaan en hebben volgens de alleen-lezen controle door de hoofdagent ieder de vier afgesproken variabelen. Een nieuwe environment met de naam van een VPS-doel-ID is niet nodig. De host-ID en de GitHub-environmentnaam hebben verschillende functies.
+De vier bestaande GitHub-environmentvariabelen blijven:
 
-Alleen deze vier GitHub-environmentvariabelen worden gebruikt:
-
-| Naam | Bron en fase |
+| Naam | Bron en gebruik |
 | --- | --- |
-| `FABELPAD_APP_ORIGIN` | De bevestigde HTTPS-origin van dit doel; build- en runtimeconfiguratie |
-| `FABELPAD_DATA_MODE` | Voor de gevraagde cloud-/OTP-inrichting exact `supabase` |
-| `NEXT_PUBLIC_SUPABASE_URL` | Het Supabase-project van dezelfde omgeving; publieke build- en runtimewaarde |
-| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Publishable key van dat project; `sb_publishable_…`, geen secret/service-role key |
+| `FABELPAD_APP_ORIGIN` | Exact de app-origin uit de doeltabel; build en runtime |
+| `FABELPAD_DATA_MODE` | `supabase` voor beide online omgevingen |
+| `NEXT_PUBLIC_SUPABASE_URL` | Exact het bijbehorende Supabase-project uit de doeltabel |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Publieke `sb_publishable_…`-key van hetzelfde project |
 
-De kandidaatjobs verwijzen naar de juiste environment en lezen daardoor de omgevingswaarden. Ze voegen geen repositoryvariabelen toe. SHA, omgeving, poort, workflowrun en authflags worden door het gecontroleerde releasecontract bepaald. Wijziging van een ingebakken publieke waarde vereist een nieuwe kandidaat en configuratie-ID.
+Geen Resend-key, SMTP-wachtwoord, Supabase-secret of worker-token toevoegen aan deze GitHub-variabelen. Een gewijzigde ingebakken publieke waarde vereist een nieuwe kandidaat en configuratie-ID. Hostgegenereerde SHA, poort en authflags zijn geen extra GitHub-variabelen.
 
-## Feitelijk voorbereide host
+## Hostpaden en rechten
 
-Vervang in onderstaande paden `<site>` uitsluitend door een van de twee vaste doel-ID's:
+Vervang `<site>` alleen door een van de twee vaste doel-ID's.
 
-| Pad | Rechten en functie |
+| Pad | Functie |
 | --- | --- |
-| `/usr/local/libexec/<site>` | Root-owned adapters; runner, build en app kunnen ze niet schrijven |
-| `/etc/dg-webservices/<site>/host.json` | Root-owned hostidentiteit, accounts, paden en pins; geen secrets |
-| `/etc/dg-webservices/<site>/installation.json` | Installatiebewijs met modulehashes; staging bevat tevens de adapterupgrade |
-| `/etc/dg-webservices/<site>/build-configs/CONFIG_ID.env` | Onveranderlijk snapshot van de vier publieke waarden, `root:build 0640` |
-| `/etc/dg-webservices/<site>/runtime-configs/CONFIG_ID/SHA.env` | Versiegebonden runtimeconfiguratie, `root:app 0640` |
-| `/etc/dg-webservices/<site>/email-readiness.json` | Nog ontbrekend rootbewijs van de werkelijk geverifieerde OTP-/mailroute |
-| `/etc/dg-webservices/<site>/prepared` | Eigen voorbereide units en uitgeschakelde proxysnippet |
-| `/var/lib/dg-build/<site>/{home,work}` | Gescheiden buildwerk; geen toegang tot runtimeconfiguratie |
-| `/opt/actions-runner/<site>` | Eigen uitgepakte runnerbinary; niet geregistreerd of gestart |
-| `/opt/dg-toolchains/<site>` | Eigen root-owned Node-/pnpm-toolchain |
-| `/srv/sites/<site>/{candidates,releases,shared}` | Verzegelde kandidaten, gekoppelde app/config-releases en enige appschrijfmap |
+| `/usr/local/libexec/<site>` | Root-owned adapters; niet schrijfbaar door runner, build of app |
+| `/etc/dg-webservices/<site>/host.json` | Doelidentiteit, account-/pad-/workflowpins |
+| `/etc/dg-webservices/<site>/installation.json` | Bewijs van de werkelijk geïnstalleerde adapterversie en modulehashes |
+| `/etc/dg-webservices/<site>/build-configs/CONFIG_ID.env` | Onveranderlijk snapshot van vier publieke waarden, `root:build 0640` |
+| `/etc/dg-webservices/<site>/runtime-configs/CONFIG_ID/SHA.env` | Bij de release horende runtimeconfiguratie, `root:app 0640` |
+| `/etc/dg-webservices/<site>/email-readiness.json` | Rootbestand met configuratiecontrole v2, `root:root 0600`; geen inlogbewijs |
+| `/etc/dg-webservices/<site>/prepared` | Voorbereide units en inactieve proxysnippet |
+| `/var/lib/dg-build/<site>/{home,work}` | Gescheiden buildwerk zonder toegang tot runtimeconfiguratie |
+| `/opt/actions-runner/<site>` | Eigen geregistreerde runner; dienst nog inactief |
+| `/opt/dg-toolchains/<site>` | Eigen root-owned Node 24.18.0 / pnpm 11.25.0 |
+| `/srv/sites/<site>/{candidates,releases,shared}` | Verzegelde kandidaten, app/config-releases en eigen appschrijfmap |
 
-Node **24.18.0** en pnpm **11.25.0** zijn per doel aanwezig. De productie-toolchain is gekopieerd van de bestaande root-owned Fabelpad-stagingtoolchain, nadat haar volledige inhoud was vergeleken met de officiële archieven. Daarna is dezelfde vergelijking voor productie herhaald: **5.162 bestanden en symlinks**, plus daadwerkelijke versiecontroles. De officiële archivechecksums en manifestdigest staan in het controlebewijs. Er is geen gedeeld pakket of systeem-PATH aangepast.
+Elke runner heeft uitsluitend de drie digestgepinde `NOSETENV` sudo-opdrachten voor de eigen kandidaat-, activatie- en rollbackadapter. De gedeelde buildlock is `/run/lock/dg-build.lock`; de bestaande persistentie en andere projecten blijven ongemoeid. Activatie en rollback hebben daarnaast per doel een eigen lock en GitHub-concurrency.
 
-De officiële runnerbinary **2.338.2** is voor productie op archivechecksum gecontroleerd. `bin/runsvc.sh` is volgens het runnercontract naar de eigen runnerroot gekopieerd. De eigen production-runnerunit is gevalideerd en als nieuwe unit geïnstalleerd. `systemctl daemon-reload` heeft de nieuwe unit zichtbaar gemaakt; geen service is gestart.
+Een adapterupdate gaat via `scripts/deploy/install-host.py --upgrade-adapters`: controle van eerdere hashes en identiteit, gestopte eigen runner, gedeelde buildlock en eigen activatielock, herstel van eigen vervangen bestanden bij fouten. Herhaal op deze bestaande doelen geen nieuwe installatie. Het `installation.json` op de host bepaalt welke versie daadwerkelijk geïnstalleerd is; nieuwere broncode op GitHub bewijst geen uitgevoerde hostupdate.
 
-De stagingadapters zijn met `--upgrade-adapters` bijgewerkt. Dit controleert de bestaande installatie-identiteit en alle eerdere modulehashes, vereist een gestopte eigen runner, houdt het bestaande gedeelde buildlock en eigen activatielock vast en herstelt eigen vervangen bestanden bij een vervangingsfout. De productie-inrichting is als nieuwe toevoeging gemaakt. Er zijn geen bestaande appreleases of runtimeconfiguraties gewijzigd.
+Het [historische hostbewijs](deploy-evidence/dg-vps-08-2026-11-22.json) legde de oorspronkelijke voorbereiding en onveranderde Caddy/SSH/Tailscale/Castiq-toestand vast. Het blijft ongewijzigd en bewijst geen latere runnerregistratie, adapterupgrade of appstart. Leg bij iedere nieuwe hostwijziging opnieuw relevante bestaande service-/release-/healthtoestand vóór en na vast.
 
-Rechtencontroles onder elk van de zes accounts bevestigen dat alleen het buildaccount zijn buildconfiguratiedirectory kan betreden, alleen het appaccount zijn runtimeconfiguratiedirectory en geen van de drie rollen privileged code kan schrijven. Iedere runner heeft precies drie `NOSETENV`, digestgepinde sudo-opdrachten voor zijn eigen kandidaat-, activatie- en rollbackadapter; geen algemene sudo.
+## Auth-configuratie en bewijs v2
 
-De buildroute gebruikt het bestaande gedeelde `/run/lock/dg-build.lock` en de bestaande persistentie in `/etc/tmpfiles.d/castiq-staging-build-lock.conf`. Die inrichting is behouden. De eigen activatie-/rollbacklocks staan onder de afzonderlijke configuratieroots.
+**Gebruik de werkende Supabase Custom SMTP-route. Activeer geen Send Email Hook.** De eerdere optionele `auth-email`-Edge Function neemt SMTP alleen over als iemand de hook actief configureert; dat is geen onderdeel van deze route. Supabase Auth-mails gebruiken de Dashboard-templates uit de 31 bestanden onder `supabase/email-templates/`: 26 doelgebonden HTML-bestanden, vier synthetische previews en een manifest.
 
-## Behoud van bestaande omgevingen
+De root-owned adapter accepteert nu versie 2 van `email-readiness.json`. Dit legt de actuele publieke providerinstellingen en de verklaring van de eigenaar over SMTP/OTP vast. De verplichte waarde `authenticationAcceptance` houdt expliciet bij dat de interactieve e-mail-/Google-acceptatie nog moet plaatsvinden. Zet geen OTP-/OAuth-test op geslaagd zonder die test uit te voeren.
 
-De nameting vergeleek de nulmeting van **15:04:34 CET** met **15:08:00 CET** op 22 november. Er zijn **geen verschillen** gevonden in de opgenomen bestaande services, processen, configuratiehashes, HTTP-responses of releaseverwijzingen:
+Staging-JSON met de werkelijk gecontroleerde publieke providerinstellingen van **22 november 2026, 17:50:30 UTC**:
 
-- Caddy, SSH, Tailscale en de Castiq-stagingrunner bleven actief met dezelfde PID's.
-- Castiq-staging en de Castiq-worker bleven inactief.
-- De hashes van Caddy-, SSH-, Castiq-unit- en bestaande buildlockpersistentieconfiguratie bleven gelijk.
-- De standaard-HTTP-response en de actieve Caddy-configuratiehash bleven gelijk.
-- Er waren vóór en na geen `current`-verwijzingen onder de onderzochte releasepaden.
+```json
+{
+  "version": 2,
+  "environment": "staging",
+  "siteId": "fabelpad-vps08-staging",
+  "appOrigin": "https://staging.fabelpad.nl",
+  "supabaseUrl": "https://tlwfpivafcokcjyjwgmq.supabase.co",
+  "emailProviderConfigured": true,
+  "googleProviderConfigured": true,
+  "otpDigits": 6,
+  "ownerConfigurationAttested": true,
+  "authenticationAcceptance": "requires-interactive-owner-test",
+  "settingsCheckedAt": "2026-11-22T17:50:30.645511+00:00"
+}
+```
 
-Er is geen Caddy-reload, DNS-wijziging, appstart of databasehandeling uitgevoerd door deze hostvoorbereiding. Supabase CLI is niet gebruikt voor hostinstallatie of deployment; die route gebruikt Node, Python, systemd en de bestaande Caddy-proxy.
+Production-JSON; dit project is op hetzelfde moment afzonderlijk gecontroleerd:
 
-## Gates vóór een kandidaat
+```json
+{
+  "version": 2,
+  "environment": "production",
+  "siteId": "fabelpad-vps08-production",
+  "appOrigin": "https://fabelpad.nl",
+  "supabaseUrl": "https://aptprpkosqctwrzeetgs.supabase.co",
+  "emailProviderConfigured": true,
+  "googleProviderConfigured": true,
+  "otpDigits": 6,
+  "ownerConfigurationAttested": true,
+  "authenticationAcceptance": "requires-interactive-owner-test",
+  "settingsCheckedAt": "2026-11-22T17:50:30.645511+00:00"
+}
+```
 
-1. Review en integreer de twee-omgevingenwijziging veilig in `main`. Controleer vooraf opnieuw alle bestaande push-/tagworkflows en eventuele Supabase-GitHub-integratie op neveneffecten.
-2. Laat op exact dezelfde volledige main-SHA beide verplichte pushcontroles slagen: job **`verify`** uit `verify.yml` en **`Native Android-controles`** uit `fabelpad-android-ci.yml`. Een oudere groene run, PR-run of overgeslagen verplichte stap telt niet. De optionele signing-/Play-job mag ontbreken wanneer publicatie is uitgeschakeld.
-3. Verifieer de juiste vier waarden per bestaande GitHub environment en de Supabase-projectidentiteit per account. Verifieer dat staging en productie gescheiden projecten en app-origins gebruiken.
-4. Maak de Supabase-/Resend-route daadwerkelijk werkend: juiste Site URL/redirects, Send Email Hook, geverifieerd verzenddomein, secrets uitsluitend bij de server-/Edge Function en een geslaagde synthetische OTP-/verzendtest. Geef het buildaccount en de runner geen Resend API-key of hook signing secret.
-5. Plaats pas daarna per doel het hieronder beschreven readinessbewijs. De kandidaatadapter weigert te bouwen zonder passend bewijs.
-6. Registreer en start uitsluitend de betreffende eigen runner nadat de actuele GitHub-repository-/runnergroep-/workflowtoegang is gecontroleerd. De runners staan nu nog ongeregistreerd en uit. Er is geen opnieuw geverifieerde uitspraak over abonnement of runnergroeptoegang in dit document.
-
-De workflows zijn alleen handmatig en staan vast op `fabelpad/platform`, `refs/heads/main` en de eigen hostidentiteit. De root-owned adapters controleren opnieuw de exacte SHA/CI, actuele workflowrun/poging, geslaagde hosted preflight, eigen actieve job, runnernaam en labels. Een runnerlabel bewijst op zichzelf geen toegangsbeperking. Registreer niet als een onbetrouwbare PR of andere repository deze privileged runner zou kunnen gebruiken.
-
-Runnerlabels per doel: `self-hosted`, `Linux`, `X64`, `dg-vps-08`, gevolgd door exact de eigen doel-ID. Het registratietoken blijft buiten broncode, uitvoer, bestanden en procesargumenten. Gebruik de ondersteunde geheime runnerinvoer `ACTIONS_RUNNER_INPUT_TOKEN` via een beheerproces; plaats geen token in een kopieerbaar shellcommando of chat.
-
-Pas na gecontroleerde registratie en toegangsbeperking, op de VPS voor het gekozen doel:
+Deze tijdstippen bewijzen de settingscontrole; zij zijn geen interactieve OTP-/OAuth- of bezorgtest. Auto Confirm staat in beide projecten uit. Controleer vóór een latere wijziging opnieuw het eigen project en de publieke Auth-settings, werk dan de controletijd bij en laat een bevoegde beheerder het beoordeelde JSON-bestand plaatsen:
 
 ```bash
 set -euo pipefail
-DEPLOY_ENV=staging # kies bewust staging of production
+DEPLOY_ENV=staging # kies staging of production expliciet
+case "$DEPLOY_ENV" in staging|production) ;; *) exit 64 ;; esac
+SITE="fabelpad-vps08-$DEPLOY_ENV"
+sudo install -o root -g root -m 0600 \
+  "/PAD/NAAR/BEOORDEELD/$DEPLOY_ENV-email-readiness.json" \
+  "/etc/dg-webservices/$SITE/email-readiness.json"
+sudo stat -c '%U:%G %a %n' "/etc/dg-webservices/$SITE/email-readiness.json"
+```
+
+De adapter vereist exacte overeenkomst van omgeving, site-ID, app-origin en Supabase-origin met de eigen vier publieke configuratiewaarden. Verkeerde projecten, ontbrekende providerflags, een ander aantal OTP-cijfers of een gefingeerde acceptatiestatus worden geweigerd. Het oude v1-formaat blijft alleen bruikbaar voor werkelijk bewezen legacy-hookacceptatie; gebruik het niet om de huidige SMTP-inrichting om te zetten in een hookclaim.
+
+Na passend v2-bewijs maakt de kandidaatadapter naast de vier publieke waarden automatisch `FABELPAD_DEPLOY_ENV`, `FABELPAD_RELEASE_SHA`, `PORT`, `FABELPAD_AUTH_EMAIL_ENABLED=true` en **`FABELPAD_AUTH_GOOGLE_ENABLED=true`**. Beide loginopties verschijnen daardoor in de juiste omgeving. Hergebruik geen reeds vastgelegde configuratie-ID voor gewijzigde waarden of nieuwe authflags.
+
+## Gates en runnerstart
+
+1. Integreer de beoordeelde bron veilig in `main`, na controle van automatische push-/tag-/Supabase-integraties. Gebruik exact de volledige geïntegreerde SHA.
+2. Laat op die SHA de twee verplichte pushcontroles slagen: **`verify`** uit `verify.yml` en **`Native Android-controles`** uit `fabelpad-android-ci.yml`. Oude runs, PR-runs, ontbrekende of overgeslagen verplichte stappen tellen niet.
+3. Controleer de vier waarden per bestaand environment, de v2-doelpins en de geïnstalleerde adapterversie. Houd staging en production gescheiden.
+4. Controleer op de host capaciteit, vrije doelpoort, locks, eigen runnerregistratie en repository-/workflowtoegang. Start alleen de betreffende eigen runner.
+5. Bouw staging en production afzonderlijk. Een kandidaatbuild activeert niets. Rond de toepasselijke configuratie-, privacy- en operationele gates af vóór gebruik van de kandidaat.
+
+```bash
+set -euo pipefail
+DEPLOY_ENV=staging
 case "$DEPLOY_ENV" in staging|production) ;; *) exit 64 ;; esac
 SITE="fabelpad-vps08-$DEPLOY_ENV"
 sudo test -f "/opt/actions-runner/$SITE/.runner"
@@ -102,42 +138,18 @@ sudo systemctl enable --now "$SITE-runner.service"
 sudo systemctl is-active "$SITE-runner.service"
 ```
 
-Controleer tevens via GitHub dat exact dezelfde runnernaam online is, in de bedoelde scope met de juiste labels. Deze startopdrachten zijn tijdens de voorbereiding **niet uitgevoerd**.
+Controleer via GitHub dat exact dezelfde runnernaam online is in repository `fabelpad/platform`, met de vaste labels. De registratie is al uitgevoerd; voer daarvoor geen nieuwe registratie of tokenaanvraag uit. Bovenstaande dienststart is een volgende uitvoeringsstap, geen historische startclaim.
 
-## OTP-readinessbewijs en onveranderlijke runtime
+## Kandidaat bouwen
 
-Een beheerder plaatst na echte verificatie `/etc/dg-webservices/<site>/email-readiness.json` als **`root:root 0600`**, met uitsluitend deze niet-geheime metadata. Onderstaande invulwaarden zijn geen bewijs; vervang ze door de gecontroleerde waarden en tijd:
-
-```json
-{
-  "version": 1,
-  "environment": "staging",
-  "siteId": "fabelpad-vps08-staging",
-  "provider": "resend",
-  "emailOtpVerified": true,
-  "sendEmailHookVerified": true,
-  "appOrigin": "DE_EXACTE_FABELPAD_APP_ORIGIN",
-  "supabaseUrl": "DE_EXACTE_NEXT_PUBLIC_SUPABASE_URL",
-  "verifiedAt": "ISO_TIJD_VAN_GESLAAGDE_VERIFICATIE"
-}
-```
-
-Voor productie worden `environment` en `siteId` exact `production` en `fabelpad-vps08-production`. De adapter weigert een andere omgeving, origin, project, provider of ontbrekende geslaagde verificatie. Neem geen e-mailadres, ontvangen OTP, API-key, token of e-mailinhoud in het bewijs op. Beide readinessbestanden ontbreken nog volgens de hostnameting.
-
-Na passend bewijs maakt de kandidaatadapter een nieuw onveranderlijk snapshot met de vier publieke waarden plus automatisch `FABELPAD_DEPLOY_ENV`, `FABELPAD_RELEASE_SHA`, `PORT`, `FABELPAD_AUTH_EMAIL_ENABLED=true` en `FABELPAD_AUTH_GOOGLE_ENABLED=false`. Deze extra namen zijn hostgegenereerde runtimeconfiguratie, geen extra GitHub-variabelen. Eerder gebruikte configuratie-ID's worden niet stilzwijgend overschreven. Een nieuwe configuratie of herbevestigde mailinrichting krijgt een nieuwe configuratie-ID.
-
-## Kandidaat bouwen, afzonderlijk activeren en herstellen
-
-De zes workflows heten `fabelpad-dg-vps-08-<omgeving>-candidate.yml`, `-activate.yml` en `-rollback.yml`, met `<omgeving>` exact `staging` of `production`. Elke app/configuratiecombinatie blijft bij één release horen. De gedeelde buildlock begrenst builds; het eigen activatielock en de GitHub-concurrency voorkomen gelijktijdige activatie en rollback binnen hetzelfde doel.
-
-Voer onderstaande stappen pas uit nadat bovenstaande gates aantoonbaar zijn afgerond. Een workflow dispatch is een werkelijke opdracht; de voorbeelden zijn geen reeds uitgevoerde release.
+De zes handmatige workflows heten `fabelpad-dg-vps-08-<omgeving>-candidate.yml`, `-activate.yml` en `-rollback.yml`. Zij pinnen repository, `refs/heads/main`, omgeving en host. Hostadapters controleren SHA/CI, actuele workflowrun/poging, hosted preflight, eigen actieve job en runneridentiteit opnieuw.
 
 ```bash
 set -euo pipefail
-DEPLOY_ENV=staging # test staging eerst; kies production daarna afzonderlijk
+DEPLOY_ENV=staging # staging eerst; production daarna afzonderlijk
 case "$DEPLOY_ENV" in staging|production) ;; *) exit 64 ;; esac
 RELEASE_SHA=VOLLEDIGE_GOEDGEKEURDE_MAIN_SHA
-CONFIG_ID=NIEUWE_NIET_GEHEIME_CONFIGURATIE_ID
+CONFIG_ID=NIEUWE_CONFIGURATIE_ID
 gh workflow run "fabelpad-dg-vps-08-$DEPLOY_ENV-candidate.yml" \
   --repo fabelpad/platform --ref main \
   -f release_sha="$RELEASE_SHA" -f config_id="$CONFIG_ID"
@@ -146,15 +158,17 @@ gh run list --repo fabelpad/platform \
 gh run watch BOUW_RUN_ID --repo fabelpad/platform --exit-status
 ```
 
-`release_sha` bestaat uit exact 40 kleine hextekens. `config_id` bestaat uit 1–63 kleine letters/cijfers/streepjes en begint met een letter/cijfer. De workflow meldt de kandidaat-ID **`SHA-RUN_ID-RUN_ATTEMPT`**. Een geslaagde kandidaatbuild start geen app en wijzigt geen `current`. Bekijk het kandidaatmanifest voor exact dezelfde omgeving, SHA, beide CI-bewijzen, configuratiedigest en artefactdigest.
+SHA: exact 40 kleine hextekens. Configuratie-ID: 1–63 kleine letters/cijfers/streepjes, beginnend met letter of cijfer. De kandidaat-ID is `SHA-RUN_ID-RUN_ATTEMPT`. Controleer het manifest op eigen omgeving, SHA, twee CI-bewijzen, configuratie- en artefactdigest.
 
-Installatie: `pnpm install --frozen-lockfile --prod=false --package-import-method=copy`. De worker draait de normale projectchecks en **`pnpm build`**. Output bevat onder meer `.next`, `public` en de benodigde `node_modules`. Startcontract blijft **`pnpm start`**; de eigen systemd-unit start de gepinde Nodebinary met Next op de vaste loopbackpoort. Er zijn geen automatische migraties of mailverzendingen in deze buildroute.
+Installatie gebruikt `pnpm install --frozen-lockfile --prod=false --package-import-method=copy`; daarna de normale projectchecks en `pnpm build`. Output bevat `.next`, `public` en de benodigde `node_modules`. Startcontract: `pnpm start`, door systemd met gepinde Nodebinary op de eigen loopbackpoort. De build voert geen automatische migraties of gebruikersmail uit.
 
-Na afzonderlijke beoordeling van de verzegelde kandidaat en juiste runtimeconfiguratie:
+Lifecycle-migratie `20261122172905_parent_account_lifecycle.sql` is in beide Supabase-projecten toegepast; er waren nul Auth-gebruikers. De Edge Functions `email-admin` v2 en `account-maintenance` v1 zijn in beide projecten actief; ongesigneerde probes geven HTTP401 zonder mailverzending. De eigen scheduler wordt afzonderlijk ingericht en geverifieerd. Bulkverwijdering na 90 dagen blijft standaard uit totdat stagingrapport, waarschuwingen, overgang en Resend API-servicemail aantoonbaar kloppen. De werkende SMTP-inrichting vervangt die API-key niet.
+
+## Activatie, gebruikersproef en HTTPS
 
 ```bash
 set -euo pipefail
-CANDIDATE_ID=EXACTE_KANDIDAAT_ID_UIT_DE_BOUWROUTE
+CANDIDATE_ID=EXACTE_KANDIDAAT_ID
 gh workflow run "fabelpad-dg-vps-08-$DEPLOY_ENV-activate.yml" \
   --repo fabelpad/platform --ref main \
   -f release_sha="$RELEASE_SHA" -f candidate_id="$CANDIDATE_ID" -f config_id="$CONFIG_ID"
@@ -163,19 +177,21 @@ gh run list --repo fabelpad/platform \
 gh run watch ACTIVATIE_RUN_ID --repo fabelpad/platform --exit-status
 ```
 
-De activatie gebruikt exact environment `staging` of `production` en respecteert aanwezige GitHub-bescherming. De adapter controleert een bestaande expliciete branchpolicy; bij ontbreken ervan blijven de vaste workflow- en hostcontroles op `main` verplicht. Er wordt geen environment aangemaakt of betaald abonnement verondersteld.
+Controleer vooraf de eigen unit met `systemd-analyze verify`, de eigen versiegebonden runtimeconfiguratie en de toepasselijke GitHub-environmentbescherming. Controleer daarna de service en eigen loopback `/api/health` op poort 4188 of 4189. Verwacht `ok=true`, `service=fabelpad`, `runtime=nextjs-node`, de juiste omgeving en exacte vrijgegeven SHA. Dit is liveness/configuratie, geen database-, mail- of loginacceptatie.
 
-Controleer vóór activering de eigen unit met `systemd-analyze verify` en `systemctl show`. Controleer na activering op de VPS de eigen service en `http://127.0.0.1:4188/api/health` voor staging, of `http://127.0.0.1:4189/api/health` voor production. De JSON moet `ok=true`, `service=fabelpad`, `runtime=nextjs-node`, de juiste `environment` en exact de vrijgegeven `revision` geven. Dit is process/configuratie-liveness, geen volledige database- of mailreadiness.
+Test afzonderlijk met synthetische gegevens: e-mailcode van zes cijfers, Google-login, actuele voorwaarden en lege afzonderlijke oudercheckboxes, optionele toestemming per profiel, intrekken op een ander apparaat, eerste beheerderrol, leesvoortgang, uitloggen en expliciet verwijderen/herstellen. Een login herstelt een geblokkeerd account nooit. Bewaar geen OTP, echte persoonsgegevens of sessietokens in testuitvoer.
 
-Test afzonderlijk de eerste OTP-aanvraag, codebevestiging, ingelogde sessie, uitloggen, beheerdersrol van het aangewezen account en de belangrijkste lees-/beheerflow met synthetische gegevens. Controleer ook verlopen/hergebruikte OTP's, geweigerde toegang tot beheerfuncties en scheiding tussen staging en productie. Sla geen OTP's of echte persoonsgegevens in testuitvoer op.
+De domeinen wezen bij de eerdere controle naar `204.168.128.28`, hetzelfde publieke adres als op de doelhost. Verifieer DNS opnieuw vóór routing; een Tailscale-adres is geen publiek DNS-doel. Valideer de eigen Caddy-snippet samen met de bestaande configuratie vóór installatie/reload, behoud bestaande sites en vergelijk hun health vóór en na. Controleer TLS, publieke `/api/health` en de volledige gebruikersflow via HTTPS. Een `.caddy.disabled` is geen actieve route.
 
-Een publieke route vereist daarnaast een bevestigde origin, geverifieerd publiek bestemmingsadres, passende DNS, een afzonderlijke eigen Caddy-snippet en geldige TLS. De aanwezige `.caddy.disabled` is geen actieve route. Valideer de nieuwe snippet samen met de bestaande Caddyconfiguratie vóór installatie/reload en controleer bestaande healthchecks vóór en na. Activeer pas een publieke route wanneer deze netwerkgegevens en opdracht zijn bevestigd. Controleer daarna publieke `/api/health`, certificaat en volledige OTP-/appflow via HTTPS. Het Tailscale-adres is geen publiek DNS-doel.
+**Productiegate:** ontbrekende projectfeiten over hosting, support, maximale back-uprotatie en internationale toegang/doorgifte blijven een blokkade voor productie-openstelling van online kinderdata. Werk de privacyversie en DPIA hiermee af vóór die verwerking; geen huidige versie overschrijven nadat iemand haar heeft aanvaard. Zie [PRIVACY-DATASTROMEN.md](PRIVACY-DATASTROMEN.md), [PRIVACY-DPIA-2026-11-22.md](PRIVACY-DPIA-2026-11-22.md) en [STAGING-PRODUCTION-STATUS.md](STAGING-PRODUCTION-STATUS.md). De lokale gratis leesroute en voorbereide kandidaten staan los van die productie-openstelling. Er is geen actieve betaalroute.
 
-Voor rollback bepaalt een beheerder op de VPS eerst de echte vorige gezonde SHA uit `/srv/sites/<site>/previous/manifest.json`. Gebruik die SHA en de eerder gekozen omgeving:
+## Rollback en eerste-installatiefout
+
+Bepaal op de VPS de werkelijke vorige gezonde SHA uit `/srv/sites/<site>/previous/manifest.json`. Gebruik die eerdere SHA en dezelfde omgeving:
 
 ```bash
 set -euo pipefail
-PREVIOUS_SHA=VOLLEDIGE_SHA_VAN_DE_ECHTE_VORIGE_GEZONDE_RELEASE
+PREVIOUS_SHA=VOLLEDIGE_SHA_VAN_VORIGE_GEZONDE_RELEASE
 gh workflow run "fabelpad-dg-vps-08-$DEPLOY_ENV-rollback.yml" \
   --repo fabelpad/platform --ref main -f release_sha="$PREVIOUS_SHA"
 gh run list --repo fabelpad/platform \
@@ -183,19 +199,9 @@ gh run list --repo fabelpad/platform \
 gh run watch ROLLBACK_RUN_ID --repo fabelpad/platform --exit-status
 ```
 
-Rollback herstelt app én bijbehorende runtimeconfiguratie samen, onder hetzelfde eigen activatielock. De adapter accepteert alleen de opgeslagen vorige gezonde release en controleert CI en health opnieuw. Bij een mislukte eerste installatie zonder vorige release stopt hij uitsluitend de eigen app en verwijdert hij de eigen `current`-verwijzing. Er is nu nog geen vorige gezonde release; een live rollbacktest is niet uitgevoerd. Databasemigraties en herstel zijn afzonderlijke handelingen: vooraf compatibiliteit, back-up en herstelprocedure vastleggen; een approllback draait geen schemawijzigingen terug.
+Rollback herstelt app én de bijbehorende runtimeconfiguratie onder hetzelfde doelgebonden activatielock, met hercontrole van CI en health. Zonder vorige gezonde release stopt een mislukte eerste installatie alleen de eigen app en verwijdert de eigen `current`-verwijzing. Er bestaat nu nog geen vorige gezonde release; geen live rollbacktest is geclaimd.
 
-## Installercontract en overdracht
+Een approllback draait geen database-, Vault-, SMTP- of templateswijzigingen terug. Houd migraties compatibel en leg back-up, herstel en heruitvoering van verwijdertombstones afzonderlijk vast. Herstel nooit verwijderde accounts door een oude databasekopie opnieuw voor gebruikers open te stellen. De actuele testuitkomsten en uitgevoerde hostwijzigingen worden bij de feitelijke release als nieuw bewijs toegevoegd; historische bewijsbestanden blijven intact.
 
-De beoordeelde root-owned installatiebron van deze uitvoering staat op `/var/tmp/fabelpad-two-env-20261122`. De code in Git gebruikt expliciet de doelomgeving. Voor een nog niet bestaand doel is de vorm:
 
-```bash
-sudo /usr/bin/python3 -I scripts/deploy/install-host.py \
-  --environment production --source-root /PAD/NAAR/BEOORDEELDE/BRON
-```
-
-`--apply` voert de nieuwe voorbereiding uit. Beide vaste doelen bestaan nu; herhaal de nieuwe installatie daar niet. Een latere adapterupdate gebruikt eerst dezelfde opdracht met `--environment staging` of `production` plus `--upgrade-adapters`, standaard als dry-run en pas na beoordeling met `--apply`. De eigen runner moet daarvoor gestopt zijn; de adapterupdate wijzigt geen appservice, proxy of releaseverwijzing.
-
-Uitgevoerde verificatie: **86 releasetests en 19 install-/upgradetests geslaagd**, versiecontroles op de host, beide vrijebindcontroles, zes accountisolatiecontrolesets en identieke voor-/nameting van bestaande omgevingen. De checksums in het JSON-bewijs beschrijven de daadwerkelijk geïnstalleerde adapterversie; latere codewijzigingen vereisen opnieuw beoordeling en een gecontroleerde update.
-
-Open vóór een eerste doelbuild: geïntegreerde workflowcode en exacte groene main-SHA, gecontroleerde runnerregistratie/toegang, geverifieerde Supabase-/Resend-inrichting en twee echte readinessbewijzen. De vier GitHub-waarden bestaan reeds per environment; hun aanwezigheid alleen bewijst geen geldige providerconfiguratie. Een kandidaatbuild op de doel-VPS blijft een afzonderlijk nog niet uitgevoerd resultaat.
+Actuele hostaanvulling (22 november 2026, na bovenstaande controles): de twaalf root-owned adapters zijn voor beide doelen bijgewerkt; beide eigen runnerservices zijn gestart en de repository-API meldt runners **21** en **22** als **online**. Het v2-configuratiebewijs staat voor beide doelen in de eigen `email-readiness.json`, `root:root 0600`, met providercontroletijd `2026-11-22T17:50:30.645511+00:00`. Dit is geen interactieve OTP-/Google-acceptatie. Er is hiermee geen app of publieke route geactiveerd.

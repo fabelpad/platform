@@ -85,7 +85,9 @@ export function validateFamilySnapshot(value: unknown): SnapshotValidation {
   if (!boundedJson(value)) return invalid('De gegevens zijn te groot of bevatten ongeldige velden.');
   if (!object(value) || !keys(value, ['schemaVersion', 'family', 'data']) || value.schemaVersion !== 1) return invalid('Het gegevensformaat wordt niet ondersteund.');
   const family = value.family;
-  if (!object(family) || !keys(family, ['version', 'children', 'activeId']) || family.version !== 1 || !Array.isArray(family.children) || family.children.length < 1 || family.children.length > MAX_CHILDREN) return invalid('Een gezin heeft één tot vijf kindprofielen.');
+  if (!object(family) || !keys(family, ['version', 'children', 'activeId']) || family.version !== 1 || !Array.isArray(family.children) || family.children.length > MAX_CHILDREN) return invalid('Een gezin heeft maximaal vijf kindprofielen.');
+  if (family.children.length === 0) return family.activeId === '' && object(value.data) && Object.keys(value.data).length === 0
+    ? { ok: true, snapshot: value as FamilySnapshot } : invalid('Een leeg online gezin bevat geen actief profiel of leesgegevens.');
   const ids = new Set<string>();
   for (const child of family.children) {
     if (!object(child) || !keys(child, ['id', 'name', 'avatar']) || typeof child.id !== 'string' || !/^[a-zA-Z0-9_-]{1,80}$/.test(child.id) || ['__proto__', 'prototype', 'constructor'].includes(child.id) || ids.has(child.id) || !text(child.name, 20) || !integer(child.avatar, 0, 3)) return invalid('Een kindprofiel bevat ongeldige gegevens.');

@@ -10,6 +10,8 @@ import { loadContentRelease, personalText } from './contentClient';
 import type { ContentRelease } from '../lib/server/content';
 import StationPlayScene from './StationPlayScene';
 import { lockBodyScroll } from './modalScroll';
+import { privateSpeechText, selectLocalDutchVoice } from './offlineSpeech';
+import { reportConsciousReading } from './parentActivity';
 import './reader.css';
 import './memory.css';
 import './reader-extended.css';
@@ -58,7 +60,16 @@ export default function StoryReader({ profileId, worldId, childName, muted, redu
   const ending = { ...rawEnding, title: personalText(rawEnding.title, childName), text: personalText(rawEnding.text, childName), keepsake: personalText(rawEnding.keepsake, childName) };
   const originalScene = release?.scenes[picks.slice(0, TOTAL - 1).join('')] || getScene(world, Math.min(picks.length, TOTAL - 1), picks, childName);
   const scene = { ...originalScene, title: personalText(originalScene.title, childName), text: personalText(originalScene.text, childName), choices: originalScene.choices.map(choice => ({...choice,label:personalText(choice.label,childName),hint:personalText(choice.hint,childName)})) };
-  const speechAvailable = typeof window !== 'undefined' && 'speechSynthesis' in window;
+  const [localVoice, setLocalVoice] = useState<SpeechSynthesisVoice | null>(null);
+  const speechAvailable = localVoice !== null;
+  useEffect(() => {
+    if (!('speechSynthesis' in window)) return;
+    const synth = window.speechSynthesis;
+    const update = () => setLocalVoice(selectLocalDutchVoice(synth.getVoices()));
+    update();
+    synth.addEventListener('voiceschanged', update);
+    return () => synth.removeEventListener('voiceschanged', update);
+  }, []);
   const activeText = accessLocked ? 'Dit avontuur gaat verder in het gezinspakket. Vraag een grote avonturier om samen te kijken.' : complete ? `${ending.title}. ${ending.text}` : `${picks.length === 0 && greeting ? `${greeting} ` : ''}${scene.title}. ${scene.text}`;
 
   useEffect(() => {
@@ -122,6 +133,7 @@ export default function StoryReader({ profileId, worldId, childName, muted, redu
   function choose(index: number) {
     if (!release || accessLocked || closeRequested.current || (index !== 0 && index !== 1) || picks.length >= TOTAL || currentPicks.current.length !== picks.length) return;
     const next = [...picks, index];
+    if (cloudContent) reportConsciousReading(profileId);
     currentPicks.current = next;
     revision.current += 1;
     setDurable(saveChild(profileId, `story-${world}`, { picks: next, updatedAt: Date.now(), storyId: world, contentVersion: release.contentVersion, revision: revision.current }));
@@ -137,11 +149,12 @@ export default function StoryReader({ profileId, worldId, childName, muted, redu
     const synth = window.speechSynthesis;
     const token = ++voiceToken.current;
     synth.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
+    const voice = selectLocalDutchVoice(synth.getVoices());
+    if (!voice) { setLocalVoice(null); setVoiceState('idle'); return; }
+    const utterance = new SpeechSynthesisUtterance(privateSpeechText(text, childName));
     utterance.lang = 'nl-NL';
     utterance.rate = 0.88;
-    const voice = synth.getVoices().find(v => v.lang.toLowerCase().startsWith('nl'));
-    if (voice) utterance.voice = voice;
+    utterance.voice = voice;
     const idle = () => { if (voiceToken.current === token) setVoiceState('idle'); };
     utterance.onend = idle;
     utterance.onerror = idle;
@@ -189,7 +202,7 @@ export default function StoryReader({ profileId, worldId, childName, muted, redu
               </> : showPlay ? <div className="reader-play-hint"><Sparkles size={20} /><div><strong>Jouw keuze komt tot leven.</strong><p>Speel in de prent, of kies leesmodus om de knoppen te gebruiken.</p></div><button onClick={() => playPanel.current?.scrollIntoView({ behavior: reducedMotion ? 'instant' : 'smooth', block: 'start' })}>Naar de speelprent <ArrowRight size={16} /></button></div> : <div className="reader-choices"><p>Wat kies jij?</p>{scene.choices.map((choice, i) => { const Icon = iconMap[choice.icon]; return <motion.button key={choice.label} className="reader-choice" onClick={() => choose(i)} whileHover={reducedMotion ? undefined : { y: -3 }} whileTap={reducedMotion ? undefined : { scale: .98 }}><span className="reader-choice-icon"><Icon size={23} /></span><span><strong>{choice.label}</strong><small>{choice.hint}</small></span><ArrowRight className="reader-choice-arrow" size={20} /></motion.button>; })}</div>}
             </motion.div>
           </AnimatePresence>}
-          <footer className="reader-controls"><button className={`reader-speech ${voiceState !== 'idle' ? 'is-speaking' : ''}`} disabled={!speechAvailable || muted} onClick={toggleSpeech} title={!speechAvailable ? 'Voorlezen is niet beschikbaar in deze browser' : muted ? 'Zet het geluid aan in het ouderhoekje om te luisteren' : undefined}>{muted ? <VolumeX size={17} /> : voiceState === 'speaking' ? <Pause size={17} /> : <Play size={17} fill="currentColor" />}<span>{!speechAvailable ? 'Lees gezellig samen' : muted ? 'Geluid staat uit' : voiceState === 'speaking' ? 'Even pauzeren' : voiceState === 'paused' ? 'Verder luisteren' : 'Lees voor'}</span></button><span className="reader-saved" role="status"><Check size={13} />{durable ? 'Je plek staat op dit apparaat' : 'Bewaren lukt niet · houd dit venster open'}</span></footer>
+          <footer className="reader-controls"><button className={`reader-speech ${voiceState !== 'idle' ? 'is-speaking' : ''}`} disabled={!speechAvailable || muted} onClick={toggleSpeech} title={!speechAvailable ? 'Er is geen offline Nederlandse stem beschikbaar. Lees samen verder of installeer een offline stem in je apparaatinstellingen.' : muted ? 'Zet het geluid aan in het ouderhoekje om te luisteren' : undefined}>{muted ? <VolumeX size={17} /> : voiceState === 'speaking' ? <Pause size={17} /> : <Play size={17} fill="currentColor" />}<span>{!speechAvailable ? 'Lees gezellig samen' : muted ? 'Geluid staat uit' : voiceState === 'speaking' ? 'Even pauzeren' : voiceState === 'paused' ? 'Verder luisteren' : 'Lees voor'}</span></button><span className="reader-saved" role="status"><Check size={13} />{durable ? 'Je plek staat op dit apparaat' : 'Bewaren lukt niet · houd dit venster open'}</span></footer>{!speechAvailable && <p className="reader-speech-note">Voorlezen kan met een geïnstalleerde offline Nederlandse stem. Lees ondertussen gezellig samen.</p>}
         </div>
       </div>
     </div>

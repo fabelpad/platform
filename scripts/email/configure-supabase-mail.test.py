@@ -135,7 +135,7 @@ class MailConfigurationTests(unittest.TestCase):
                 self.assertEqual(edge['FABELPAD_APP_ORIGIN'], api.target['origin'])
                 self.assertEqual(edge['FABELPAD_ENVIRONMENT'], environment)
                 self.assertEqual(edge['FABELPAD_EMAIL_FROM'], mail.sender(environment, 'noreply@fabelpad.nl'))
-                self.assertEqual(api.auth['mailer_otp_length'], 8)
+                self.assertEqual(api.auth['mailer_otp_length'], 6)
                 self.assertEqual(api.auth['mailer_otp_exp'], 600)
                 self.assertEqual(api.auth['rate_limit_email_sent'], 30)
                 self.assertEqual(api.auth['smtp_max_frequency'], 60)

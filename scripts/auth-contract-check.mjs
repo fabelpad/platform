@@ -13,6 +13,8 @@ const originalEnvironment = { ...process.env }, originalFetch = globalThis.fetch
 const contextKey = Symbol.for('fabelpad.auth.contract.cookies');
 const originalContext = globalThis[contextKey];
 let requests = [], writes = [], jar = new Map(), handler;
+let lifecycleState = 'active';
+const lifecycle = () => ({ state: lifecycleState, termsVersion: '2026-11-22', privacyVersion: '2026-11-22', acceptedTermsVersion: lifecycleState === 'onboarding' ? null : '2026-11-22', shownPrivacyVersion: '2026-11-22', lastActivityAt: null, deletionDeadline: lifecycleState === 'deletion_pending' ? '2026-12-22T00:00:00Z' : null, consents: [] });
 let checks = 0;
 const parent = { id: '00000000-0000-4000-8000-000000000101', email: 'parent@example.test', aud: 'authenticated', role: 'authenticated', email_confirmed_at: '2026-01-01T00:00:00Z', is_anonymous: false, user_metadata: { full_name: 'Testouder', admin: true, role: 'admin' } };
 const json = (body, status = 200) => Response.json(body, { status });
@@ -54,6 +56,8 @@ try {
     const text = outgoing.method === 'GET' ? '' : await outgoing.text();
     const item = { method: outgoing.method, url, body: text ? JSON.parse(text) : null, authorization: outgoing.headers.get('authorization') };
     requests.push(item);
+    if (url.pathname === '/rest/v1/rpc/get_account_lifecycle') return json(lifecycle());
+    if (url.pathname === '/rest/v1/rpc/record_family_activity') { assert.equal(item.body.p_kind, 'parent_login'); return json({ recorded: true }); }
     assert.ok(handler, 'Every provider request must have an explicit test response');
     return handler(item);
   };
@@ -63,10 +67,21 @@ try {
   let response = await authMutation(request({ email: ' Parent@Example.Test ', next: 'https://attacker.example.test' }), 'otp');
   assert.equal(response.status, 200);
   assert.equal(requests[0].body.email, parent.email);
-  assert.equal(requests[0].body.create_user, true);
+  assert.equal(requests[0].body.create_user, false, 'Login must not create an undeclared parent account');
   assert.equal(requests[0].url.searchParams.get('redirect_to'), 'https://fabelpad.example.test/inloggen');
   assert.match((await response.json()).message, /Fabelpad/u);
   assert.equal(response.headers.get('cache-control'), 'private, no-store'); checks++;
+
+  // Registration checks both explicit declarations and current immutable versions
+  // before Auth is allowed to create even an unconfirmed OTP identity.
+  for (const body of [
+    { email: parent.email, intent: 'register' },
+    { email: parent.email, intent: 'register', parentDeclaration: true, acceptTerms: false, termsVersion: '2026-11-22', privacyVersion: '2026-11-22' },
+    { email: parent.email, intent: 'register', parentDeclaration: true, acceptTerms: true, termsVersion: 'obsolete', privacyVersion: '2026-11-22' },
+  ]) { reset(); response = await authMutation(request(body), 'otp'); assert.ok([409, 422].includes(response.status)); assert.equal(requests.length, 0); checks++; }
+  reset(); handler = item => { assert.equal(item.url.pathname, '/auth/v1/otp'); assert.equal(item.body.create_user, true); return json({}); };
+  response = await authMutation(request({ email: parent.email, intent: 'register', parentDeclaration: true, acceptTerms: true, termsVersion: '2026-11-22', privacyVersion: '2026-11-22' }), 'otp');
+  assert.equal(response.status, 200); checks++;
 
   // Invalid inputs and cross-site requests never reach the mail provider.
   for (const [body, headers, action, status] of [
@@ -172,6 +187,31 @@ try {
   response = await authMutation(request({ type: 'email_change', tokenHash: 'synthetic-token-hash-for-test' }), 'confirm');
   assert.equal(response.status, 200); result = await response.json();
   assert.equal(result.next, '/inloggen'); assert.match(result.message, /andere e-mailadres/u); assert.equal(jar.size, 0); checks++;
+
+  // Google uses the real SDK's PKCE cookie and fixed project callback. Every
+  // successful channel then uses the same server-side onboarding/deletion gate.
+  process.env.FABELPAD_AUTH_GOOGLE_ENABLED = 'true';
+  for (const state of ['onboarding', 'active', 'deletion_pending']) {
+    reset(); lifecycleState = state;
+    handler = item => {
+      if (item.url.pathname === '/auth/v1/token') { assert.equal(item.url.searchParams.get('grant_type'), 'pkce'); assert.equal(item.body.auth_code, 'synthetic-google-code'); assert.ok(item.body.code_verifier); return json(session()); }
+      if (item.url.pathname === '/auth/v1/user') return json(parent);
+      throw new Error('Unexpected OAuth request');
+    };
+    response = await authMutation(request({ next: '/studio', intent: 'login' }), 'google');
+    assert.equal(response.status, 200);
+    const destination = new URL((await response.json()).url);
+    assert.equal(destination.origin, 'https://project.example.test'); assert.equal(destination.pathname, '/auth/v1/authorize'); assert.equal(destination.searchParams.get('provider'), 'google');
+    assert.equal(new URL(destination.searchParams.get('redirect_to')).origin, 'https://fabelpad.example.test');
+    response = await callback(new Request('https://untrusted-host.example.test/auth/callback?code=synthetic-google-code&next=/studio'));
+    assert.equal(response.status, 303);
+    const target = new URL(response.headers.get('location'));
+    assert.equal(target.origin, 'https://fabelpad.example.test');
+    assert.equal(target.pathname, state === 'onboarding' ? '/onboarding' : state === 'active' ? '/studio' : '/profiel/account');
+    assert.equal(requests.some(item => item.url.pathname === '/rest/v1/rpc/record_family_activity'), state === 'active'); checks++;
+  }
+  lifecycleState = 'active';
+  process.env.FABELPAD_AUTH_GOOGLE_ENABLED = 'false';
 
   // Unavailable/invalid configuration is a safe 503, not an unhandled callback.
   reset(); process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY = 'sb_secret_synthetic-rejected-secret';

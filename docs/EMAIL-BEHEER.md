@@ -5,13 +5,13 @@ De beheeromgeving heeft twee afzonderlijke pagina's. Iedere omgeving bewaart haa
 | Pagina | Inhoud |
 | --- | --- |
 | `/studio/email` — Beheer → E-mail | Resend-koppeling, afzendernaam en -adres, antwoordadres, supportadres, gezamenlijke voettekst, domeincontrole en testmail |
-| `/studio/email/templates` — Beheer → E-mailtemplates | Alle 17 templates; onderwerp, kop, introductietekst, voorbeeld en standaardtekst herstellen |
+| `/studio/email/templates` — Beheer → E-mailtemplates | Alle 17 templates; onderwerp, kop, introductietekst, voorbeeld, standaardtekst herstellen en Auth-HTML exporteren voor Supabase custom SMTP |
 
 Alleen een ingelogde, bevestigde ouder met een actuele databasebeheerrol heeft toegang. Het eerste beheerdersadres is **info@dgwebservices.nl**. De rol ontstaat na een echte bevestiging via Supabase, nooit doordat een browser zelf een beheerkenmerk opgeeft.
 
 ## Eerste inrichting
 
-De eerste login heeft al een werkende OTP-mailroute nodig. Voer daarom eenmaal de veilige providerinrichting uit volgens [EMAIL-CONFIGURATIE.md](EMAIL-CONFIGURATIE.md): geverifieerd Resend-domein, afgeschermde API-key, Supabase Site URL/redirects, OTP-instellingen, ondertekende Send Email Hook en bijbehorende Edge-configuratie. De workspaceconnector kan geen Auth-instellingen of Edge secrets beheren; hiervoor is de bedoelde Supabase Management-toegang of de verborgen terminaltool nodig. Deel geen key, token of OTP in chat.
+De eigenaar heeft de OTP-route ingericht als **Supabase Auth → custom SMTP → Resend**, met zescijferige codes. Behoud die inrichting. Er wordt geen Send Email Hook geactiveerd. De eerste login werkt via deze SMTP-route en staat los van de Resend-API-koppeling op deze beheerpagina. Controleer de eigen Supabase Site URL, redirects en e-mailinstellingen per omgeving; deel geen key, token of OTP in chat. De Resend-API voor applicatieserviceberichten krijgt afzonderlijk een key via Beheer → E-mail.
 
 Log daarna als **info@dgwebservices.nl** in en open **Beheer → E-mail**. Op een nog niet publiek geactiveerde omgeving volgen deze browserstappen pas bij de afzonderlijk vrijgegeven kandidaatproef/activatie. De zelfstandige OTP-acceptatie uit de configuratiehandleiding kan daarvoor al worden uitgevoerd.
 
@@ -37,20 +37,31 @@ Open **Beheer → E-mailtemplates** en selecteer een template in het overzicht:
 
 1. Wijzig **Onderwerp** (maximaal 160 Unicode-tekens), **Kop** (200) en **Introductie** (1.000). Dit zijn gewone teksten; HTML en headers zijn niet toegestaan.
 2. Klik **Voorbeeld bijwerken** om de nog niet opgeslagen tekst te bekijken. De voorbeeldgegevens en code zijn fictief. Er wordt geen e-mail verstuurd en geen echte inlogcode opgevraagd.
-3. Gebruik **Standaardtekst voor deze e-mail herstellen** om de tekst van de geselecteerde template terug te zetten. Deze wijziging wordt pas na opslaan actief.
+3. Gebruik **Standaardtekst voor deze e-mail herstellen** om de tekst van de geselecteerde template terug te zetten. Deze wijziging is eerst een concept. Voor applicatieserviceberichten wordt ze na opslaan gebruikt; een Auth-template moet je daarnaast handmatig naar Supabase overnemen.
 4. Klik **Opslaan en testmail versturen**. Ook templatewijzigingen worden pas bewaard nadat de test is geaccepteerd. Bekijk daarnaast zelf het voorbeeld van de aangepaste template: de verbindingsmail bewijst niet iedere afzonderlijke gebruikersflow.
 
-Alle templates behouden dezelfde Fabelpad-opmaak. Inlogcodes, bevestigingslinks, beveiligingsinstructies en de zichtbare staging-testmarkering worden door de toepassing toegevoegd. Een beheerder kan ze niet per ongeluk uit de HTML verwijderen. De afzender, antwoordadressen, supportverwijzing en voettekst gelden gezamenlijk. De serviceberichten zijn beschikbaar voor echte applicatiegebeurtenissen; het bestaan of aanpassen van een template schakelt geen welkomstcampagne of automatische accountverwijdering in.
+Alle templates behouden dezelfde Fabelpad-opmaak. Inlogcodes, bevestigingslinks, beveiligingsinstructies en de zichtbare staging-testmarkering worden door de renderer toegevoegd. De applicatie gebruikt de bewaarde afzender, antwoordadressen, supportverwijzing en voettekst. Supabase custom SMTP heeft eigen afzender-/toegangsinstellingen en leest de Fabelpad-Vault-templates niet automatisch. Een export bevat de actuele supportverwijzing en voettekst; neem die bewust over. Het bestaan of aanpassen van een template schakelt geen functie of automatische verzending in.
 
-De pagina bewaart alleen de eigen gewijzigde velden/templates boven op de laatst opgehaalde instellingen. Is hetzelfde veld intussen door een andere beheerder gewijzigd, dan blijft jouw concept in het venster staan en moet je eerst het verschil beoordelen. De database weigert ook een gewijzigde revisie tussen ophalen en opslaan. Een kandidaatbuild is niet nodig voor nieuwe mailteksten: de Edge-mailroute leest de opgeslagen configuratie bij het volgende geldige bericht.
+De pagina bewaart alleen de eigen gewijzigde velden/templates boven op de laatst opgehaalde instellingen. Is hetzelfde veld intussen door een andere beheerder gewijzigd, dan blijft jouw concept in het venster staan en moet je eerst het verschil beoordelen. De database weigert ook een gewijzigde revisie tussen ophalen en opslaan. Een kandidaatbuild is niet nodig voor nieuwe applicatiemailteksten: nieuwe serviceberichten lezen de opgeslagen configuratie. Een reeds klaargezette duurzame verzending behoudt haar vastgelegde inhoud voor veilige retries. Auth-berichten via custom SMTP veranderen pas na het handmatig opslaan van onderwerp en HTML in het eigen Supabase-project.
+
+## Auth-templates handmatig naar Supabase overnemen
+
+1. Open **Beheer → E-mailtemplates** en kies een accountmail, bijvoorbeeld **Inlogcode**. Pas de gewone teksten aan. Je hoeft geen API-key in te voeren om een template te downloaden.
+2. Onder **Overnemen in Supabase** staat het volledige **Onderwerp voor Supabase**, inclusief de vaste `[TEST]`-markering voor staging. Gebruik dit onderwerp in het juiste Supabase-project.
+3. Klik **HTML downloaden voor Supabase**. De export gebruikt de nu zichtbare editorwaarden, ook als je die nog niet in Fabelpad hebt opgeslagen. Downloadnamen bevatten uitsluitend omgeving en vaste template-ID, bijvoorbeeld `fabelpad-staging-magic_link.html`.
+4. Open de download als tekst in je editor. Ga in het bijbehorende Supabase-project naar **Authentication → Email Templates → de op de pagina getoonde templatenaam**. Plak de volledige HTML en het onderwerp in de betreffende velden en bewaar ze daar.
+5. Laat vaste Go-velden zoals `{{ .Token }}`, `{{ .TokenHash }}` en `{{ .SiteURL }}` in de export staan. Ze bevatten geen echte inlogcode. De vrije editorvelden zijn gewone tekst; daarin voer je geen eigen Go-expressies in.
+6. Controleer de betreffende echte accountactie. Herhaal dit afzonderlijk voor staging en productie en voor iedere gewijzigde Auth-template. Bewaren in Fabelpad wijzigt Supabase niet vanzelf. Laat de bestaande custom SMTP-route staan en activeer geen Send Email Hook.
+
+Serviceberichten hebben deze downloadknop niet: die worden rechtstreeks door de applicatie via de Resend-API gerenderd. De vaste standaardexport onder `supabase/email-templates/` blijft beschikbaar en verandert niet door een browserdownload.
 
 ## Opslag, sleutelrotatie en herstel
 
 De API-key staat versleuteld in **Supabase Vault** van het eigen project. De browser en de Next.js-server krijgen de opgeslagen key niet terug. Alleen de Edge-runtime kan de beperkte service-only configuratiefunctie gebruiken. De automatische Supabase-servicecredential blijft in de Edge-runtime; hiervoor wordt geen extra GitHub-variable of applicatiesecret toegevoegd.
 
-Vóór de eerste opslag in Beheer gebruikt de mailroute de bestaande bootstrapconfiguratie uit Edge Secrets. Vanaf de eerste geslaagde opslag is de Vault-configuratie leidend, inclusief afzender en teksten. Een fout bij lezen uit de database valt niet terug op een oude key. Laat de bootstrapsecret niet als schijnbare actieve key roteren via de oude configuratietool: verdere Resend-wijzigingen lopen via Beheer. Hookondertekening, Site URL, OTP-lengte/verlooptijd en Supabase-authlimieten blijven technische Supabase-instellingen buiten deze pagina.
+De Vault-configuratie is leidend voor de **Resend-API van applicatie-/lifecycleberichten**, inclusief afzender en teksten. Een fout bij lezen uit de database valt niet terug op een oude key. Alleen als nog geen Vault-record bestaat kan een expliciet ingerichte legacy Edge-bootstrap als fallback dienen; een werkende SMTP-koppeling vult die niet vanzelf in. Supabase Auth blijft de afzonderlijk ingerichte custom SMTP en de daar opgeslagen Auth-templates gebruiken. Site URL, redirects, OTP-lengte/verlooptijd, SMTP-toegang en Supabase-authlimieten blijven technische Supabase-instellingen buiten deze pagina. Gebruik de oude configuratietool niet om de werkende SMTP-route door een Send Email Hook te vervangen.
 
-Voor rotatie: maak eerst de nieuwe beperkte key in Resend, vul die in Beheer in, sla op en controleer de echte testmail plus een OTP-login. Trek de vorige key pas in nadat de nieuwe route werkt. Bij een geweigerde test blijft de vorige configuratie behouden. Bij een later opgemerkt tekstprobleem herstel je de standaardtekst of voer je de vorige juiste tekst opnieuw in en sla je die met een test op. Een approllback draait Vault-, Auth- of mailinstellingen niet automatisch terug. Herstel geen oude key die bij Resend al is ingetrokken.
+Voor rotatie: maak eerst de nieuwe beperkte key in Resend, vul die in Beheer in, sla op en controleer de echte API-testmail en een nieuw applicatieservicebericht. Een OTP-login test de afzonderlijke SMTP-route. Trek de vorige API-key pas in nadat de nieuwe route werkt. Bij een geweigerde test blijft de vorige configuratie behouden. Bij een later opgemerkt tekstprobleem herstel je de standaardtekst of voer je de vorige juiste tekst opnieuw in en sla je die met een test op. Een approllback draait Vault-, Auth- of mailinstellingen niet automatisch terug. Herstel geen oude key die bij Resend al is ingetrokken.
 
 ## Verificatie en grenzen
 

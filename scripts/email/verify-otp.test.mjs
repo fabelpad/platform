@@ -33,7 +33,7 @@ test('SDK requests stay on the selected project with bounded time and no redirec
 });
 test('standalone verification creates only requested admin, verifies server identity/role and signs out local session', async () => {
   const client = provider();
-  const proof = await verifyAdminOtp(client, config, async () => '12345678', () => new Date('2026-11-22T14:00:00Z'));
+  const proof = await verifyAdminOtp(client, config, async () => '123456', () => new Date('2026-11-22T14:00:00Z'));
   assert.equal(proof.adminVerified, true); assert.equal(proof.emailOtpVerified, true); assert.equal(proof.sessionSignedOut, true);
   assert.deepEqual(client.calls[0], ['request', { email: 'info@dgwebservices.nl', options: { shouldCreateUser: true } }]);
   assert.deepEqual(client.calls.at(-1), ['signout', { scope: 'local' }]);
@@ -41,7 +41,7 @@ test('standalone verification creates only requested admin, verifies server iden
 });
 test('wrong/unconfirmed/anonymous identity or missing role cannot produce proof and cleanup is attempted', async () => {
   for (const change of [{ user: { email: 'other@example.invalid' } }, { user: { email_confirmed_at: null } }, { user: { is_anonymous: true } }, { noRole: true }]) {
-    const client = provider(change); await assert.rejects(verifyAdminOtp(client, config, async () => '12345678'));
+    const client = provider(change); await assert.rejects(verifyAdminOtp(client, config, async () => '123456'));
     assert.deepEqual(client.calls.at(-1), ['signout', { scope: 'local' }]);
   }
 });
@@ -49,5 +49,5 @@ test('invalid OTP, provider exceptions and failed cleanup remain sanitized', asy
   const client = provider(); await assert.rejects(verifyAdminOtp(client, config, async () => 'invalid-secret'), error => !error.message.includes('invalid-secret'));
   assert.equal(client.calls.some(([name]) => name === 'verify'), false);
   const errorClient = provider({ verifyError: new Error('secret-response-body'), signoutError: new Error('secret-token') });
-  await assert.rejects(verifyAdminOtp(errorClient, config, async () => '12345678'), error => !/secret-token|secret-response-body|12345678/u.test(error.message));
+  await assert.rejects(verifyAdminOtp(errorClient, config, async () => '123456'), error => !/secret-token|secret-response-body|12345678/u.test(error.message));
 });

@@ -27,13 +27,34 @@ jobs:
     name: Native Android-controles
     runs-on: ubuntu-24.04
     timeout-minutes: 60
+    outputs:
+      native_changed: ${{ steps.native_scope.outputs.changed }}
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           persist-credentials: false
+          fetch-depth: 0
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version-file: .nvmrc
+      - name: Bepaal of deze main-push de Android-app wijzigt
+        id: native_scope
+        env:
+          BEFORE_SHA: ${{ github.event.before }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          changed=false
+          if [[ "$GITHUB_EVENT_NAME" == push && "$BEFORE_SHA" =~ ^[a-f0-9]{40}$ && "$BEFORE_SHA" != 0000000000000000000000000000000000000000 ]]; then
+            if git diff --quiet "$BEFORE_SHA" "$GITHUB_SHA" -- mobile/; then
+              changed=false
+            else
+              result=$?
+              [[ "$result" == 1 ]] || exit "$result"
+              changed=true
+            fi
+          fi
+          printf 'changed=%s\n' "$changed" >> "$GITHUB_OUTPUT"
       - name: Maak ruimte op de tijdelijke GitHub-runner
         run: |
           set -euo pipefail
@@ -134,7 +155,7 @@ jobs:
 
   signed:
     name: Productie-AAB signeren en eventueel intern uploaden
-    if: github.ref == 'refs/heads/main' && ((github.event_name == 'push' && vars.FABELPAD_PLAY_ENABLED == 'true') || (github.event_name == 'workflow_dispatch' && inputs.signed_bundle && vars.FABELPAD_SIGNING_ENABLED == 'true'))
+    if: github.ref == 'refs/heads/main' && ((github.event_name == 'push' && needs.verify.outputs.native_changed == 'true' && vars.FABELPAD_PLAY_ENABLED == 'true') || (github.event_name == 'workflow_dispatch' && inputs.signed_bundle && vars.FABELPAD_SIGNING_ENABLED == 'true'))
     needs: verify
     runs-on: ubuntu-24.04
     timeout-minutes: 60

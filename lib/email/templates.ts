@@ -121,10 +121,15 @@ function authEmail(action: AuthEmailAction, values: AuthEmailValues, context: Em
 export function renderAuthEmail(action: AuthEmailAction, values: AuthEmailValues, context: EmailContext): RenderedEmail {
   return authEmail(action, values, context, false);
 }
-/** Paste-ready Go templates. These placeholders are only allowed by this build-time export. */
-export function renderSupabaseDashboardTemplate(action: AuthEmailAction, environment: EmailEnvironment = 'production'): RenderedEmail {
+/** Paste-ready Go templates. Only the fixed renderer inserts executable Go placeholders. */
+export function renderSupabaseDashboardTemplate(action: AuthEmailAction, environment: EmailEnvironment = 'production', settings?: EmailContext['settings']): RenderedEmail {
+  if (settings) {
+    const copy = settings.templates[action];
+    const values = [settings.supportEmail, settings.footerText, ...(copy ? [copy.subject, copy.title, copy.intro] : [])];
+    if (values.some(value => typeof value !== 'string' || /\{\{|\}\}/u.test(value))) throw new Error('Use plain text in custom Dashboard copy; the renderer adds the Supabase variables.');
+  }
   const confirmationUrl = ['invite', 'recovery', 'email_change'].includes(action) ? `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=${action}&next=/gezin` : '{{ .ConfirmationURL }}';
-  return authEmail(action, { token: '{{ .Token }}', confirmationUrl, email: '{{ .Email }}', newEmail: '{{ .NewEmail }}', oldEmail: '{{ .OldEmail }}', phone: '{{ .Phone }}', oldPhone: '{{ .OldPhone }}', provider: '{{ .Provider }}', factorType: '{{ .FactorType }}' }, { siteUrl: '{{ .SiteURL }}', environment }, true);
+  return authEmail(action, { token: '{{ .Token }}', confirmationUrl, email: '{{ .Email }}', newEmail: '{{ .NewEmail }}', oldEmail: '{{ .OldEmail }}', phone: '{{ .Phone }}', oldPhone: '{{ .OldPhone }}', provider: '{{ .Provider }}', factorType: '{{ .FactorType }}' }, { siteUrl: '{{ .SiteURL }}', environment, ...(settings ? { settings } : {}) }, true);
 }
 
 export type ServiceEmail =

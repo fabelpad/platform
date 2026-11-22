@@ -13,11 +13,17 @@ De bron voor zowel Supabase Auth als applicatieberichten is [`lib/email/template
 
 Controleer vóór opslaan of de projectreferentie bij de `NEXT_PUBLIC_SUPABASE_URL` van diezelfde GitHub environment hoort. Accountnamen alleen identificeren geen Supabase-project. Gebruik nooit een productie-Resendkey, hooksecret of afzender als tijdelijke stagingconfiguratie.
 
-De vier bestaande GitHub-variabelen blijven `FABELPAD_APP_ORIGIN`, `FABELPAD_DATA_MODE`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` en `NEXT_PUBLIC_SUPABASE_URL`. De onderstaande mailinstellingen zijn **afgeschermde Edge Function-configuratie per Supabase-project**; ze worden geen aanvullende GitHub-variabelen of publieke Next.js-waarden.
+De vier bestaande GitHub-variabelen blijven `FABELPAD_APP_ORIGIN`, `FABELPAD_DATA_MODE`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` en `NEXT_PUBLIC_SUPABASE_URL`. De API-mailinstellingen worden afgeschermd per Supabase-project in Vault beheerd; ze worden geen aanvullende GitHub-variabelen of publieke Next.js-waarden. Het technische configuratieoverzicht hieronder hoort alleen bij de niet-actieve alternatieve hookroute.
 
-## Actieve route: Supabase Send Email Hook → Resend API
+## Actieve routes: Auth via SMTP, serviceberichten via API
 
-De Edge Function [`auth-email`](../supabase/functions/auth-email/index.ts) gebruikt de gedeelde renderer en [`lib/email/resend.ts`](../lib/email/resend.ts). Een ingeschakelde Send Email Hook neemt de verzending over van SMTP. De HTML in de Supabase Dashboard-template wordt dan niet gebruikt voor de actieve verzending; de bijgeleverde Dashboard-bestanden zijn export van dezelfde bron en kunnen daar eveneens worden ingesteld. Alleen een Dashboard-template aanpassen wijzigt dus geen actieve hookmail. [Supabase Send Email Hook](https://supabase.com/docs/guides/auth/auth-hooks/send-email-hook).
+De eigenaar heeft **Supabase Auth → Custom SMTP → Resend** ingericht. Neem de Auth-HTML en onderwerpen uit de juiste omgevingsmap over in Authentication → Email Templates. Dezelfde opmaakbron wordt gebruikt voor de applicatieservicemails, die hun eigen Resend API-key en instellingen uit Vault krijgen na configuratie in Beheer → E-mail.
+
+Voor latere Auth-tekstwijzigingen biedt Beheer → E-mailtemplates een HTML-download en het exacte onderwerp voor het betreffende Supabase-scherm. Neem beide handmatig over in hetzelfde project. Opslaan in Fabelpad wijzigt de Supabase SMTP-templates niet automatisch. Service-templates gebruiken de opgeslagen wijzigingen rechtstreeks. SMTP-credentials of API-keys horen nooit in een HTML-export.
+
+## Alternatieve Send Email Hook — niet actief in deze release
+
+De voorbereide maar voor deze SMTP-inrichting niet ingeschakelde Edge Function [`auth-email`](../supabase/functions/auth-email/index.ts) gebruikt de gedeelde renderer en [`lib/email/resend.ts`](../lib/email/resend.ts). Een ingeschakelde Send Email Hook neemt de verzending over van SMTP. De HTML in de Supabase Dashboard-template wordt dan niet gebruikt voor de actieve verzending; de bijgeleverde Dashboard-bestanden zijn export van dezelfde bron en kunnen daar eveneens worden ingesteld. Alleen een Dashboard-template aanpassen wijzigt dus geen actieve hookmail. [Supabase Send Email Hook](https://supabase.com/docs/guides/auth/auth-hooks/send-email-hook).
 
 | Edge-secret/configuratie | Bron en invoer |
 | --- | --- |
@@ -42,7 +48,7 @@ Voer dit eerst voor staging uit en daarna voor productie. De bestanden bevatten 
 2. Zet de **Email**-provider aan. Gebruik voor de ouderlogin OTP; de Fabelpad-login controleert de ingevulde e-mailcode. Laat de beveiligde bevestiging van beide adressen bij e-mailwijzigingen aan.
 3. Open **Authentication → Notifications → Email** en vervolgens **Templates**; afhankelijk van het Dashboard heet de pagina **Email Templates**. Kies de onderstaande gebeurtenis, plak het bijbehorende volledige HTML-bestand in de code-editor en vul het onderwerp in. Klik per template op **Save**. Gebruik de stagingmap voor staging en de productionmap voor productie.
 4. Zet in het onderdeel **Security notifications** de zeven meldingen aan. De templates schakelen geen wachtwoord-, telefoon-, OAuth- of MFA-functies in: zo'n melding verschijnt uitsluitend wanneer de bijbehorende wijziging echt plaatsvindt.
-5. Configureer **Authentication → Hooks → Send Email** met de gedeployde `auth-email`-functie van hetzelfde project en het bijbehorende hooksecret. Pas activeren nadat Edge Secrets en de geverifieerde Resend-afzender zijn ingesteld. De gedetailleerde uitvoerstappen staan in het omgevingsrunbook.
+5. Behoud de bestaande **Custom SMTP**-koppeling met Resend. Activeer voor deze release geen Send Email Hook. Bewerk je Auth-teksten later in Beheer → E-mailtemplates, neem dan ook het gedownloade HTML-bestand en onderwerp over in ditzelfde Supabase-scherm; SMTP leest de Vault-editorinstellingen niet automatisch.
 
 De onderwerpkolom hieronder geldt voor productie. Zet voor staging exact `[TEST] ` ervoor. Dezelfde onderwerpen en de exacte Management API-veldnamen staan in [`manifest.json`](../supabase/email-templates/manifest.json). [Supabase Email Templates](https://supabase.com/docs/guides/auth/auth-email-templates).
 

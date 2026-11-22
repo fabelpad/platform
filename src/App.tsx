@@ -1,9 +1,11 @@
 'use client';
+import './legal.css';
 import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { ArrowRight, ArrowUpRight, BookOpen, Check, ChevronRight, Compass, Download, Heart, Headphones, Leaf, LockKeyhole, Map, Moon, Play, Rocket, ShieldCheck, Sparkles, Star, Sun, Ticket, TrainFront, Volume2, VolumeX, X, Pencil, Plus, Users } from 'lucide-react';
 import StoryReader from './StoryReader';
+import { reportConsciousReading } from './parentActivity';
 import { lockBodyScroll } from './modalScroll';
 import type { BeforeInstallPromptEvent } from './pwa';
 import { worlds as baseWorlds } from './worlds';
@@ -105,7 +107,7 @@ export default function App({ initialStory, initialPage, forceEmpty = false, onR
     return () => { window.removeEventListener('beforeinstallprompt', handle); window.removeEventListener('appinstalled', done); };
   }, []);
   const go = (target: Page) => { setPage(target); setFilter('Alles'); setSearch(''); window.scrollTo({ top: 0, behavior: calm ? 'instant' : 'smooth' }); };
-  const openStory = (id: string) => { const next = [...new Set([...started, id])]; setStarted(next); saveChild(profile.id, 'started', next); setReader(id); };
+  const openStory = (id: string) => { if (cloudContent) reportConsciousReading(profile.id); const next = [...new Set([...started, id])]; setStarted(next); saveChild(profile.id, 'started', next); setReader(id); };
   const toggleFavorite = (id: string) => { const next = favorites.includes(id) ? favorites.filter(x => x !== id) : [...favorites, id]; setFavorites(next); saveChild(profile.id, 'favorites', next); };
   const updatePrefs = (next: Prefs) => { setPrefs(next); saveChild(profile.id, 'prefs', next); };
   const completeStory = (id: string, ending: string) => { setCompleted(previous => { const next = { ...previous, [id]: { ending, date: new Date().toISOString() } }; saveChild(profile.id, 'completed', next); return next; }); };
@@ -124,6 +126,7 @@ export default function App({ initialStory, initialPage, forceEmpty = false, onR
     setToast(`Welkom terug, ${child.name}!`);
   }
   function editChild(id: string | null) {
+    if (cloudContent) { openParents(); return; }
     if (id === null && family.children.length >= MAX_CHILDREN) return;
     const child = family.children.find(item => item.id === id);
     setEditingId(id);
@@ -131,6 +134,7 @@ export default function App({ initialStory, initialPage, forceEmpty = false, onR
     setModal('profile');
   }
   function saveProfile() {
+    if (cloudContent) { openParents(); return; }
     const name = draft.name.trim() || 'Avonturier';
     if (editingId) {
       const next: Family = { ...family, children: family.children.map(child => child.id === editingId ? { ...child, name, avatar: draft.avatar } : child) };
@@ -181,7 +185,7 @@ export default function App({ initialStory, initialPage, forceEmpty = false, onR
       {page === 'treasures' && <section className="treasure-page page-container"><div className="eyebrow"><Sparkles size={16} /> HERINNERINGEN OM TE BEWAREN</div><div className="treasure-heading"><div><h1>Een schatkist vol<br /><span>jouw avonturen.</span></h1><p className="page-subtitle">Elk beleefd verhaal geeft je een bijzondere stempel.</p></div><div className="passport-count"><Ticket size={24} /><strong>{Object.keys(completed).length}<small> / {worlds.length}</small></strong><span>stempels verzameld</span></div></div><div className="stamp-grid">{worlds.map(w => { const unlocked = !!completed[w.id]; const Icon = w.icon === 'train' ? TrainFront : w.icon === 'moon' ? Moon : Star; return <article key={w.id} className={`stamp-card ${w.color} ${unlocked ? 'unlocked' : 'locked'}`}><div className="stamp-art"><div className="stamp-perforated"><Icon size={66} strokeWidth={1.3} /><span>FABELPAD</span></div>{unlocked ? <span className="stamp-check"><Check size={18} /></span> : <span className="stamp-lock"><LockKeyhole size={16} /></span>}</div><h2>{w.stamp}</h2><p>{unlocked ? completed[w.id].ending : `Beleef ${w.title} en ontdek deze stempel.`}</p><button className="text-link" onClick={() => openStory(w.id)}>{unlocked ? 'Beleef het nog eens' : 'Op avontuur'}<ArrowRight size={18} /></button></article>; })}</div><div className="treasure-note"><img src="/brand/mascot.webp" alt="" /><p>De mooiste schatten?<br /><strong>De verhalen die je zelf hebt gemaakt.</strong></p><Doodle kind="spark" /></div></section>}
     </motion.div></AnimatePresence></main>
 
-    <footer className="site-footer page-container"><div className="footer-top"><img src="/brand/logo.webp" alt="Fabelpad" loading="lazy" /><p>Jij kiest het avontuur.<br /><span>Wij bewaren een plekje voor je fantasie.</span></p><button className="footer-install" onClick={installApp}><Download size={19} /><span>{installed ? 'Fabelpad is jouw app' : 'Neem Fabelpad mee'}<small>{installed ? 'Klaar voor je volgende avontuur' : 'Ook fijn op je beginscherm'}</small></span><ArrowUpRight size={19} /></button></div><div className="footer-bottom"><span>© {new Date().getFullYear()} Fabelpad · Met een beetje magie gemaakt.</span><SyncBadge /><button onClick={openParents}><ShieldCheck size={14} /> Voor ouders</button></div></footer>
+    <footer className="site-footer page-container"><div className="footer-top"><img src="/brand/logo.webp" alt="Fabelpad" loading="lazy" /><p>Jij kiest het avontuur.<br /><span>Wij bewaren een plekje voor je fantasie.</span></p><button className="footer-install" onClick={installApp}><Download size={19} /><span>{installed ? 'Fabelpad is jouw app' : 'Neem Fabelpad mee'}<small>{installed ? 'Klaar voor je volgende avontuur' : 'Ook fijn op je beginscherm'}</small></span><ArrowUpRight size={19} /></button></div><div className="footer-bottom"><span>© {new Date().getFullYear()} Fabelpad · Met een beetje magie gemaakt.</span><SyncBadge /><button onClick={openParents}><ShieldCheck size={14} /> Voor ouders</button><nav className="legal-inline-links" aria-label="Privacy en informatie"><a href="/privacy-voor-kinderen">Privacy voor kinderen</a><a href="/algemene-voorwaarden">Voorwaarden</a><a href="/privacyverklaring">Privacy</a><a href="/bedrijfsgegevens">Bedrijfsgegevens</a></nav></div></footer>
     <nav className="mobile-nav" aria-label="App-navigatie">{nav.map(({ id, title, Icon }) => <button key={id} className={page === id ? 'active' : ''} onClick={() => go(id)} aria-current={page === id ? 'page' : undefined}><Icon size={23} strokeWidth={page === id ? 2.5 : 1.8} /><span>{title}</span></button>)}<button onClick={openProfile}><Avatar value={profile.avatar} /><span>Wie speelt?</span></button></nav>
 
     <AnimatePresence>{reader && <StoryReader key={`${profile.id}-${reader}`} profileId={profile.id} worldId={reader} childName={profile.name} muted={prefs.muted} reducedMotion={calm} textSize={prefs.textSize} cloudContent={cloudContent} previewLimit={cloudContent ? undefined : getStoryPreviewLimit(reader)} onRequestParents={onRequestParents || openParents} onClose={() => setReader(null)} onComplete={completeStory} />}</AnimatePresence>

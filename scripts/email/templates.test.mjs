@@ -148,3 +148,17 @@ test('all four service templates accept edited subject/title/intro through the c
     assert.equal(message.subject, 'Eigen onderwerp'); assert.match(message.html, /Eigen titel &amp; uitleg/u); assert.match(message.text, /Eigen inleiding/u); assert.match(message.html, /Gedeelde voettekst/u); assert.match(message.html, /hulp@example.test/u);
   }
 });
+
+test('custom Dashboard export keeps fixed Go fields and uses the edited safe copy and branding', () => {
+  const settings = { supportEmail: 'help@example.test', footerText: 'Een eigen gezamenlijke voettekst.', templates: { magiclink: { subject: 'Mijn aangepaste inlogonderwerp', title: 'Een eigen Fabelpad-kop', intro: 'Gebruik jouw eenmalige code om verder te gaan.' } } };
+  const message = renderSupabaseDashboardTemplate('magiclink', 'staging', settings);
+  assert.equal(message.subject, '[TEST] Mijn aangepaste inlogonderwerp');
+  for (const value of ['Een eigen Fabelpad-kop', 'Gebruik jouw eenmalige code om verder te gaan.', 'Een eigen gezamenlijke voettekst.', 'help@example.test', '{{ .Token }}', '{{ .SiteURL }}']) assert.equal(message.html.includes(value), true);
+  assert.doesNotMatch(message.html, /000000|123456|re_[a-zA-Z0-9]{8}/u);
+  assert.match(message.html, /TESTOMGEVING/u);
+  assert.equal(renderSupabaseDashboardTemplate('magiclink').subject, AUTH_EMAIL_CATALOG.magiclink.subject);
+  const link = renderSupabaseDashboardTemplate('invite', 'production', settings);
+  assert.match(link.html, /token_hash=\{\{ \.TokenHash \}\}&amp;type=invite/u);
+  assert.equal(renderSupabaseDashboardTemplate('email_changed_notification', 'production', settings).html.includes('{{ .OldEmail }}'), true);
+  assert.throws(() => renderSupabaseDashboardTemplate('magiclink', 'production', { ...settings, templates: { magiclink: { ...settings.templates.magiclink, intro: '{{ .Data.arbitrary }}' } } }), /plain text/u, 'Admin copy must not introduce executable Go expressions.');
+});

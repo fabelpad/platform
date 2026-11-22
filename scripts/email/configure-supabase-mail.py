@@ -137,7 +137,7 @@ def auth_configuration(environment, root=ROOT):
         'mailer_allow_unverified_email_sign_ins': False,
         'mailer_secure_email_change_enabled': True,
         'mailer_otp_exp': 600,
-        'mailer_otp_length': 8,
+        'mailer_otp_length': 6,
         # Conservative initial capacity; unrelated IP/verification limits stay.
         'rate_limit_email_sent': 30,
         'smtp_max_frequency': 60,

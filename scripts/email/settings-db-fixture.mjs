@@ -1,3 +1,5 @@
+import { installLifecycleSchedulerTestFixture } from '../lifecycle-scheduler-fixture.mjs';
+export { localMigrationSql } from '../lifecycle-scheduler-fixture.mjs';
 /** Test-only Vault boundary. PostgreSQL still executes real application SQL,
  * privileges, locking, CAS and transactions. This stub does NOT test encryption:
  * hosted Supabase Vault provides that, with its own external encryption key.
@@ -6,6 +8,10 @@
 export async function installEmailVaultTestFixture(db) {
   await db.exec(`
     do $$ begin if not exists(select 1 from pg_roles where rolname='service_role') then create role service_role nologin; end if; end $$;
+    alter table auth.users add column if not exists created_at timestamptz not null default now();
+    create table if not exists auth.sessions(id uuid primary key,user_id uuid references auth.users(id) on delete cascade,created_at timestamptz not null default now(),not_after timestamptz);
+    create schema if not exists storage;
+    create table if not exists storage.objects(id uuid primary key default gen_random_uuid(),bucket_id text,name text,owner_id text,owner uuid);
     create schema vault;
     revoke all on schema vault from public,anon,authenticated,service_role;
     create table vault.secrets(id uuid primary key default gen_random_uuid(),name text unique,description text,secret text not null);
@@ -24,4 +30,5 @@ export async function installEmailVaultTestFixture(db) {
     revoke all on all tables in schema vault from public,anon,authenticated,service_role;
     revoke all on all functions in schema vault from public,anon,authenticated,service_role;
   `);
+  await installLifecycleSchedulerTestFixture(db);
 }

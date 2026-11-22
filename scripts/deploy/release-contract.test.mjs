@@ -248,11 +248,26 @@ test('production identity is separate and staging paths, accounts or manifests c
   assert.throws(() => validateManifest(production, manifest, manifest.id));
 });
 
-test('OTP is enabled only after a receipt for the same environment, project and origin with a verified Resend hook', () => {
+test('legacy verified-hook receipts remain bound to the exact target', () => {
   const receipt = {version:1,environment:'staging',siteId:profile.siteId,provider:'resend',emailOtpVerified:true,sendEmailHookVerified:true,
     appOrigin:config.FABELPAD_APP_ORIGIN,supabaseUrl:config.NEXT_PUBLIC_SUPABASE_URL,verifiedAt:'2026-11-22T12:00:00Z'};
   assert.equal(validateEmailReadiness(profile,config,receipt),receipt);
   for (const change of [{environment:'production'},{siteId:'fabelpad-vps08-production'},{provider:'smtp'},{emailOtpVerified:false},{sendEmailHookVerified:false},
     {appOrigin:'https://other.example.test'},{supabaseUrl:'https://other.example.test'},{verifiedAt:''}]) assert.throws(() => validateEmailReadiness(profile,config,{...receipt,...change}));
   assert.throws(() => validateEmailReadiness(profile,{...config,FABELPAD_DATA_MODE:'local'},receipt));
+});
+
+test('owner-configured Google and six-digit OTP require live settings proof and preserve the interactive acceptance boundary', () => {
+  const receipt = { version: 2, environment: 'staging', siteId: profile.siteId,
+    appOrigin: config.FABELPAD_APP_ORIGIN, supabaseUrl: config.NEXT_PUBLIC_SUPABASE_URL,
+    emailProviderConfigured: true, googleProviderConfigured: true, otpDigits: 6,
+    ownerConfigurationAttested: true, authenticationAcceptance: 'requires-interactive-owner-test',
+    settingsCheckedAt: '2026-11-22T17:30:00Z' };
+  assert.equal(validateEmailReadiness(profile, config, receipt), receipt);
+  for (const change of [{ environment: 'production' }, { siteId: 'fabelpad-vps08-production' },
+    { appOrigin: 'https://other.example.test' }, { supabaseUrl: 'https://other.example.test' },
+    { emailProviderConfigured: false }, { googleProviderConfigured: false }, { otpDigits: 8 },
+    { ownerConfigurationAttested: false }, { authenticationAcceptance: 'verified-without-proof' }, { settingsCheckedAt: '' }]) {
+    assert.throws(() => validateEmailReadiness(profile, config, { ...receipt, ...change }));
+  }
 });

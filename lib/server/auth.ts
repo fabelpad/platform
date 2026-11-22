@@ -1,6 +1,29 @@
 import { createSupabaseServerClient, getVerifiedParent, isContentAdmin } from '../supabase/server';
 import { BackendConfigurationError, getBackendStatus, getSupabaseConfig } from '../supabase/config';
 import { checkMutationOrigin, handleApiError, object, privateJson, readJson, RequestError, safeNext } from './http';
+import { getParentAccountStatus, parentRpcError } from './parent';
+import { TERMS_VERSION, PRIVACY_VERSION } from '../legal/documents';
+import type { SupabaseClient } from '@supabase/supabase-js';
+
+export async function finishParentAuthentication(client: SupabaseClient, requestedNext: unknown) {
+  const parent = await getVerifiedParent(client);
+  if (!parent) throw new RequestError(401, 'not_authenticated');
+  const lifecycle = await getParentAccountStatus(client);
+  const next = safeNext(requestedNext);
+  if (lifecycle.state === 'deletion_pending' || lifecycle.state === 'deleting') return { parent, lifecycle, next: '/profiel/account' };
+  if (lifecycle.state !== 'active' || lifecycle.acceptedTermsVersion !== lifecycle.termsVersion) return { parent, lifecycle, next: `/onboarding?next=${encodeURIComponent(next)}` };
+  // This is an explicit completed login, never a passive session refresh.
+  const { error } = await client.rpc('record_family_activity', { p_event_id: crypto.randomUUID(), p_kind: 'parent_login', p_child_id: null, p_occurred_at: null });
+  if (error) parentRpcError(error);
+  return { parent, lifecycle, next };
+}
+function registrationIntent(body: Record<string, unknown>): boolean {
+  if (body.intent !== undefined && body.intent !== 'login' && body.intent !== 'register') throw new RequestError(422, 'invalid_intent');
+  if (body.intent !== 'register') return false;
+  if (body.termsVersion !== TERMS_VERSION || body.privacyVersion !== PRIVACY_VERSION) throw new RequestError(409, 'terms_changed', 'De documenten zijn gewijzigd. Lees de actuele versie en bevestig opnieuw.');
+  if (body.parentDeclaration !== true || body.acceptTerms !== true) throw new RequestError(422, 'declarations_required', 'Bevestig de ouderverklaring en de algemene voorwaarden afzonderlijk.');
+  return true;
+}
 
 export async function authSession() {
   try {
@@ -8,7 +31,8 @@ export async function authSession() {
     if (!status.configured) return privateJson({ ...status, parent: null, admin: false });
     const client = await createSupabaseServerClient();
     const parent = await getVerifiedParent(client);
-    return privateJson({ ...status, parent, admin: parent ? await isContentAdmin(client, parent.id) : false });
+    const lifecycle = parent ? await getParentAccountStatus(client) : null;
+    return privateJson({ ...status, parent, lifecycle, admin: parent && lifecycle?.state === 'active' && lifecycle.acceptedTermsVersion === lifecycle.termsVersion ? await isContentAdmin(client, parent.id) : false });
   } catch (error) { return handleApiError(error); }
 }
 export async function authMutation(request: Request, action: 'otp' | 'verify' | 'confirm' | 'google' | 'signout') {
@@ -24,6 +48,7 @@ export async function authMutation(request: Request, action: 'otp' | 'verify' | 
     const body = await readJson(request);
     if (!object(body)) throw new RequestError(422, 'invalid_request');
     if (action === 'google') {
+      registrationIntent(body);
       if (!config.googleEnabled) throw new RequestError(503, 'provider_not_configured', 'Google-inloggen is niet beschikbaar. Gebruik een andere beschikbare inlogmethode.');
       const callback = new URL('/auth/callback', config.appUrl);
       callback.searchParams.set('next', safeNext(body.next));
@@ -43,22 +68,19 @@ export async function authMutation(request: Request, action: 'otp' | 'verify' | 
       // Secure email changes may need both the old and new address confirmed.
       // Their first confirmation can succeed without issuing a session.
       if (type === 'email_change' && !data.session) return privateJson({ ok: true, next: '/inloggen', message: 'Dit e-mailadres is bevestigd. Als je ook een bevestiging op je andere e-mailadres hebt ontvangen, bevestig die dan ook. Log daarna opnieuw in.' });
-      const parent = await getVerifiedParent(client);
-      if (!parent) throw new RequestError(401, 'not_authenticated');
-      return privateJson({ ok: true, parent, next: safeNext(body.next) });
+      return privateJson({ ok: true, ...await finishParentAuthentication(client, body.next) });
     }
     const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : '';
     if (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/u.test(email)) throw new RequestError(422, 'invalid_email', 'Vul een geldig e-mailadres in.');
     if (action === 'otp') {
-      const { error } = await client.auth.signInWithOtp({ email, options: { shouldCreateUser: true, emailRedirectTo: new URL('/inloggen', config.appUrl).href } });
+      const shouldCreateUser = registrationIntent(body);
+      const { error } = await client.auth.signInWithOtp({ email, options: { shouldCreateUser, emailRedirectTo: new URL('/inloggen', config.appUrl).href } });
       if (error) throw new RequestError(error.status === 429 ? 429 : 503, error.status === 429 ? 'too_many_requests' : 'mail_unavailable', error.status === 429 ? 'Wacht even voordat je een nieuwe code aanvraagt.' : 'Er kon nog geen code worden verzonden. Probeer het later opnieuw.');
       return privateJson({ ok: true, message: 'Als dit adres is toegestaan, ontvang je een Fabelpad-inlogcode. Vul de code uit je e-mail in.' });
     }
-    if (typeof body.token !== 'string' || !/^\d{6,10}$/u.test(body.token.trim())) throw new RequestError(422, 'invalid_code', 'Vul de code uit je e-mail in.');
+    if (typeof body.token !== 'string' || !/^\d{6}$/u.test(body.token.trim())) throw new RequestError(422, 'invalid_code', 'Vul de zescijferige code uit je e-mail in.');
     const { error } = await client.auth.verifyOtp({ email, token: body.token.trim(), type: 'email' });
     if (error) throw new RequestError(error.status === 429 ? 429 : 401, 'invalid_code', 'Deze code klopt niet meer. Vraag zo nodig een nieuwe code aan.');
-    const parent = await getVerifiedParent(client);
-    if (!parent) throw new RequestError(401, 'not_authenticated');
-    return privateJson({ ok: true, parent, next: safeNext(body.next) });
+    return privateJson({ ok: true, ...await finishParentAuthentication(client, body.next) });
   } catch (error) { return handleApiError(error); }
 }

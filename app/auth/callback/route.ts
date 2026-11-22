@@ -1,4 +1,5 @@
-import { createSupabaseServerClient, getVerifiedParent } from '../../../lib/supabase/server';
+import { createSupabaseServerClient } from '../../../lib/supabase/server';
+import { finishParentAuthentication } from '../../../lib/server/auth';
 import { getSupabaseConfig } from '../../../lib/supabase/config';
 import { handleApiError, safeNext } from '../../../lib/server/http';
 export const dynamic = 'force-dynamic';
@@ -14,7 +15,7 @@ export async function GET(request: Request) {
       try {
         const client = await createSupabaseServerClient();
         const { error } = await client.auth.exchangeCodeForSession(code);
-        if (!error && await getVerifiedParent(client)) target = safeNext(url.searchParams.get('next'));
+        if (!error) target = (await finishParentAuthentication(client, safeNext(url.searchParams.get('next')))).next;
       } catch { /* A failed or expired PKCE exchange grants no session rights. */ }
     }
     return new Response(null, { status: 303, headers: { Location: new URL(target, config.appUrl).href, 'Cache-Control': 'private, no-store', Vary: 'Cookie' } });

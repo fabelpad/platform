@@ -3,10 +3,11 @@ import { readFile, readdir, mkdtemp, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { compileSource } from '../source-test-loader.mjs';
-import { installEmailVaultTestFixture } from './settings-db-fixture.mjs';
+import { installEmailVaultTestFixture, localMigrationSql } from './settings-db-fixture.mjs';
 
 const { PGlite } = await import(process.env.FABELPAD_PGLITE_MODULE ?? '@electric-sql/pglite');
-const db = new PGlite();
+const {pgcrypto}=await import('@electric-sql/pglite/contrib/pgcrypto');
+const db = new PGlite({extensions:{pgcrypto}});
 const temporary = await mkdtemp(join(tmpdir(), 'fabelpad-email-settings-db-'));
 const administrator = '11111111-1111-4111-8111-111111111111';
 const otherAdministrator = '22222222-2222-4222-8222-222222222222';
@@ -20,7 +21,8 @@ const request = () => `aaaaaaaa-aaaa-4aaa-8aaa-${String(++counter).padStart(12, 
 
 async function identity(id, role='authenticated', metadata={}) {
   await db.exec('reset role');
-  await db.query("select set_config('request.jwt.claims',$1,false)", [JSON.stringify({sub:id,...metadata})]);
+  if (id && role==='authenticated') await db.query('insert into auth.sessions(id,user_id) values($1,$1) on conflict do nothing',[id]);
+  await db.query("select set_config('request.jwt.claims',$1,false)", [JSON.stringify({sub:role==='service_role'?null:id,session_id:id,amr:[{method:'otp',timestamp:Math.floor(Date.now()/1000)}],...metadata})]);
   await db.exec(`set role ${role}`);
 }
 async function rpc(name, parameters=[]) {
@@ -53,13 +55,18 @@ try {
   await installEmailVaultTestFixture(db);
   const migrationRoot = new URL('../../supabase/migrations/',import.meta.url);
   for (const name of (await readdir(migrationRoot)).filter(name=>name.endsWith('.sql')).sort()) {
-    await db.exec(await readFile(new URL(name,migrationRoot),'utf8'));
+    await db.exec(localMigrationSql(await readFile(new URL(name,migrationRoot),'utf8')));
   }
   await db.query('insert into auth.users(id,email,email_confirmed_at) values($1,$2,now()),($3,$4,now()),($5,$6,now())',
     [administrator,'admin@example.test',otherAdministrator,'admin2@example.test',parent,'parent@example.test']);
   await db.query('insert into auth.users(id,email,email_confirmed_at,is_anonymous) values($1,$2,now(),true)',[anonymous,'anonymous@example.test']);
   await db.query('insert into auth.users(id,email) values($1,$2)',[unconfirmed,'unconfirmed@example.test']);
   await db.query('insert into public.content_admins(user_id) values($1),($2),($3),($4)',[administrator,otherAdministrator,anonymous,unconfirmed]);
+
+  for (const id of [administrator,otherAdministrator,parent]) {
+    await identity(id); await rpc('complete_parent_onboarding',['2026-11-22','2026-11-22',true,true]);
+  }
+  await db.exec('reset role');
 
   const {DEFAULT_EMAIL_SETTINGS,parseEmailSettings,parseResendApiKey,EMAIL_TEMPLATE_ACTIONS,EMAIL_TEMPLATE_IDS} = await import(await compileSource(new URL('../../lib/email/settings.ts',import.meta.url),temporary));
   const {AUTH_EMAIL_CATALOG} = await import(await compileSource(new URL('../../lib/email/templates.ts',import.meta.url),temporary));

@@ -1,0 +1,112 @@
+{
+  "checkedDate": "2026-11-22",
+  "repository": "fabelpad/platform",
+  "integrationBranch": "main",
+  "scope": "Google OTP, legal documents, parent lifecycle and isolated target preparation",
+  "supabase": {
+    "staging": {
+      "account": "fabelpad",
+      "projectRef": "tlwfpivafcokcjyjwgmq",
+      "region": "eu-west-1",
+      "organizationPlan": "free",
+      "parentLifecycleMigration": {
+        "version": "20261122172905",
+        "sha256": "0c27e9fb90df4a0910b6a988045918f6f01f0dd40b637dd82bfb249996409212",
+        "applied": true
+      },
+      "legalDocumentHashes": {
+        "terms": "8da71baa717f1e98b393320532670b4ebbddacbd390a14dba3c4cc144b394840",
+        "privacy": "97673d3103443115097def26e20e6c677650dcb760d095de900ae3c5c5961cb7"
+      },
+      "usersAfterMigration": 0,
+      "emailAdminEdgeVersion": 2,
+      "accountMaintenanceEdgeVersion": 1,
+      "unauthenticatedMailAdminStatus": 401,
+      "unauthenticatedWorkerStatus": 401,
+      "authRoute": "owner-configured Supabase Custom SMTP -> Resend; preserved",
+      "autoInactivityDeletionEnabled": false,
+      "schedulerState": "not configured; signed-request hardening in progress"
+    },
+    "production": {
+      "account": "Duindorpdoet",
+      "projectRef": "aptprpkosqctwrzeetgs",
+      "region": "eu-west-1",
+      "organizationPlan": "pro",
+      "parentLifecycleMigration": {
+        "version": "20261122172905",
+        "sha256": "0c27e9fb90df4a0910b6a988045918f6f01f0dd40b637dd82bfb249996409212",
+        "applied": true
+      },
+      "legalDocumentHashes": {
+        "terms": "8da71baa717f1e98b393320532670b4ebbddacbd390a14dba3c4cc144b394840",
+        "privacy": "97673d3103443115097def26e20e6c677650dcb760d095de900ae3c5c5961cb7"
+      },
+      "usersAfterMigration": 0,
+      "emailAdminEdgeVersion": 2,
+      "accountMaintenanceEdgeVersion": 1,
+      "unauthenticatedMailAdminStatus": 401,
+      "unauthenticatedWorkerStatus": 401,
+      "authRoute": "owner-configured Supabase Custom SMTP -> Resend; preserved",
+      "autoInactivityDeletionEnabled": false,
+      "schedulerState": "not configured; signed-request hardening in progress"
+    }
+  },
+  "host": {
+    "hostname": "dg-vps-08",
+    "machineId": "05db94b99eca4c3d815f6585ef8ed517",
+    "ownAdapterModulesPerTarget": 12,
+    "runners": {
+      "staging": {
+        "id": 21,
+        "status": "online"
+      },
+      "production": {
+        "id": 22,
+        "status": "online"
+      }
+    },
+    "emailReadiness": {
+      "staging": {
+        "version": 2,
+        "environment": "staging",
+        "siteId": "fabelpad-vps08-staging",
+        "appOrigin": "https://staging.fabelpad.nl",
+        "supabaseUrl": "https://tlwfpivafcokcjyjwgmq.supabase.co",
+        "emailProviderConfigured": true,
+        "googleProviderConfigured": true,
+        "otpDigits": 6,
+        "ownerConfigurationAttested": true,
+        "authenticationAcceptance": "requires-interactive-owner-test",
+        "settingsCheckedAt": "2026-11-22T17:50:30.645511+00:00"
+      },
+      "production": {
+        "version": 2,
+        "environment": "production",
+        "siteId": "fabelpad-vps08-production",
+        "appOrigin": "https://fabelpad.nl",
+        "supabaseUrl": "https://aptprpkosqctwrzeetgs.supabase.co",
+        "emailProviderConfigured": true,
+        "googleProviderConfigured": true,
+        "otpDigits": 6,
+        "ownerConfigurationAttested": true,
+        "authenticationAcceptance": "requires-interactive-owner-test",
+        "settingsCheckedAt": "2026-11-22T17:50:30.645511+00:00"
+      }
+    },
+    "appActivationPerformed": false,
+    "proxyChanged": false
+  },
+  "acceptance": {
+    "interactiveOtpLoginVerified": false,
+    "interactiveGoogleLoginVerified": false,
+    "resendApiConfiguredInVault": false,
+    "realMailSentByThisWork": false
+  },
+  "productionOpenPoints": [
+    "maximum project/provider/VPS backup retention",
+    "support mailbox provider and deletion/retention implementation",
+    "accepted processor agreements and transfer safeguards",
+    "own environment Resend API key in admin Vault configuration",
+    "interactive owner login and real delivery acceptance"
+  ]
+}

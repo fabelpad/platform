@@ -12,3 +12,9 @@ enabled = true
 verify_jwt = false # Mandatory Auth getUser + current database admin role inside handler.
 entrypoint = "./functions/email-admin/index.ts"
 import_map = "./functions/email-admin/deno.json"
+
+[functions.account-maintenance]
+enabled = true
+verify_jwt = false # Dedicated server-generated Vault token, verified on every invocation.
+entrypoint = "./functions/account-maintenance/index.ts"
+import_map = "./functions/account-maintenance/deno.json"

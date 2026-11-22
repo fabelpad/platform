@@ -11,11 +11,11 @@
     "start": "next start --hostname 127.0.0.1",
     "typecheck": "tsc --noEmit",
     "check:config": "node scripts/config-check.mjs",
-    "check:content": "node scripts/local-checks.mjs",
+    "check:content": "node scripts/local-checks.mjs && node scripts/legal-check.mjs",
     "check:profiles": "node --experimental-strip-types scripts/profile-storage-check.mjs",
     "content:export": "node scripts/export-native-content.mjs",
     "test:browser": "playwright test",
-    "check:backend": "node scripts/supabase-db-check.mjs && node scripts/supabase-contract-check.mjs",
+    "check:backend": "node scripts/supabase-db-check.mjs && node scripts/supabase-contract-check.mjs && node scripts/parent-api-check.mjs && node scripts/lifecycle-db-check.mjs && node --test scripts/lifecycle-worker.test.mjs && node scripts/privacy-admin-api-check.mjs && node scripts/lifecycle-scheduler-db-check.mjs",
     "check:email": "node scripts/email/export-templates.mjs --check && node --test scripts/email/*.test.mjs && node scripts/email/settings-db-check.mjs && python3 -B scripts/email/configure-supabase-mail.test.py",
     "check:native": "node scripts/native-runtime-check.mjs",
     "check:deploy": "node --test scripts/deploy/*.test.mjs && python3 -B scripts/deploy/install-host.test.py"

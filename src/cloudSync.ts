@@ -1,5 +1,5 @@
 import type { FamilySnapshot } from './profileStorage';
-import { isFamilySnapshot } from './profileStorage';
+import { clearParentDeviceData, isFamilySnapshot } from './profileStorage';
 
 export type ParentIdentity = { id: string; email: string; displayName: string };
 export type CloudEnvelope = { parent: ParentIdentity; revision: number; snapshot: FamilySnapshot | null };
@@ -20,6 +20,7 @@ export class FamilySyncClient {
   private writing: Promise<void> | null = null;
   private refreshing = false;
   private disposed = false;
+  private revoked = false;
   private store: Store;
   private fetcher: Fetcher;
   private debounceMs: number;
@@ -42,6 +43,7 @@ export class FamilySyncClient {
   subscribe(listener: (state: SyncState) => void) { this.listeners.add(listener); listener(this.state); return () => { this.listeners.delete(listener); }; }
   private emit(next: SyncState) { this.state = next; if (!this.disposed) for (const listener of this.listeners) listener(next); }
   private cache() {
+    if (this.revoked) return;
     try {
       this.store.setItem(this.cacheKey, JSON.stringify({ owner: this.owner, revision: this.state.revision, snapshot: this.state.snapshot, dirty: this.state.dirty, baseSnapshot: this.baseSnapshot }));
       if (this.state.localDurable === false) this.emit({ ...this.state, localDurable: true });
@@ -62,8 +64,32 @@ export class FamilySyncClient {
     if (!v || !Number.isSafeInteger(v.revision) || v.revision < 0 || (v.snapshot !== null && !isFamilySnapshot(v.snapshot))) throw new Error('Ongeldig antwoord van de opslag.');
     return v;
   }
+  private adoptRemoteRemoval(remote: { revision: number; snapshot: FamilySnapshot | null }, known: FamilySnapshot | null | undefined = this.baseSnapshot): boolean {
+    if (!known || !remote.snapshot) return false;
+    const retained = new Set(remote.snapshot.family.children.map(child => child.id));
+    if (!known.family.children.some(child => !retained.has(child.id))) return false;
+    clearTimeout(this.timer); this.generation += 1;
+    clearParentDeviceData(this.owner);
+    try { this.store.setItem(this.cacheKey, 'null'); this.store.setItem(`${this.cacheKey}-recovery`, 'null'); } catch { /* Replaced memory does not retain the withdrawn child. */ }
+    this.baseSnapshot = remote.snapshot;
+    this.emit({ phase: remote.snapshot.family.children.length ? 'saved' : 'empty', revision: remote.revision, snapshot: remote.snapshot, dirty: false });
+    this.cache(); this.onRemote(remote.snapshot);
+    return true;
+  }
+  private async checkBlocked(response: Response): Promise<void> {
+    if (![403, 410, 423].includes(response.status)) return;
+    const result = await response.clone().json().catch(() => null);
+    if (!['account_inactive', 'account_blocked', 'profile_consent_required', 'profile_consent_revoked', 'profile_withdrawn', 'account_deleted'].includes(result?.error)) return;
+    this.revoked = true; clearTimeout(this.timer); this.generation += 1; this.baseSnapshot = null;
+    clearParentDeviceData(this.owner);
+    try { this.store.setItem(this.cacheKey, 'null'); this.store.setItem(`${this.cacheKey}-recovery`, 'null'); } catch { /* Keep the revoked data out of memory even when storage is blocked. */ }
+    this.emit({ phase: 'signed-out', revision: 0, snapshot: null, dirty: false, message: 'De toegang tot deze gezinsgegevens is ingetrokken. De apparaatkopie is gewist. Bekijk je accountoverzicht.' });
+    throw new AccountBlockedError();
+  }
   private async getCloud(): Promise<CloudEnvelope> {
+    if (this.revoked) throw new AccountBlockedError();
     const response = await this.fetcher('/api/family', { method: 'GET', credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'application/json', 'X-Fabelpad-Parent': this.owner } });
+    await this.checkBlocked(response);
     if (response.status === 401 || response.status === 403 || response.redirected || response.headers.get('Content-Type')?.includes('text/html')) throw new AuthError();
     if (!response.ok) throw new Error('De opgeslagen avonturen zijn nu niet bereikbaar.');
     return this.envelope(await response.json());
@@ -73,7 +99,8 @@ export class FamilySyncClient {
     this.emit({ ...this.state, phase: 'loading' });
     try {
       const remote = await this.getCloud();
-      if (this.disposed) return;
+      if (this.disposed || this.revoked) return;
+      if (this.adoptRemoteRemoval(remote, cached?.baseSnapshot ?? (cached?.dirty ? null : cached?.snapshot))) return;
       this.baseSnapshot = remote.snapshot;
       if (cached?.dirty && cached.revision !== remote.revision && !sameContent(cached.snapshot, remote.snapshot)) {
         const merged = cached.baseSnapshot && mergeDisjointChildren(cached.baseSnapshot, cached.snapshot, remote.snapshot);
@@ -96,6 +123,7 @@ export class FamilySyncClient {
       this.cache(); this.onRemote(remote.snapshot);
     } catch (error) {
       if (this.disposed) return;
+      if (error instanceof AccountBlockedError) return;
       if (error instanceof AuthError) { this.emit({ ...this.state, phase: 'signed-out', message: 'Log opnieuw in om jullie verhalen te openen.' }); return; }
       if (cached) {
         this.baseSnapshot = cached.baseSnapshot;
@@ -106,7 +134,7 @@ export class FamilySyncClient {
     }
   }
   enqueue(snapshot: FamilySnapshot): void {
-    if (this.disposed || !isFamilySnapshot(snapshot) || sameContent(snapshot, this.state.snapshot)) return;
+    if (this.disposed || this.revoked || !isFamilySnapshot(snapshot) || sameContent(snapshot, this.state.snapshot)) return;
     this.generation += 1;
     this.emit({ ...this.state, snapshot: copy(snapshot), dirty: true, phase: this.state.phase === 'conflict' ? 'conflict' : this.state.phase === 'signed-out' ? 'signed-out' : 'pending', message: undefined });
     this.cache();
@@ -129,12 +157,14 @@ export class FamilySyncClient {
       this.emit({ ...this.state, phase: 'saving', message: undefined });
       try {
         const response = await this.fetcher('/api/family', { method: 'PUT', credentials: 'same-origin', cache: 'no-store', headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'X-Fabelpad-Parent': this.owner }, body: JSON.stringify({ baseRevision, snapshot: submitted }) });
-        if (this.disposed) return;
+        if (this.disposed || this.revoked) return;
+        await this.checkBlocked(response);
         if (response.status === 401 || response.status === 403 || response.redirected || response.headers.get('Content-Type')?.includes('text/html')) { this.emit({ ...this.state, phase: 'signed-out', message: 'Log opnieuw in. Je veranderingen blijven op dit apparaat bewaard.' }); this.cache(); return; }
         if (response.status === 409) {
           const value = await response.json() as { revision?: number; snapshot?: unknown };
           if (!Number.isSafeInteger(value.revision) || (value.revision ?? -1) < 0 || (value.snapshot !== null && !isFamilySnapshot(value.snapshot))) throw new Error('Ongeldig versieantwoord.');
           const remote = { revision: value.revision!, snapshot: value.snapshot as FamilySnapshot | null };
+          if (this.adoptRemoteRemoval(remote)) return;
           if (sameContent(this.state.snapshot, remote.snapshot)) {
             this.baseSnapshot = remote.snapshot;
             this.emit({ phase: 'saved', revision: remote.revision, snapshot: remote.snapshot, dirty: false });
@@ -155,6 +185,7 @@ export class FamilySyncClient {
         this.emit({ phase: changedDuringWrite ? 'pending' : 'saved', revision: remote.revision, snapshot: changedDuringWrite ? this.state.snapshot : (remote.snapshot ?? submitted), dirty: changedDuringWrite });
         this.cache();
       } catch (error) {
+        if (error instanceof AccountBlockedError) return;
         if (!this.disposed) { this.emit({ ...this.state, phase: error instanceof AuthError ? 'signed-out' : 'offline', message: error instanceof AuthError ? 'Het ouderaccount is gewijzigd. Log opnieuw in om verder te gaan.' : 'Geen verbinding. Veranderingen blijven op dit apparaat bewaard.' }); this.cache(); }
         return;
       }
@@ -163,7 +194,7 @@ export class FamilySyncClient {
   /** Check a changed session without applying data while an edit or story dialog is open. */
   async verifyIdentity(): Promise<void> {
     if (this.disposed || this.state.phase === 'signed-out') return;
-    try { await this.getCloud(); }
+    try { const remote = await this.getCloud(); if (!this.disposed) this.adoptRemoteRemoval(remote); }
     catch (error) { if (!this.disposed && error instanceof AuthError) this.emit({ ...this.state, phase: 'signed-out', message: 'Het ouderaccount is gewijzigd. Log opnieuw in om verder te gaan.' }); }
   }
   async refresh(): Promise<void> {
@@ -173,6 +204,7 @@ export class FamilySyncClient {
     const generation = this.generation;
     try {
       const remote = await this.getCloud();
+      if (!this.disposed && this.adoptRemoteRemoval(remote)) return;
       if (this.disposed || this.state.dirty || this.generation !== generation) return;
       const changed = !sameContent(remote.snapshot, this.state.snapshot);
       if (changed && !this.canApplyRemote()) return;
@@ -180,6 +212,7 @@ export class FamilySyncClient {
       this.emit({ phase: remote.snapshot ? 'saved' : 'empty', revision: remote.revision, snapshot: remote.snapshot, dirty: false });
       this.cache(); if (changed) this.onRemote(remote.snapshot);
     } catch (error) {
+      if (error instanceof AccountBlockedError) return;
       if (!this.disposed) this.emit({ ...this.state, phase: error instanceof AuthError ? 'signed-out' : 'offline', message: error instanceof AuthError ? 'Log opnieuw in om te synchroniseren.' : 'Geen verbinding. Jullie verhalen blijven beschikbaar op dit apparaat.' });
     } finally { this.refreshing = false; }
   }
@@ -223,3 +256,4 @@ function preferLocalChangedChildren(base: FamilySnapshot, local: FamilySnapshot,
   return chosen;
 }
 class AuthError extends Error {}
+class AccountBlockedError extends Error {}

@@ -109,7 +109,7 @@ export async function emailAdminRequest(request: Request, action: Action): Promi
     if (result.lastTestAt !== null && (typeof result.lastTestAt !== 'string' || !Number.isFinite(Date.parse(result.lastTestAt)))) unavailable();
     const snapshot = { environment: expectedEnvironment, appOrigin: config.appUrl, configured: result.keyConfigured, source: result.source === 'unconfigured' ? 'none' : result.source, revision: result.revision,
       keyConfigured: result.keyConfigured, settings: parseEmailSettings(result.settings), lastTestAt: result.lastTestAt,
-      auth: { emailEnabled: config.emailEnabled, googleEnabled: false },
+      auth: { emailEnabled: config.emailEnabled, googleEnabled: config.googleEnabled },
     };
     if (action === 'test') {
       if (result.testStatus !== 'accepted') unavailable();

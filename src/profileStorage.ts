@@ -51,6 +51,8 @@ export function normalizeFamily(value: unknown): Family | null {
 
 export function isFamilySnapshot(value: unknown): value is FamilySnapshot {
   if (!record(value) || value.schemaVersion !== 1 || !record(value.data)) return false;
+  if (record(value.family) && value.family.version === 1 && Array.isArray(value.family.children) && value.family.children.length === 0)
+    return Object.keys(value.family).length === 3 && value.family.activeId === '' && Object.keys(value.data).length === 0;
   const family = normalizeFamily(value.family);
   if (!family || JSON.stringify(family) !== JSON.stringify(value.family)) return false;
   const childIds = new Set(family.children.map(child => child.id));
@@ -124,6 +126,11 @@ export function hydrateSnapshot(snapshot: FamilySnapshot): void {
   silent += 1;
   try {
     const current = normalizeFamily(parse(FAMILY_KEY));
+    const retained = new Set(snapshot.family.children.map(child => child.id));
+    for (const child of current?.children || []) if (!retained.has(child.id)) for (const field of CHILD_FIELDS) {
+      const key = physical(childKey(child.id, field)); memory.delete(key); volatileKeys.delete(key);
+      try { window.localStorage.removeItem(key); } catch { memory.set(key, 'null'); volatileKeys.add(key); }
+    }
     const activeId = current && snapshot.family.children.some(child => child.id === current.activeId) ? current.activeId : snapshot.family.activeId;
     saveFamily({ ...snapshot.family, activeId });
     for (const child of snapshot.family.children) for (const field of CHILD_FIELDS) {
@@ -165,3 +172,19 @@ export function legacySnapshotForParent(parentId: string, includeDemo = false): 
 export function markLegacyImported(parentId: string): void { setPhysical(IMPORT_OWNER_KEY, parentId); }
 
 export function isLocalStorageDurable(): boolean { return ![...volatileKeys].some(key => !scope || key.startsWith(`${scope}::`)); }
+
+/** Remove only this parent's app-managed device data, never another family's scope. */
+export function clearParentDeviceData(parentId: string): void {
+  const prefix = `fabelpad-scope-${encodeURIComponent(`parent:${parentId}`)}::`;
+  const draft = `fabelpad-cloud-draft-${encodeURIComponent(parentId)}`;
+  const matches = (key: string) => key.startsWith(prefix) || key === draft || key === `${draft}-recovery` || key === `fabelpad-import-pending-${encodeURIComponent(parentId)}` || key === `fabelpad-parent-activity-${encodeURIComponent(parentId)}`;
+  for (const key of [...memory.keys()]) if (matches(key)) { memory.delete(key); volatileKeys.delete(key); }
+  try {
+    const stored = window.localStorage;
+    const keys = Array.from({ length: stored.length }, (_, index) => stored.key(index)).filter((key): key is string => key !== null);
+    for (const key of keys) if (matches(key)) stored.removeItem(key);
+  } catch { /* Memory is cleared even when persistent storage is unavailable. */ }
+  if (scope === prefix.slice(0, -2)) { scopeEpoch += 1; notificationEpoch = null; }
+  if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') window.dispatchEvent(new CustomEvent('fabelpad-parent-data-cleared', { detail: { parentId } }));
+  dispatchChange();
+}

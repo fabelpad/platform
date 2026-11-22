@@ -1,6 +1,19 @@
 # Fabelpad — Supabase Auth en Resend instellen
 
-Gecontroleerd op 22 november 2026. De applicatie gebruikt wachtwoordloze e-mailcodes. Een code bevat **8 cijfers** en verloopt na **600 seconden**. Kinderen krijgen geen eigen e-mailadres. Google-inloggen blijft uit zolang daarvoor geen afzonderlijk gecontroleerde inrichting bestaat.
+## Actuele inrichting: SMTP behouden
+
+De eigenaar bevestigt op 22 november 2026 dat Resend als **Supabase Custom SMTP** is ingericht. E-mail en Google staan in beide projecten aan; Auth bevestigt e-mailadressen en gebruikt zes cijfers. Deze release wijzigt geen SMTP-credentials, Auth-limieten, Site URL of redirects en activeert **geen Send Email Hook**.
+
+1. Meld je per omgeving werkelijk aan met `info@dgwebservices.nl`, met de OTP uit de eigen mailbox of de geconfigureerde Google-identiteit. Rond de aparte ouderverklaring en voorwaardenaanvaarding af. De server kent uitsluitend het bevestigde adres de eerste beheerrol toe.
+2. Open **Beheer → E-mail** en voer daar per omgeving de afzonderlijke Resend API-key, geverifieerde afzender en antwoordadres in. Deze API-koppeling verzorgt Fabelpad-servicemails; werkende Auth-SMTP levert die key niet automatisch aan Vault. Deel de key niet in chat. Opslag vereist een geaccepteerde test naar de ingelogde beheerder; controleer ook de mailbox.
+3. Open **Beheer → E-mailtemplates**. Auth-HTML en onderwerp moeten bij SMTP handmatig naar het bijbehorende Supabase-project, **Authentication → Email Templates**, worden overgenomen. De editor en de statische exports gebruiken dezelfde Fabelpad-renderer. Serviceberichten gebruiken de opgeslagen API-instellingen rechtstreeks.
+4. Test werkelijke OTP-bezorging, codebevestiging, Google-callback en uitloggen per omgeving. Een openbare providerinstelling of geaccepteerde API-test bewijst geen inboxbezorging of geslaagde interactieve login.
+
+De onderstaande configuratietool beschrijft een **alternatieve historische hook-bootstrap**. Voer die voor deze SMTP-release niet uit: zij zou de werkende route veranderen. Gebruik haar alleen bij een later afzonderlijk besloten overstap naar de hook. De actuele uitvoeringsstatus staat in [STAGING-PRODUCTION-STATUS.md](STAGING-PRODUCTION-STATUS.md).
+
+## Alternatieve hook-bootstrap — niet uitvoeren voor deze SMTP-release
+
+Gecontroleerd op 22 november 2026. De applicatie gebruikt de door de eigenaar bevestigde **6-cijferige** e-mailcodes. De configuratietool stelt bij een nieuwe inrichting **600 seconden** geldigheid in; bestaande providerinstellingen worden bij deze release niet overschreven. Kinderen krijgen geen eigen e-mailadres. Google en e-mail zijn in beide projecten via de publieke Auth-settings als ingeschakeld bevestigd.
 
 Deze handleiding verzorgt de **eenmalige bootstrap vóór de eerste beheerderlogin**. Daarna staan Resend, afzenders en de 17 bewerkbare templates in **Beheer → E-mail** en **Beheer → E-mailtemplates**; volg [EMAIL-BEHEER.md](EMAIL-BEHEER.md). Vanaf de eerste geslaagde opslag is de eigen Vault-configuratie leidend. De bootstraptool roteert die actieve Vault-key niet.
 
@@ -95,7 +108,7 @@ De tool doet in volgorde het volgende:
 3. Plaatst bij eerste inrichting uitsluitend deze zes Edge-secrets: `RESEND_API_KEY`, `SEND_EMAIL_HOOK_SECRET`, `FABELPAD_EMAIL_FROM`, `FABELPAD_EMAIL_REPLY_TO`, `FABELPAD_APP_ORIGIN`, `FABELPAD_ENVIRONMENT`. Bestaande andere Edge-secrets blijven staan. Een actieve route met overeenkomende digests krijgt geen Edge-secret-schrijfactie.
 4. Controleert intern de zes SHA-256-digests tegen de bedoelde waarden. Dit leest geen geheimwaarden of digests terug naar de uitvoer.
 5. Zet de vaste Site URL en de drie exacte redirect-URL's `/inloggen`, `/auth/callback` en `/auth/confirm`; activeert e-mailaccounts met bevestiging, laat onbevestigde e-mailadressen niet inloggen en zet veilige e-mailwijziging aan.
-6. Zet OTP op 8 cijfers/600 seconden en de Auth-startlimieten op 30 mails per uur/60 seconden per gebruiker, schrijft alle 13 Fabelpad-onderwerpen en HTML-templates plus zeven beveiligingsmeldingen en stelt de Send Email Hook in met hetzelfde geheim als de Edge Function. Andere bestaande IP- en verificatielimieten blijven behouden.
+6. Zet OTP op 6 cijfers/600 seconden en de Auth-startlimieten op 30 mails per uur/60 seconden per gebruiker, schrijft alle 13 Fabelpad-onderwerpen en HTML-templates plus zeven beveiligingsmeldingen en stelt de Send Email Hook in met hetzelfde geheim als de Edge Function. Andere bestaande IP- en verificatielimieten blijven behouden. Voer dit niet opnieuw uit over de reeds door de eigenaar ingestelde productieconfiguratie zonder de verschillen te controleren.
 7. Leest de Auth-configuratie terug en vergelijkt die intern met de bedoelde configuratie. Er wordt **geen testmail verstuurd**.
 
 Er bestaat geen transactie over Edge-secrets en Auth samen. Bij een mislukte Auth-update of afwijkende readback probeert de tool eenmaal de vooraf in het geheugen bewaarde Auth-instellingen terug te zetten en controleert die terugkeer. Een oorspronkelijk uitgeschakelde hook blijft daarmee uit; een actieve hook houdt zijn eerdere instellingen en ongewijzigde geheimen. Voorbereide Edge-secrets van een eerste, inactieve inrichting kunnen blijven staan. Een herhaling genereert daarvoor opnieuw een vers hookgeheim.

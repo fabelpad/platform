@@ -4,9 +4,10 @@ import { createHash } from 'node:crypto';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { compileSource } from './source-test-loader.mjs';
-import { installEmailVaultTestFixture } from './email/settings-db-fixture.mjs';
+import { installEmailVaultTestFixture, localMigrationSql } from './email/settings-db-fixture.mjs';
 const { PGlite } = await import(process.env.FABELPAD_PGLITE_MODULE ?? '@electric-sql/pglite');
-const db = new PGlite();
+const {pgcrypto}=await import('@electric-sql/pglite/contrib/pgcrypto');
+const db = new PGlite({extensions:{pgcrypto}});
 const temp = await mkdtemp(join(tmpdir(), 'fabelpad-db-content-'));
 const parentA = '11111111-1111-4111-8111-111111111111';
 const parentB = '22222222-2222-4222-8222-222222222222';
@@ -16,8 +17,17 @@ const pendingAdministrator = '55555555-5555-4555-8555-555555555555';
 const fixture = name => ({ schemaVersion: 1, family: { version: 1, children: [{ id: 'shared-child-id', name, avatar: 0 }], activeId: 'shared-child-id' }, data: { 'shared-child-id': { favorites: ['station'], started: ['station'], completed: {}, prefs: { muted: false, calm: true }, 'story-station': { picks: [0], updatedAt: 1790000000000, contentVersion: 'a'.repeat(16), storyId: 'station', revision: 1 }, memory: { version: 1, encounters: [], items: [], openThreads: [], events: [] } } } });
 async function identity(id, role = 'authenticated', extra = {}) {
   await db.exec('reset role');
-  await db.query("select set_config('request.jwt.claims', $1, false)", [JSON.stringify({ sub: id, ...extra })]);
+  const session = id;
+  if (id && role === 'authenticated' && !extra.is_anonymous) {
+    await db.query("update auth.users set email=coalesce(email,'synthetic-'||id::text||'@example.test'),email_confirmed_at=coalesce(email_confirmed_at,now()) where id=$1",[id]);
+    await db.query('insert into auth.sessions(id,user_id) values($1,$1) on conflict do nothing',[id]);
+  }
+  await db.query("select set_config('request.jwt.claims', $1, false)", [JSON.stringify({ sub: id,session_id:session,amr:[{method:'otp',timestamp:Math.floor(Date.now()/1000)}], ...extra })]);
   await db.exec(`set role ${role}`);
+  if (id && role === 'authenticated' && !extra.is_anonymous) {
+    await db.query("select public.complete_parent_onboarding('2026-11-22','2026-11-22',true,true)");
+    await db.query("select public.consent_child_profile('shared-child-id',true,true)");
+  }
 }
 async function save(revision, snapshot) { return (await db.query('select public.save_family_snapshot($1, $2::jsonb) as result', [revision, JSON.stringify(snapshot)])).rows[0].result; }
 async function denied(sql, params = []) { await assert.rejects(db.query(sql, params), error => error.code === '42501'); }
@@ -39,7 +49,7 @@ try {
   `);
   await installEmailVaultTestFixture(db); // Not a cryptographic test; hosted Vault is verified separately.
   const migrationRoot = new URL('../supabase/migrations/', import.meta.url);
-  for (const name of (await readdir(migrationRoot)).filter(name => name.endsWith('.sql')).sort()) await db.exec(await readFile(new URL(name, migrationRoot), 'utf8'));
+  for (const name of (await readdir(migrationRoot)).filter(name => name.endsWith('.sql')).sort()) await db.exec(localMigrationSql(await readFile(new URL(name, migrationRoot), 'utf8')));
   const bootstrapGrant = async id => (await db.query('select grant_source from public.content_admins where user_id=$1', [id])).rows[0]?.grant_source;
   assert.equal(await bootstrapGrant(bootstrapAdministrator), 'bootstrap_email', 'Migration backfills only the already verified owner-approved mailbox');
   assert.equal(await bootstrapGrant(parentB), undefined);

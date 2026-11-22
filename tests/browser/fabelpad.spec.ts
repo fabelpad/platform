@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+const activeParent = { state: 'active', termsVersion: '2026-11-22', privacyVersion: '2026-11-22', acceptedTermsVersion: '2026-11-22', shownPrivacyVersion: '2026-11-22', lastActivityAt: '2026-11-22T12:00:00Z', deletionDeadline: null, consents: [] };
 
 test('website, child library, family and admin routes stay distinct', async ({ page, request }) => {
   const errors: string[] = [];
@@ -87,7 +88,8 @@ test('family UI uses server metadata, isolates siblings and opens parent setting
   const parent = { id: 'test-parent-a', email: 'parent@example.test', displayName: 'Testouder' };
   let snapshot = { schemaVersion:1, family:{version:1,children:[{id:'test-mila',name:'Mila',avatar:0},{id:'test-bo',name:'Bo',avatar:1}],activeId:'test-mila'},data:{'test-mila':{},'test-bo':{}} };
   let revision = 1;
-  await page.route('**/api/auth/session', route => route.fulfill({json:{configured:true,parent,admin:false,providers:{email:true,google:false}}}));
+  await page.route('**/api/auth/session', route => route.fulfill({json:{configured:true,parent,admin:false,providers:{email:true,google:false},lifecycle:activeParent}}));
+  await page.route('**/api/parent/status', route => route.fulfill({json:activeParent}));
   await page.route('**/api/family', async route => {
     if (route.request().method() === 'PUT') { snapshot = route.request().postDataJSON().snapshot; revision++; }
     await route.fulfill({json:{parent,revision,snapshot}});
@@ -117,7 +119,7 @@ test('studio prevents edits while saving a server concept (mocked admin session)
   const parent = {id:'test-admin',email:'admin@example.test',displayName:'Beheerder'};
   let draft = {metadata:{title:'Het Verdwaalde Station',description:'Een verhaal',image:'/art/station.webp'},chapters:{},updatedAt:''};
   let finishSave: (()=>void) | undefined;
-  await page.route('**/api/auth/session', route => route.fulfill({json:{configured:true,parent,admin:true}}));
+  await page.route('**/api/auth/session', route => route.fulfill({json:{configured:true,parent,admin:true,lifecycle:activeParent}}));
   await page.route('**/api/content/drafts/station', async route => {
     if (route.request().method() === 'PUT') {
       draft = route.request().postDataJSON().draft;
@@ -151,7 +153,7 @@ test('email login asks for a code and preserves a safe studio return (mocked pro
   await page.getByRole('button', {name:'Stuur mij een inlogcode'}).click();
   await expect(page.getByRole('textbox', {name:'Jouw e-mailadres'})).toBeDisabled();
   await expect(page.getByText('Je Fabelpad-inlogcode is aangevraagd.')).toBeVisible();
-  await page.getByRole('textbox', {name:'Code uit je e-mail'}).fill('123456');
+  await page.getByRole('textbox', {name:'6-cijferige code uit je e-mail'}).fill('123456');
   await page.getByRole('button', {name:'Veilig inloggen'}).click();
   await expect(page).toHaveURL(/\/studio$/);
   expect(verification).toEqual({email:'parent@example.test',token:'123456',next:'/studio'});

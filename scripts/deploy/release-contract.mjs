@@ -311,10 +311,20 @@ export function assertSharedLock(file) {
 
 export const ROOT_NOFOLLOW = constants.O_NOFOLLOW;
 
-// An operator writes this receipt only after verifying Supabase email OTP and
-// the Resend Send Email Hook for this exact environment/project/origin. No provider credentials
-// or mail content enter the build, runner, receipt or immutable release.
+// Version 2 records checked provider settings and the owner's SMTP setup,
+// with interactive OTP/OAuth acceptance explicitly outstanding. Version 1 is
+// retained for previously verified hook receipts. Neither contains credentials.
 export function validateEmailReadiness(profile, config, receipt) {
+  if (receipt?.version === 2) {
+    invariant(receipt.environment === profile.environment && receipt.siteId === profile.siteId
+      && receipt.appOrigin === config.FABELPAD_APP_ORIGIN && receipt.supabaseUrl === config.NEXT_PUBLIC_SUPABASE_URL
+      && config.FABELPAD_DATA_MODE === 'supabase' && receipt.emailProviderConfigured === true && receipt.googleProviderConfigured === true
+      && receipt.otpDigits === 6 && receipt.ownerConfigurationAttested === true
+      && receipt.authenticationAcceptance === 'requires-interactive-owner-test'
+      && typeof receipt.settingsCheckedAt === 'string' && Number.isFinite(Date.parse(receipt.settingsCheckedAt)),
+    'De providerconfiguratie is niet voor dit exacte doel gecontroleerd.');
+    return receipt;
+  }
   invariant(receipt && receipt.version === 1 && receipt.environment === profile.environment
     && receipt.siteId === profile.siteId && receipt.provider === 'resend'
     && receipt.emailOtpVerified === true && receipt.sendEmailHookVerified === true && config.FABELPAD_DATA_MODE === 'supabase'

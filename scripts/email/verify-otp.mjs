@@ -47,7 +47,7 @@ export async function verifyAdminOtp(client, config, readCode, now = () => new D
     const sent = await client.auth.signInWithOtp({ email: MAILBOX, options: { shouldCreateUser: true } });
     if (sent.error) throw new OtpVerificationError('De OTP-aanvraag is geweigerd; controleer de eigen providerinstellingen.');
     const code = await readCode();
-    if (typeof code !== 'string' || !/^\d{8}$/u.test(code)) throw new OtpVerificationError('Gebruik de achtcijferige code uit de beheermailbox.');
+    if (typeof code !== 'string' || !/^\d{6}$/u.test(code)) throw new OtpVerificationError('Gebruik de zescijferige code uit de beheermailbox.');
     const verified = await client.auth.verifyOtp({ email: MAILBOX, token: code, type: 'email' });
     sessionCreated = Boolean(verified.data?.session);
     if (verified.error || !sessionCreated) throw new OtpVerificationError('De code is niet bevestigd; vraag zo nodig een nieuwe aan.');

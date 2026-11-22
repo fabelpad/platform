@@ -10,7 +10,7 @@ const temp = await mkdtemp(join(tmpdir(), 'fabelpad-sync-'));
 const storageURL = await compileSource(new URL('../src/profileStorage.ts', import.meta.url), temp);
 const { FamilySyncClient } = await import(await compileSource(new URL('../src/cloudSync.ts', import.meta.url), temp));
 const storageAPI = await import(storageURL);
-class MemoryStore { data = new Map(); getItem(key) { return this.data.get(key) ?? null; } setItem(key, value) { this.data.set(key, value); } }
+class MemoryStore { data = new Map(); get length() { return this.data.size; } key(index) { return [...this.data.keys()][index] ?? null; } getItem(key) { return this.data.get(key) ?? null; } setItem(key, value) { this.data.set(key, value); } removeItem(key) { this.data.delete(key); } }
 const clone = value => JSON.parse(JSON.stringify(value));
 const snapshot = (name = 'Noor') => ({ schemaVersion: 1, family: { version: 1, children: [{ id: 'child-one', name, avatar: 0 }], activeId: 'child-one' }, data: { 'child-one': {} } });
 const changed = (source, field, value) => { const next = clone(source); next.data['child-one'][field] = value; return next; };
@@ -231,6 +231,66 @@ function server(owner = 'parent-a', initial = snapshot()) {
   const exported = storageAPI.exportSnapshot(); assert.equal(exported.family.activeId, 'child-one');
   client.enqueue(exported); await client.flush(); assert.equal(remote.putCount, 0);
   storageAPI.hydrateSnapshot(family); assert.equal(storageAPI.loadFamily().activeId, 'child-two', 'Remote hydration must preserve this device’s selected child');
+  client.dispose(); delete globalThis.window;
+}
+
+// A remotely withdrawn child disappears immediately even while a reader/modal is open.
+{
+  const store = new MemoryStore(); globalThis.window = { localStorage: store, dispatchEvent() {} };
+  const family = snapshot(); family.family.children.push({ id: 'child-two', name: 'Dex', avatar: 1 }); family.data['child-two'] = {};
+  storageAPI.setStorageScope('parent:parent-a'); storageAPI.hydrateSnapshot(family); storageAPI.saveChild('child-one', 'favorites', ['station']);
+  const remote = server('parent-a', family); let applied;
+  const client = new FamilySyncClient('parent-a', { fetcher: remote.fetcher, store, debounceMs: 60_000, canApplyRemote: () => false, onRemote: value => { applied = value; if (value?.family.children.length) storageAPI.hydrateSnapshot(value); } });
+  await client.load(); store.setItem(`${client.cacheKey}-recovery`, JSON.stringify(family));
+  store.setItem('fabelpad-parent-activity-parent-a', JSON.stringify([{ profileId: 'child-one' }]));
+  remote.snapshot = { ...family, family: { ...family.family, children: [family.family.children[1]], activeId: 'child-two' }, data: { 'child-two': {} } }; remote.revision++;
+  await client.verifyIdentity();
+  assert.equal(client.getState().phase, 'saved'); assert.equal(client.getState().revision, 2);
+  assert.equal(applied.family.children[0].name, 'Dex', 'An open reader cannot postpone a withdrawal');
+  assert.equal(storageAPI.readChild('child-one', 'favorites', null), null);
+  assert.equal(store.getItem(`${client.cacheKey}-recovery`), 'null');
+  assert.equal(store.getItem('fabelpad-parent-activity-parent-a'), null);
+  assert.equal(storageAPI.loadFamily().children.length, 1); assert.equal(storageAPI.loadFamily().children[0].name, 'Dex');
+  client.dispose(); delete globalThis.window;
+}
+
+// An offline pending draft cannot resurrect the last profile once its remote ID has been withdrawn.
+{
+  const store = new MemoryStore(); const remote = server();
+  const old = new FamilySyncClient('parent-a', { fetcher: remote.fetcher, store, debounceMs: 60_000 }); await old.load();
+  remote.online = false; old.enqueue(changed(snapshot(), 'favorites', ['toy'])); await old.flush(); old.dispose();
+  remote.online = true; remote.snapshot = { schemaVersion: 1, family: { version: 1, children: [], activeId: '' }, data: {} }; remote.revision++;
+  let applied;
+  const renewed = new FamilySyncClient('parent-a', { fetcher: remote.fetcher, store, debounceMs: 60_000, onRemote: value => { applied = value; } });
+  await renewed.load(); await renewed.flush();
+  assert.equal(renewed.getState().phase, 'empty'); assert.equal(renewed.getState().dirty, false);
+  assert.deepEqual(applied.family.children, []); assert.equal(remote.putCount, 0);
+  assert.equal(JSON.parse(store.getItem(renewed.cacheKey)).snapshot.family.children.length, 0);
+  renewed.dispose();
+}
+
+// A revoked account or withdrawn profile destroys its own draft; ordinary expiry stays recoverable above.
+for (const code of ['account_inactive', 'profile_consent_required']) {
+  const store = new MemoryStore(); globalThis.window = { localStorage: store, dispatchEvent() {} };
+  storageAPI.setStorageScope('parent:parent-a'); storageAPI.hydrateSnapshot(snapshot('Noor'));
+  storageAPI.setStorageScope('parent:parent-b'); storageAPI.hydrateSnapshot(snapshot('Dex'));
+  let blocked = false, uploads = 0;
+  const remote = server();
+  const fetcher = (url, options) => {
+    if (blocked) { if (options.method === 'PUT') uploads++; return Promise.resolve(json({ error: code }, 403)); }
+    return remote.fetcher(url, options);
+  };
+  const client = new FamilySyncClient('parent-a', { fetcher, store, debounceMs: 60_000 }); await client.load();
+  client.enqueue(changed(snapshot(), 'favorites', ['toy']));
+  store.setItem(`${client.cacheKey}-recovery`, JSON.stringify({ child: 'must disappear' }));
+  blocked = true; await client.flush();
+  assert.equal(client.getState().phase, 'signed-out'); assert.equal(client.getState().dirty, false); assert.equal(client.getState().snapshot, null);
+  assert.equal(store.getItem(client.cacheKey), 'null'); assert.equal(store.getItem(`${client.cacheKey}-recovery`), 'null');
+  storageAPI.setStorageScope('parent:parent-a'); assert.equal(storageAPI.loadFamily().children[0].name, 'Avonturier');
+  storageAPI.setStorageScope('parent:parent-b'); assert.equal(storageAPI.loadFamily().children[0].name, 'Dex');
+  client.enqueue(snapshot('stale offline data')); await client.flush(); await client.refresh();
+  assert.equal(uploads, 1, 'A blocked client must never retry a stale snapshot');
+  assert.equal(client.getState().snapshot, null);
   client.dispose(); delete globalThis.window;
 }
 

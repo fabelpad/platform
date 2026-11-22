@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { readFile } from 'node:fs/promises';
 
 const parent = { id: 'synthetic-mail-admin', email: 'admin@example.test', displayName: 'Testbeheerder' };
 const settings = {
@@ -192,4 +193,28 @@ test('a tracking restriction explains the provider setting without a false edit 
   await page.getByRole('button', { name: 'Testmail opnieuw versturen', exact: true }).click();
   await expect(page.locator('.email-error[role=alert]')).toHaveText('Zet open- en kliktracking uit bij je domein in Resend.');
   await expect(page.getByLabel('Naam afzender', { exact: true })).toHaveValue('Fabelpad');
+});
+
+
+test('edited Auth copy downloads safe Supabase SMTP HTML while service templates have no SMTP export', async ({ page }) => {
+  await mockReadRoutes(page);
+  await page.goto('/studio/email/templates');
+  await page.getByLabel('Onderwerp', { exact: true }).fill('Een eigen veilige OTP-template');
+  await page.getByLabel('Kop in de e-mail', { exact: true }).fill('Een aangepaste Fabelpad-kop');
+  await expect(page.getByLabel('Onderwerp voor Supabase', { exact: true })).toHaveValue('[TEST] Een eigen veilige OTP-template');
+  await expect(page.getByText('Bewaren in Fabelpad wijzigt deze Supabase-templates niet automatisch.', { exact: false })).toBeVisible();
+  const downloadReady = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'HTML downloaden voor Supabase', exact: true }).click();
+  const download = await downloadReady;
+  expect(download.suggestedFilename()).toBe('fabelpad-staging-magic_link.html');
+  const file = await download.path();
+  expect(file).not.toBeNull();
+  const html = await readFile(file!, 'utf8');
+  expect(html).toContain('Een aangepaste Fabelpad-kop');
+  expect(html).toContain('{{ .Token }}');
+  expect(html).toContain('{{ .SiteURL }}');
+  expect(html).not.toMatch(/000000|123456|re_synthetic/);
+  await page.getByRole('navigation', { name: 'Alle e-mailtemplates' }).getByRole('button', { name: /^Welkom/ }).click();
+  await expect(page.getByRole('button', { name: 'HTML downloaden voor Supabase', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: 'Servicebericht vanuit Fabelpad', exact: true })).toBeVisible();
 });
