@@ -1,0 +1,250 @@
+{
+  "scope": "reviewed registration migration applied staging then production; no user, family, Auth or SMTP mutation",
+  "applicationSha": "003670aad04ecdf761b21627d8624dea50403ae5",
+  "migration": {
+    "file": "20261122210104_parent_registration_proof.sql",
+    "sha256": "60621f836cf16c80b070f4daae69cc3f5de779c40566b69fe3d5caf4b52c79ba",
+    "localRealSqlScenariosPassed": 27,
+    "independentReviewPassed": true,
+    "warmWorkerCleanupPassed": true,
+    "privateAnonCallableOnlyRegistrationBegin": true
+  },
+  "environments": {
+    "staging": {
+      "before": {
+        "users": 1,
+        "families": 1,
+        "acceptances": 1,
+        "migrations": 10,
+        "inactivity_enabled": false
+      },
+      "after": {
+        "users": 1,
+        "families": 1,
+        "functions": [
+          {
+            "anon": true,
+            "name": "begin_parent_registration",
+            "schema": "private",
+            "service_role": false,
+            "authenticated": true,
+            "public_default": false,
+            "security_definer": true
+          },
+          {
+            "anon": false,
+            "name": "complete_parent_registration",
+            "schema": "private",
+            "service_role": false,
+            "authenticated": true,
+            "public_default": false,
+            "security_definer": true
+          },
+          {
+            "anon": true,
+            "name": "begin_parent_registration",
+            "schema": "public",
+            "service_role": false,
+            "authenticated": true,
+            "public_default": false,
+            "security_definer": false
+          },
+          {
+            "anon": false,
+            "name": "complete_parent_registration",
+            "schema": "public",
+            "service_role": false,
+            "authenticated": true,
+            "public_default": false,
+            "security_definer": false
+          }
+        ],
+        "proof_rls": true,
+        "migrations": 11,
+        "acceptances": 1,
+        "active_cron_jobs": 1,
+        "family_valid_count": 1,
+        "inactivity_enabled": false,
+        "registration_proofs": 0,
+        "private_anon_callable": [
+          "begin_parent_registration"
+        ],
+        "public_family_anon_save": false,
+        "proof_direct_role_access": [
+          {
+            "role": "anon",
+            "delete": false,
+            "insert": false,
+            "select": false,
+            "update": false
+          },
+          {
+            "role": "authenticated",
+            "delete": false,
+            "insert": false,
+            "select": false,
+            "update": false
+          },
+          {
+            "role": "service_role",
+            "delete": false,
+            "insert": false,
+            "select": false,
+            "update": false
+          }
+        ],
+        "proof_has_auth_foreign_key": false,
+        "preauth_declarations_backfilled": 0,
+        "public_family_authenticated_save": true
+      },
+      "migrationHistoryNormalization": {
+        "executionVersion": "20261122211211",
+        "sourceVersion": "20261122210104",
+        "sqlSha256": "60621f836cf16c80b070f4daae69cc3f5de779c40566b69fe3d5caf4b52c79ba",
+        "statementCount": 1
+      },
+      "advisorsBefore": {
+        "counts": {
+          "INFO": 1,
+          "WARN": 1
+        },
+        "lints": [
+          {
+            "name": "rls_enabled_no_policy",
+            "level": "INFO"
+          },
+          {
+            "name": "auth_leaked_password_protection",
+            "level": "WARN"
+          }
+        ]
+      },
+      "advisorsAfter": {
+        "lints": [
+          {
+            "name": "rls_enabled_no_policy",
+            "level": "INFO"
+          },
+          {
+            "name": "auth_leaked_password_protection",
+            "level": "WARN"
+          }
+        ]
+      }
+    },
+    "production": {
+      "before": {
+        "users": 0,
+        "families": 0,
+        "acceptances": 0,
+        "migrations": 10,
+        "inactivity_enabled": false
+      },
+      "after": {
+        "users": 0,
+        "families": 0,
+        "functions": [
+          {
+            "anon": true,
+            "name": "begin_parent_registration",
+            "schema": "private",
+            "service_role": false,
+            "authenticated": true,
+            "public_default": false,
+            "security_definer": true
+          },
+          {
+            "anon": false,
+            "name": "complete_parent_registration",
+            "schema": "private",
+            "service_role": false,
+            "authenticated": true,
+            "public_default": false,
+            "security_definer": true
+          },
+          {
+            "anon": true,
+            "name": "begin_parent_registration",
+            "schema": "public",
+            "service_role": false,
+            "authenticated": true,
+            "public_default": false,
+            "security_definer": false
+          },
+          {
+            "anon": false,
+            "name": "complete_parent_registration",
+            "schema": "public",
+            "service_role": false,
+            "authenticated": true,
+            "public_default": false,
+            "security_definer": false
+          }
+        ],
+        "proof_rls": true,
+        "migrations": 11,
+        "acceptances": 0,
+        "active_cron_jobs": 1,
+        "family_valid_count": 0,
+        "inactivity_enabled": false,
+        "registration_proofs": 0,
+        "private_anon_callable": [
+          "begin_parent_registration"
+        ],
+        "public_family_anon_save": false,
+        "proof_direct_role_access": [
+          {
+            "role": "anon",
+            "delete": false,
+            "insert": false,
+            "select": false,
+            "update": false
+          },
+          {
+            "role": "authenticated",
+            "delete": false,
+            "insert": false,
+            "select": false,
+            "update": false
+          },
+          {
+            "role": "service_role",
+            "delete": false,
+            "insert": false,
+            "select": false,
+            "update": false
+          }
+        ],
+        "proof_has_auth_foreign_key": false,
+        "preauth_declarations_backfilled": 0,
+        "public_family_authenticated_save": true
+      },
+      "migrationHistoryNormalization": {
+        "executionVersion": "20261122211350",
+        "sourceVersion": "20261122210104",
+        "sqlSha256": "60621f836cf16c80b070f4daae69cc3f5de779c40566b69fe3d5caf4b52c79ba",
+        "statementCount": 1
+      },
+      "advisorsBefore": {
+        "counts": {
+          "INFO": 1
+        },
+        "lints": [
+          {
+            "name": "rls_enabled_no_policy",
+            "level": "INFO"
+          }
+        ]
+      },
+      "advisorsAfter": {
+        "lints": [
+          {
+            "name": "rls_enabled_no_policy",
+            "level": "INFO"
+          }
+        ]
+      }
+    }
+  },
+  "passed": true
+}

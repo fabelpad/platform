@@ -1,0 +1,205 @@
+{
+  "checkedAt": "2026-11-22T21:36:40.923942+00:00",
+  "repository": "fabelpad/platform",
+  "integrationBranch": "main",
+  "applicationSha": "003670aad04ecdf761b21627d8624dea50403ae5",
+  "scope": "registration declarations once, JSONB profile synchronization, actual available web features; staging HTTPS active, production app loopback only",
+  "githubRuns": {
+    "webCi": {
+      "conclusion": "success",
+      "createdAt": "2026-11-22T21:12:04Z",
+      "databaseId": 45070746885,
+      "event": "push",
+      "headSha": "003670aad04ecdf761b21627d8624dea50403ae5",
+      "status": "completed",
+      "updatedAt": "2026-11-22T21:13:38Z",
+      "url": "https://github.com/fabelpad/platform/actions/runs/45070746885"
+    },
+    "nativeCi": {
+      "conclusion": "success",
+      "createdAt": "2026-11-22T21:12:04Z",
+      "databaseId": 45070746947,
+      "event": "push",
+      "headSha": "003670aad04ecdf761b21627d8624dea50403ae5",
+      "status": "completed",
+      "updatedAt": "2026-11-22T21:30:36Z",
+      "url": "https://github.com/fabelpad/platform/actions/runs/45070746947"
+    },
+    "stagingCandidate": {
+      "conclusion": "success",
+      "createdAt": "2026-11-22T21:30:49Z",
+      "databaseId": 45072508682,
+      "event": "workflow_dispatch",
+      "headSha": "003670aad04ecdf761b21627d8624dea50403ae5",
+      "status": "completed",
+      "updatedAt": "2026-11-22T21:32:26Z",
+      "url": "https://github.com/fabelpad/platform/actions/runs/45072508682"
+    },
+    "productionCandidate": {
+      "conclusion": "success",
+      "createdAt": "2026-11-22T21:32:57Z",
+      "databaseId": 45072710965,
+      "event": "workflow_dispatch",
+      "headSha": "003670aad04ecdf761b21627d8624dea50403ae5",
+      "status": "completed",
+      "updatedAt": "2026-11-22T21:34:38Z",
+      "url": "https://github.com/fabelpad/platform/actions/runs/45072710965"
+    },
+    "stagingActivation": {
+      "conclusion": "success",
+      "createdAt": "2026-11-22T21:33:04Z",
+      "databaseId": 45072723017,
+      "event": "workflow_dispatch",
+      "headSha": "003670aad04ecdf761b21627d8624dea50403ae5",
+      "status": "completed",
+      "updatedAt": "2026-11-22T21:33:57Z",
+      "url": "https://github.com/fabelpad/platform/actions/runs/45072723017"
+    },
+    "productionActivation": {
+      "conclusion": "success",
+      "createdAt": "2026-11-22T21:34:52Z",
+      "databaseId": 45072894209,
+      "event": "workflow_dispatch",
+      "headSha": "003670aad04ecdf761b21627d8624dea50403ae5",
+      "status": "completed",
+      "updatedAt": "2026-11-22T21:35:48Z",
+      "url": "https://github.com/fabelpad/platform/actions/runs/45072894209"
+    }
+  },
+  "localValidation": {
+    "checkedAt": "2026-11-22T21:21:11.718905+00:00",
+    "sourceSha": "003670aad04ecdf761b21627d8624dea50403ae5",
+    "repository": "fabelpad/platform",
+    "cleanGitArchive": true,
+    "cleanDirectory": "/tmp/fabelpad-registration-clean-20261122-wpaebkaz",
+    "node": "24.18.0",
+    "pnpm": "11.25.0",
+    "next": "16.3.4",
+    "installCommand": "pnpm install --frozen-lockfile",
+    "buildCommand": "bash scripts/local-build.sh",
+    "dataMode": "local",
+    "buildPassed": true,
+    "buildSeconds": 44.2,
+    "browserPassed": 43,
+    "browserTotal": 43,
+    "browserSeconds": 29.2,
+    "temporaryServerStopped": true,
+    "syntheticTestDataOnly": true,
+    "realOtpOrGoogleLoginPerformed": false,
+    "providerMailSent": false,
+    "newPlayUploadTriggered": false,
+    "includedContractTests": {
+      "auth": 51,
+      "registrationDatabase": 27,
+      "parentApi": 36,
+      "privacyAdminApi": 48,
+      "email": 59,
+      "mailPython": 17,
+      "deploy": 89,
+      "hostPython": 19
+    },
+    "logs": {
+      "build": {
+        "path": "/tmp/fabelpad-registration-clean-build-20261122.log",
+        "sha256": "b0497bc2bd2eb0bcc2e9cba182de74aac5cbc48566857089ce89a3376eba8e3f"
+      },
+      "browser": {
+        "path": "/tmp/fabelpad-registration-clean-browser-20261122.log",
+        "sha256": "6eac646a0d6c04df2e3aae10de7728cf5c07b2dce23a2a8b78c1afb1e5977086"
+      }
+    }
+  },
+  "environments": {
+    "staging": {
+      "candidateId": "003670aad04ecdf761b21627d8624dea50403ae5-45072508682-1",
+      "configId": "regprof-20261122-stg",
+      "artifactDigest": "299ed89254b1bdf72ebe43a69d4c595536b9f1baa268e2bcade496a606142bbb",
+      "runtimeConfigDigest": "c1b1fdd10eedc89d01a8e23adc2f8e1fe3d09c1f9756d5a85180e3b4f45aba30",
+      "serviceActive": true,
+      "serviceEnabled": true,
+      "healthExactSha": true,
+      "current": "/srv/sites/fabelpad-vps08-staging/releases/003670aad04ecdf761b21627d8624dea50403ae5-45072508682-1",
+      "previous": "releases/538c6b719e372f4dca99cfa2bc824cbf6310f5c1-45061896274-1",
+      "loopbackPort": 4188,
+      "publiclyActive": true
+    },
+    "production": {
+      "candidateId": "003670aad04ecdf761b21627d8624dea50403ae5-45072710965-1",
+      "configId": "regprof-20261122-prd",
+      "artifactDigest": "c9667ca63b799c6fff634b8cf51a695fd75671b18691347bcd42281d606284cc",
+      "runtimeConfigDigest": "4d52066ea55231573fde3aaf9c35cff53159eeed14e844ecc3a7bcfa4289205c",
+      "serviceActive": true,
+      "serviceEnabled": true,
+      "healthExactSha": true,
+      "current": "/srv/sites/fabelpad-vps08-production/releases/003670aad04ecdf761b21627d8624dea50403ae5-45072710965-1",
+      "previous": "releases/538c6b719e372f4dca99cfa2bc824cbf6310f5c1-45062081153-1",
+      "loopbackPort": 4189,
+      "publiclyActive": false
+    }
+  },
+  "database": {
+    "migrationCountPerProject": 11,
+    "registrationMigration": "20261122210104_parent_registration_proof.sql",
+    "registrationSqlSha256": "60621f836cf16c80b070f4daae69cc3f5de779c40566b69fe3d5caf4b52c79ba",
+    "migrationBackfilledHistoricalDeclarations": false,
+    "migrationRewroteUserProfiles": false,
+    "privateRegistrationProofLifetimeMinutes": 30,
+    "existingStagingWarningUnchanged": "auth_leaked_password_protection",
+    "inactivityDeletionEnabled": false
+  },
+  "behaviour": {
+    "registrationDeclarationsAppliedOnlyAfterVerifiedSession": true,
+    "alreadyCompletedParentRedirectsToFamily": true,
+    "expiredOrMissingProofRequiresExplicitFallback": true,
+    "childProfileConsentRemainsSeparate": true,
+    "jsonObjectOrderIgnoredButArrayOrderPreserved": true,
+    "historicalLocalProfileStorageNamespacePreserved": true,
+    "simulatedSubscriptionAndParentAccessRemovedFromReachableRoutes": true,
+    "legacyDemoRouteRedirectsToReader": true
+  },
+  "existingEnvironmentPreservation": {
+    "sixExistingServicesMatchBaseline": true,
+    "sharedConfigurationHashesMatchBaseline": true,
+    "productionPublicRouteRemainsAbsent": true,
+    "stagingProxyUnchanged": true,
+    "defaultHostsUnchanged": true,
+    "dnsFirewallSharedSshPackagesChanged": false,
+    "hostAdaptersChanged": false
+  },
+  "emailAndAuth": {
+    "customSmtpPreserved": true,
+    "sendEmailHookEnabled": false,
+    "newGithubVariablesOrSecrets": false,
+    "newInteractiveOtpOrGoogleLoginPerformedByAgent": false,
+    "realMailDeliveryProvenByThisRelease": false,
+    "apiSettingsPath": "/studio/email",
+    "templateEditorPath": "/studio/email/templates"
+  },
+  "rollback": {
+    "previousAppSha": "538c6b719e372f4dca99cfa2bc824cbf6310f5c1",
+    "appAndRuntimePaired": true,
+    "liveRollbackPerformed": false,
+    "databaseNotRevertedByAppRollback": true,
+    "previousAppRestoresOldRegistrationAndProfileBehaviour": true
+  },
+  "android": {
+    "nativeSourceChanged": false,
+    "playUploadTriggered": false
+  },
+  "evidenceFiles": [
+    "registration-activated-2026-11-22.json",
+    "registration-database-final-2026-11-22.json",
+    "registration-host-before-2026-11-22.json",
+    "registration-local-validation-2026-11-22.json",
+    "registration-production-candidate-2026-11-22.json",
+    "registration-profile-before-2026-11-22.json",
+    "registration-routing-2026-11-22.json",
+    "registration-rpc-production-2026-11-22.json",
+    "registration-rpc-staging-2026-11-22.json",
+    "registration-staging-candidate-2026-11-22.json",
+    "registration-staging-public-2026-11-22.json",
+    "registration-staging-public-smoke-2026-11-22.json",
+    "registration-staging-public-smoke-initial-2026-11-22.json",
+    "registration-supabase-live-2026-11-22.json"
+  ]
+}

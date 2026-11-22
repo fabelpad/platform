@@ -1,0 +1,82 @@
+{
+  "checkedAt": "2026-11-22T21:03:24.624Z",
+  "readOnly": true,
+  "personalDataRead": false,
+  "sourceBug": "Browser used order-sensitive JSON.stringify comparisons for PostgreSQL JSONB objects.",
+  "localReproductionBeforeFix": {
+    "originalAccepted": true,
+    "postgresJSONBAccepted": false,
+    "databaseSaved": true,
+    "putCount": 1,
+    "syncPhase": "offline",
+    "dirty": true
+  },
+  "environments": [
+    {
+      "environment": "staging",
+      "users": 1,
+      "families": 1,
+      "activeParents": 1,
+      "activeConsents": 1,
+      "migrationCount": 10,
+      "familyRlsEnabled": true,
+      "saveFunctionHash": "59939b8e0a6fdc99b5091acb569761bf70fd400f8670ef3dad458d60357a3c91",
+      "inactivityEnabled": false,
+      "familyReadPolicies": 1,
+      "validStoredFamilies": 1,
+      "consentsWithoutFamily": 0,
+      "savePublicAnonExecute": false,
+      "familyAuthenticatedInsert": false,
+      "familyAuthenticatedSelect": true,
+      "familyAuthenticatedUpdate": false,
+      "savePublicAuthenticatedExecute": true,
+      "savePrivateAuthenticatedExecute": true,
+      "syntheticJsonbProof": {
+        "originalObjectKeyOrder": [
+          "version",
+          "children",
+          "activeId"
+        ],
+        "returnedObjectKeyOrder": [
+          "version",
+          "activeId",
+          "children"
+        ],
+        "oldSerializedShapeComparisonPasses": false
+      }
+    },
+    {
+      "environment": "production",
+      "users": 0,
+      "families": 0,
+      "activeParents": 0,
+      "activeConsents": 0,
+      "migrationCount": 10,
+      "familyRlsEnabled": true,
+      "saveFunctionHash": "59939b8e0a6fdc99b5091acb569761bf70fd400f8670ef3dad458d60357a3c91",
+      "inactivityEnabled": false,
+      "familyReadPolicies": 1,
+      "validStoredFamilies": 0,
+      "consentsWithoutFamily": 0,
+      "savePublicAnonExecute": false,
+      "familyAuthenticatedInsert": false,
+      "familyAuthenticatedSelect": true,
+      "familyAuthenticatedUpdate": false,
+      "savePublicAuthenticatedExecute": true,
+      "savePrivateAuthenticatedExecute": true,
+      "syntheticJsonbProof": {
+        "originalObjectKeyOrder": [
+          "version",
+          "children",
+          "activeId"
+        ],
+        "returnedObjectKeyOrder": [
+          "version",
+          "activeId",
+          "children"
+        ],
+        "oldSerializedShapeComparisonPasses": false
+      }
+    }
+  ]
+}

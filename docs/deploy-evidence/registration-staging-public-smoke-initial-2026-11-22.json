@@ -1,0 +1,33 @@
+{
+  "checkedAt": "2026-11-22T21:34:39.670Z",
+  "target": "staging",
+  "expectedRevision": "003670aad04ecdf761b21627d8624dea50403ae5",
+  "readOnlyServer": true,
+  "disposableAnonymousBrowser": true,
+  "persistentUserStorageUsed": false,
+  "realOtpRequested": false,
+  "realGoogleStarted": false,
+  "realAuthCompleted": false,
+  "realMailSent": false,
+  "pageTextOrPersonalDataRecorded": false,
+  "screenshotsOrTracesRecorded": false,
+  "checks": {
+    "strictTlsAndHealth200": true,
+    "healthExpectedRevision": true,
+    "healthExpectedEnvironment": true,
+    "healthConfigured": true,
+    "freshBrowserAnonymous": true,
+    "emailAndGoogleEnabled": true,
+    "home:http200": true
+  },
+  "routeStatuses": {
+    "health": 200,
+    "anonymousSession": 200,
+    "home": 200
+  },
+  "blockedMutationRequests": 0,
+  "blockedExternalRequests": 0,
+  "browserError": false,
+  "passed": false,
+  "failedAt": "home"
+}

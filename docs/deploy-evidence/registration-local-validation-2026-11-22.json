@@ -1,0 +1,43 @@
+{
+  "checkedAt": "2026-11-22T21:21:11.718905+00:00",
+  "sourceSha": "003670aad04ecdf761b21627d8624dea50403ae5",
+  "repository": "fabelpad/platform",
+  "cleanGitArchive": true,
+  "cleanDirectory": "/tmp/fabelpad-registration-clean-20261122-wpaebkaz",
+  "node": "24.18.0",
+  "pnpm": "11.25.0",
+  "next": "16.3.4",
+  "installCommand": "pnpm install --frozen-lockfile",
+  "buildCommand": "bash scripts/local-build.sh",
+  "dataMode": "local",
+  "buildPassed": true,
+  "buildSeconds": 44.2,
+  "browserPassed": 43,
+  "browserTotal": 43,
+  "browserSeconds": 29.2,
+  "temporaryServerStopped": true,
+  "syntheticTestDataOnly": true,
+  "realOtpOrGoogleLoginPerformed": false,
+  "providerMailSent": false,
+  "newPlayUploadTriggered": false,
+  "includedContractTests": {
+    "auth": 51,
+    "registrationDatabase": 27,
+    "parentApi": 36,
+    "privacyAdminApi": 48,
+    "email": 59,
+    "mailPython": 17,
+    "deploy": 89,
+    "hostPython": 19
+  },
+  "logs": {
+    "build": {
+      "path": "/tmp/fabelpad-registration-clean-build-20261122.log",
+      "sha256": "b0497bc2bd2eb0bcc2e9cba182de74aac5cbc48566857089ce89a3376eba8e3f"
+    },
+    "browser": {
+      "path": "/tmp/fabelpad-registration-clean-browser-20261122.log",
+      "sha256": "6eac646a0d6c04df2e3aae10de7728cf5c07b2dce23a2a8b78c1afb1e5977086"
+    }
+  }
+}

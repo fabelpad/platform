@@ -1,0 +1,20 @@
+{
+  "environment": "staging",
+  "actualHostedSdkRequests": true,
+  "anonymous": true,
+  "validRegistrationAttempted": false,
+  "userCreated": false,
+  "mailRequested": false,
+  "publicValuesLogged": false,
+  "begin": {
+    "status": 400,
+    "code": "22023",
+    "invalidDeclarationRejected": true
+  },
+  "complete": {
+    "status": 401,
+    "code": "42501",
+    "anonymousDenied": true
+  },
+  "passed": true
+}
