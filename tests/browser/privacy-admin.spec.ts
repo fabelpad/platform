@@ -37,8 +37,8 @@ test('an administrator registers a minimal child request and explicitly verifies
   });
   await page.goto('/studio/privacy');
   await page.getByLabel('Dossierkenmerk', { exact: true }).fill('AVG_CHILD_0001');
-  await page.getByLabel('Soort verzoek', { exact: true }).selectOption('erasure');
-  await page.getByLabel('Bereik', { exact: true }).selectOption('child');
+  await page.getByRole('combobox', { name: 'Soort verzoek', exact: true }).selectOption('erasure');
+  await page.getByRole('combobox', { name: 'Bereik', exact: true }).selectOption('child');
   await page.getByRole('button', { name: 'Registreer ontvangst', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'AVG_CHILD_0001', exact: true })).toBeVisible();
   expect(writes[0].body).toEqual({ reference: 'AVG_CHILD_0001', kind: 'erasure', scope: 'child', parentId: null, profileId: null });
@@ -53,7 +53,7 @@ test('an administrator registers a minimal child request and explicitly verifies
   await expect(page.getByRole('button', { name: 'Verificatie vastleggen', exact: true })).toBeEnabled();
   expect(writes.at(-1)?.body).toEqual({ action: 'bind_subject', parentId: subject, profileId: 'synthetic-child' });
   await page.getByRole('button', { name: 'Verificatie vastleggen', exact: true }).click();
-  await page.getByLabel('Verificatiemethode', { exact: true }).selectOption('proportionate_support');
+  await page.getByRole('combobox', { name: 'Verificatiemethode', exact: true }).selectOption('proportionate_support');
   await page.getByLabel('Ik heb de juiste aanvrager, het bereik en de vereiste afhandeling gecontroleerd en bevestig deze handeling.').check();
   await page.getByRole('button', { name: 'Bevestig zaakhandeling', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Gegevenswissing uitvoeren', exact: true })).toBeEnabled();

@@ -144,7 +144,10 @@ test('online child creation stays behind the parent consent page, and remote wit
   await page.getByRole('button', { name: /Nieuw kindprofiel/ }).click();
   await expect(page.getByRole('textbox', { name: '7 + 5 =' })).toBeVisible();
   await expect(page.locator('#child-name')).toHaveCount(0);
-  await page.getByRole('button', { name: 'Sluiten', exact: true }).click();
+  // The preceding profile dialog may still be leaving via AnimatePresence.
+  // Act on the intended parent dialog, then wait for both transitions to finish.
+  await page.getByRole('dialog', { name: 'Voor ouders', exact: true }).getByRole('button', { name: 'Sluiten', exact: true }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
   await page.getByRole('button', { name: 'Open De Droompost' }).click();
   await expect(page.getByRole('dialog')).toBeVisible();
   snapshot = { schemaVersion: 1, family: { version: 1, children: [{ id: 'child-kept', name: 'Testkind twee', avatar: 0 }], activeId: 'child-kept' }, data: { 'child-kept': {} } }; revision++;
