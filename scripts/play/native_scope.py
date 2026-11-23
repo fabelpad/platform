@@ -22,6 +22,7 @@ SHARED_SOURCE = (
     'src/story*.ts', 'src/newStories.ts', 'src/worlds.ts', 'src/readingLevel.ts',
     'src/youngChapterLabels.ts', 'src/contentReadingLevels.ts', 'src/profileReading.ts',
     'lib/contentHash.ts',
+    'lib/narration/*.ts',
 )
 EXPORT_AND_CHECKS = {
     'scripts/export-native-content.mjs', 'scripts/source-test-loader.mjs',

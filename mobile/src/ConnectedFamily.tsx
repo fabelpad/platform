@@ -6,6 +6,10 @@ import type { FamilySnapshot } from '../../lib/familyValidation';
 import { effectiveReadingLevel } from './readingLevels';
 import { personalizeStoryText } from '../../src/storyPersonalization';
 import { cloneConnectedFamily } from './connected-contract';
+import { NarrationPlayer } from './NarrationPlayer';
+import { ConnectedNarrationParent } from './ConnectedNarrationParent';
+import { isVoiceSlot } from '../../lib/narration/contracts';
+import { cachedConnectedParentId } from './connected';
 import { cacheConnectedRelease, cachedConnectedRelease, clearConnectedProgress, clearProtectedContent, connectedConfig, ConnectedError, connectedRequest, connectedRequestId, disconnectFamily, familySession, flushConnectedProgress, importLocalProfiles, loadConnectedAccount, loadConnectedFamily, loadConnectedRelease, loadPlayTrialOffers, loadPlayLicenseProofOffers, purchasePlayLicenseProofOffer, purchasePlayOffer, purchasePlayTrialOffer, queryConfiguredPlayOffers, readConnectedProgress, resolveConnectedProgress, restorePlayLicenseProof, restorePlayPurchases, saveConnectedProgress, sendParentCode, verifyParentCode, type ConnectedFamilyState, type PlayOffer } from './connected';
 
 const record = (value: unknown): value is Record<string, unknown> => !!value && typeof value === 'object' && !Array.isArray(value);
@@ -59,6 +63,7 @@ export function ConnectedParentArea({ store }: { store: Store }) {
       <Text style={s.body}>Aangemeld als {account.session.email}.</Text>
       {lifecycle?.state === 'active' && lifecycle.acceptedTermsVersion === lifecycle.termsVersion ? <>
         <Text style={s.heading}>Gezinstoegang</Text>
+        <ConnectedNarrationParent />
         <Text style={s.body}>{entitlement.fullLibrary === true ? 'Je gezin heeft toegang tot de volledige online bibliotheek.' : 'Je gezin gebruikt Fabelpad Ontdek met een volledig verhaal en twee voorproefjes.'}{typeof entitlement.validUntil === 'string' ? ` Geldig tot ${new Date(entitlement.validUntil).toLocaleDateString('nl-NL')}.` : ''}</Text>
         <Action label="Gezinsstatus opnieuw controleren" disabled={busy} onPress={() => void run(refresh)} />
         <Text style={s.heading}>Lokale kinderprofielen importeren</Text>
@@ -133,6 +138,7 @@ export function ConnectedLibrary({ onClose }: { onClose(): void }) {
   const [catalog, setCatalog] = useState<Array<Record<string, unknown>>>([]), [family, setFamily] = useState<FamilySnapshot | null>(null), [revision, setRevision] = useState(0);
   const [childId, setChildId] = useState(''), [release, setRelease] = useState<OnlineRelease | null>(null), [picks, setPicks] = useState<number[]>([]);
   const [releaseExpiresAt, setReleaseExpiresAt] = useState(0);
+  const [audioParentId, setAudioParentId] = useState('');
   const [progressPending, setProgressPending] = useState(false), [progressConflict, setProgressConflict] = useState(false);
   const [status, setStatus] = useState(''), [busy, setBusy] = useState(false);
   const live = useRef(true), write = useRef(false), selectedChild = useRef(childId);
@@ -151,6 +157,7 @@ export function ConnectedLibrary({ onClose }: { onClose(): void }) {
     setBusy(true); setStatus('');
     try {
       const account = await loadConnectedAccount();
+      setAudioParentId(account.session.parentId);
       if (account.lifecycle.state !== 'active' || account.lifecycle.acceptedTermsVersion !== account.lifecycle.termsVersion) { setRelease(null); setFamily(null); setCatalog([]); setStatus('Rond eerst de actuele ouderonboarding af in het ouderhoekje. Je beveiligde leesvoortgang blijft bewaard.'); return; }
       const [listed, stored] = await Promise.all([connectedRequest('/api/content'), loadConnectedFamily()]);
       if (!live.current) return;
@@ -162,6 +169,7 @@ export function ConnectedLibrary({ onClose }: { onClose(): void }) {
       else {
         const cached = await cachedConnectedRelease('_catalog').catch(() => null);
         if (cached && record(cached.release) && record(cached.release.listed) && record(cached.release.stored)) {
+          setAudioParentId(cachedConnectedParentId() ?? '');
           const { listed, stored } = cached.release;
           const draft = await readConnectedProgress();
           setCatalog(Array.isArray(listed.stories) ? listed.stories.filter(record) : []);
@@ -190,6 +198,8 @@ export function ConnectedLibrary({ onClose }: { onClose(): void }) {
     return () => { live.current = false; listener.remove(); };
   }, []);
   const child = family?.family.children.find(value => value.id === childId), level = effectiveReadingLevel(child);
+  const rawAudioPrefs = child ? family?.data[child.id]?.prefs : undefined;
+  const audioPrefs = record(rawAudioPrefs) ? rawAudioPrefs : {};
   const reading = release?.readingLevels?.[level] ?? release;
   const passage = picks.length === 5 ? reading?.endings[picks.join('')] : reading?.scenes[picks.join('')];
   async function open(story: Record<string, unknown>) {
@@ -236,6 +246,7 @@ export function ConnectedLibrary({ onClose }: { onClose(): void }) {
       <Text style={s.small}>{child?.name} · {picks.length === 5 ? 'Verhaal compleet' : `Deel ${picks.length + 1}`}</Text>
       <Text accessibilityRole="header" style={s.heading}>{personalizeStoryText(passage.title, child?.name ?? 'Avonturier')}</Text>
       {personalizeStoryText(passage.text, child?.name ?? 'Avonturier').split(/\n\s*\n/u).map((paragraph, index) => <Text key={index} style={s.reader}>{paragraph}</Text>)}
+      {child && audioParentId && <NarrationPlayer scope={{ kind: 'family', parentId: audioParentId }} profileId={child.id} storyId={release.storyId} contentVersion={release.contentVersion} readingLevel={level} voiceSlot={isVoiceSlot(audioPrefs.voiceSlot) ? audioPrefs.voiceSlot : undefined} route={picks.join('')} ending={!('choices' in passage)} text={`${passage.title}. ${passage.text}`} choices={'choices' in passage ? passage.choices.map(choice => choice.label) : []} muted={audioPrefs.muted === true} />}
       {'choices' in passage ? passage.choices.map((choice, index) => <Action key={index} label={personalizeStoryText(choice.label, child?.name ?? 'Avonturier')} disabled={busy} onPress={() => void choose(index)} />) : <Text style={s.body}>{(passage as Ending).keepsake}</Text>}
     </> : <Text style={s.body}>Dit gratis voorproefje is uit. Je gekozen volledige gratis verhaal en de meegeleverde verhalen blijven beschikbaar.</Text> : <>
       <Text style={s.body}>Kies je gekoppelde gezinsprofiel. Je gezinsrecht wordt op de server gecontroleerd.</Text>

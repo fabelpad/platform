@@ -38,6 +38,8 @@ Een gestart verhaal krijgt in `Profile.storyVersions` de onveranderlijke content
 
 De eigen lokale Expo-module `modules/fabelpad-offline-speech` ondersteunt Android. Alleen een geïnstalleerde Nederlandse stem die volgens Android geen netwerk nodig heeft wordt geselecteerd; een mislukte selectie krijgt geen standaard- of netwerkfallback. Stoppen initialiseert geen stem. De engine ontvangt generieke verhaaltekst met **Avonturier**, nooit de naam uit het kindprofiel. Als een geschikte stem ontbreekt blijft gewoon lezen beschikbaar. Steminstallatie gebeurt buiten Fabelpad via de Android-instellingen.
 
+De stagingkandidaat voegt vooraf gepubliceerde audio toe met vijf stemslots, lokale aanspreekzinnen en versiegebonden offline pakketten. Deze route gebruikt `modules/fabelpad-narration`; persoonlijke ouderopnamen blijven in `noBackupFilesDir` en buiten export en cloudsync. De lokale variant krijgt alleen met expliciete staging-audiopinnen netwerktoegang. Zonder die pinnen blijft zijn bestaande offline netwerkgrens gelden. Zie [Voorlezen-validatie](VOORLEZEN-VALIDATIE.md) voor configuratie, privacy, normale controles en de uitsluitend ongesigneerde CI-audiofixture.
+
 Een eigen Android-build is nodig om deze module te testen. Expo Go heeft de module niet. Een geslaagde compilatie bewijst geen correcte enginewerking: test voorlezen op echte toestellen, zonder netwerk, met en zonder Nederlandse offline stem en na achtergrond/stop/heropenen. Het gedrag van de afzonderlijke, door de gebruiker geïnstalleerde TTS-engine moet bij de definitieve gegevensbeoordeling worden meegenomen.
 
 ## Productiebuild en signing

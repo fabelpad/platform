@@ -3,7 +3,7 @@ import { AccessibilityInfo, ActivityIndicator, Alert, Animated, AppState, BackHa
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { appendChoice } from './src/readerProgress';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
-import { runtimeConfig, closeBirthDatePicker, pickBirthDate, speakOffline, stopSpeech } from './src/offlineSpeech';
+import { runtimeConfig, closeBirthDatePicker, pickBirthDate, stopSpeech } from './src/offlineSpeech';
 import content from './src/content.json';
 import { releaseCatalog } from './src/releaseCatalog';
 import { storiesForProfile } from './src/storyReleases';
@@ -18,6 +18,11 @@ import { clearDeviceData } from './src/deviceData';
 import { ParentAppBar } from './src/ParentAppBar';
 import { ParentOverview } from './src/ParentOverview';
 import { isParentScreen, nativeBackAction, nativeTabs, needsParentGate, selectedNativeTab, type NativeScreen } from './src/parentNavigation';
+import { NarrationPlayer } from './src/NarrationPlayer';
+import { NarrationSettings } from './src/NarrationSettings';
+import { NarrationDownloads } from './src/NarrationDownloads';
+import { type VoiceSlot } from '../lib/narration/contracts';
+import { NarrationFixture } from './src/NarrationFixture';
 
 const stories = content.stories as Story[];
 const avatars = ['🌿', '⭐', '🌙', '🚀'];
@@ -56,6 +61,8 @@ function Fabelpad() {
   const [draftAvatar, setDraftAvatar] = useState(0);
   const [draftBirthDate, setDraftBirthDate] = useState('');
   const [draftOverride, setDraftOverride] = useState<ReadingLevel | undefined>();
+  const [draftVoice, setDraftVoice] = useState<VoiceSlot>();
+  const [downloadsOpen, setDownloadsOpen] = useState(false);
   const [profileError, setProfileError] = useState('');
   const [today, setToday] = useState(amsterdamDate);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -74,7 +81,6 @@ function Fabelpad() {
   const wipingRef = useRef(false);
   const [contentChanged, setContentChanged] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
-  const [speaking, setSpeaking] = useState(false);
   const [playMode, setPlayMode] = useState(true);
   const [replay, setReplay] = useState<Replay | null>(null);
   const replayRef = useRef<Replay | null>(null); replayRef.current = replay;
@@ -92,7 +98,6 @@ function Fabelpad() {
   const playModeRef = useRef(playMode); playModeRef.current = playMode;
   const screenRef = useRef(screen); screenRef.current = screen;
   const opacity = useRef(new Animated.Value(1)).current;
-  const speechToken = useRef(0);
   const saveToken = useRef(0);
   const { width, fontScale } = useWindowDimensions();
   const hasParentAccess = parentSessionIsActive(parentSessionUntil);
@@ -128,7 +133,7 @@ function Fabelpad() {
   };
   useEffect(() => { const sub = BackHandler.addEventListener('hardwareBackPress', () => handleBack.current()); return () => sub.remove(); }, []);
   useEffect(() => {
-    speechToken.current += 1; void stopSpeech().catch(() => {}); setSpeaking(false);
+    void stopSpeech().catch(() => {});
     opacity.stopAnimation(); opacity.setValue(calm ? 1 : .4);
     if (!calm) Animated.timing(opacity, { toValue: 1, duration: 180, useNativeDriver: true }).start();
     return () => opacity.stopAnimation();
@@ -144,9 +149,9 @@ function Fabelpad() {
     refreshDate();
     const subscription = AppState.addEventListener('change', state => {
       if (state === 'active') refreshDate();
-      else { parentEpoch.current += 1; parentSessionRef.current = 0; setParentSessionUntil(0); setParentYear(''); setParentMenuOpen(false); parentAction.current = null; void closeBirthDatePicker().catch(() => {}); speechToken.current += 1; void stopSpeech().catch(() => {}); setSpeaking(false); }
+      else { parentEpoch.current += 1; parentSessionRef.current = 0; setParentSessionUntil(0); setParentYear(''); setParentMenuOpen(false); parentAction.current = null; void closeBirthDatePicker().catch(() => {}); void stopSpeech().catch(() => {}); }
     });
-    return () => { clearTimeout(timer); subscription.remove(); speechToken.current += 1; void stopSpeech().catch(() => {}); };
+    return () => { clearTimeout(timer); subscription.remove(); void stopSpeech().catch(() => {}); };
   }, []);
 
   useEffect(() => {
@@ -236,25 +241,13 @@ function Fabelpad() {
     readerActionGeneration.current += 1; readerScrollOffset.current = 0; setReaderMinHeight(0);
     replayRef.current = next; setReplay(next); setReaderVisit(value => value + 1); setStoryId(id); setScreen('reader');
   }
-  function speak() {
-    if (!passage || !profile) return;
-    if (speaking) { speechToken.current += 1; void stopSpeech().catch(() => {}); setSpeaking(false); return; }
-    const token = ++speechToken.current;
-    void stopSpeech().then(() => {
-      if (speechToken.current !== token) return;
-      // Saved child names never leave React state for the separate Android TTS engine.
-      const text = personalize(`${passage.title}. ${passage.text}`, 'Avonturier');
-      setSpeaking(true);
-      return speakOffline(text).then(() => { if (speechToken.current === token) setSpeaking(false); });
-    }).catch(() => { if (speechToken.current === token) { setSpeaking(false); setMessage('Voorlezen vraagt een geïnstalleerde Nederlandse offline apparaatstem. Je kunt wel verder lezen.'); } });
-  }
   function requireParentAccess(action: () => void) {
     setParentMenuOpen(false);
     if (parentSessionIsActive(parentSessionRef.current)) { action(); return; }
     parentAction.current = action; setParentYear(''); setScreen('parent-gate');
   }
   function resetProfileDraft() {
-    setEditingId(null); setDraftName(''); setDraftBirthDate(''); setDraftOverride(undefined); setProfileError(''); initialProfileDraft.current = '';
+    setEditingId(null); setDraftName(''); setDraftBirthDate(''); setDraftOverride(undefined); setDraftVoice(undefined); setProfileError(''); initialProfileDraft.current = '';
   }
   function navigate(destination: Screen) {
     function go() {
@@ -262,7 +255,7 @@ function Fabelpad() {
       if (destination === 'parent') { openParentArea(); return; }
       parentAction.current = null; setParentYear(''); leaveReader(destination);
     }
-    const draft = JSON.stringify([draftName, draftAvatar, draftBirthDate, draftOverride]);
+    const draft = JSON.stringify([draftName, draftAvatar, draftBirthDate, draftOverride, draftVoice]);
     if (screen === 'profile-settings' && initialProfileDraft.current && draft !== initialProfileDraft.current) {
       Alert.alert('Wijzigingen niet bewaren?', 'Je hebt dit kindprofiel nog niet opgeslagen. Je bestaande profiel en leesvoortgang blijven bewaard.', [{ text: 'Verder bewerken', style: 'cancel' }, { text: 'Niet bewaren', onPress: () => { resetProfileDraft(); go(); } }], { cancelable: true });
     } else { if (screen === 'profile-settings') resetProfileDraft(); go(); }
@@ -288,7 +281,7 @@ function Fabelpad() {
       setToday(amsterdamDate()); setProfileError('');
       setEditingId(target?.id || null); setDraftName(target?.name || '');
       setDraftAvatar(target?.avatar || 0); setDraftBirthDate(target?.birthDate || '');
-      setDraftOverride(target?.readingLevelOverride); initialProfileDraft.current = JSON.stringify([target?.name || '', target?.avatar || 0, target?.birthDate || '', target?.readingLevelOverride]); setScreen('profile-settings');
+      setDraftOverride(target?.readingLevelOverride); setDraftVoice(target?.voiceSlot); initialProfileDraft.current = JSON.stringify([target?.name || '', target?.avatar || 0, target?.birthDate || '', target?.readingLevelOverride, target?.voiceSlot]); setScreen('profile-settings');
     });
   }
   function chooseBirthDate() {
@@ -311,7 +304,7 @@ function Fabelpad() {
     const previous = current.profiles.find(p => p.id === editingId);
     const base: Profile = previous || { id, name, avatar: draftAvatar, picks: {}, lastCompletedPicks: {}, lastCompletedStoryVersions: {}, favorites: [], calm: false, largeText: false };
     try {
-      const next = profileWithReadingSettings({ ...base, name, avatar: draftAvatar, isPersonal: true }, draftBirthDate, draftOverride, !editingId || previous?.isPersonal === false);
+      const next = profileWithReadingSettings({ ...base, name, avatar: draftAvatar, isPersonal: true, voiceSlot: draftVoice }, draftBirthDate, draftOverride, !editingId || previous?.isPersonal === false);
       const profiles = editingId ? current.profiles.map(p => p.id === id ? next : p) : [...current.profiles, next];
       commit({ ...current, profiles, activeId: id }); resetProfileDraft(); setScreen('parent');
     } catch (error) { setProfileError(error instanceof Error ? error.message : 'Controleer de geboortedatum.'); }
@@ -323,7 +316,7 @@ function Fabelpad() {
     wipingRef.current = true; setWiping(true); saveToken.current += 1;
     parentEpoch.current += 1; parentSessionRef.current = 0; setParentSessionUntil(0); parentAction.current = null; setParentMenuOpen(false);
     readerActionGeneration.current += 1; replayRef.current = null; setReplay(null);
-    speechToken.current += 1; void stopSpeech().catch(() => {}); void closeBirthDatePicker().catch(() => {});
+    void stopSpeech().catch(() => {}); void closeBirthDatePicker().catch(() => {});
     try {
       await clearDeviceData(runtimeConfig.connected);
       const fresh = freshStore(content.contentVersion); storeRef.current = fresh; setStore(fresh);
@@ -341,7 +334,7 @@ function Fabelpad() {
       <Text style={s.readerBookTitle}>{story.title}</Text>
       <Pressable accessibilityRole="button" accessibilityLabel="Verhaal sluiten" onPress={() => leaveReader('library')} style={s.readerBack}><Text style={s.readerBackText}>×</Text></Pressable>
     </View> : (isParentScreen(screen) || screen === 'profiles') ? <ParentAppBar active={selectedNativeTab(screen)} menuOpen={parentMenuOpen} onMenuChange={setParentMenuOpen} onNavigate={navigate} onStories={() => navigate('library')} /> : <View style={s.header}><Pressable accessibilityRole="button" accessibilityLabel="Naar je verhalen" onPress={() => setScreen('library')}><Image source={assets['/brand/logo.webp']} style={s.logo} resizeMode="contain" /></Pressable><Pressable style={s.profileButton} accessibilityRole="button" accessibilityLabel="Kies een kindprofiel" onPress={() => setScreen('profiles')}><Text style={s.avatar}>{avatars[profile.avatar]}</Text><Text style={s.profileName}>{profile.name}</Text></Pressable></View>}
-    {screen === 'library' && <FlatList key={width > 700 ? 'tablet' : 'phone'} data={visible} numColumns={width > 700 ? 2 : 1} keyExtractor={item => item.id} contentContainerStyle={s.library} ListHeaderComponent={<><Text style={s.eyebrow}>HÉ, {profile.name.toLocaleUpperCase('nl-NL')}!</Text><Text style={s.heading}>Waar gaan we{ '\n' }vandaag naartoe?</Text><Text style={s.subtitle}>Jij kiest het avontuur. Neem je fantasie mee.</Text><Pressable onPress={() => openStory('station')} accessibilityRole="button" accessibilityLabel="Open Het Verdwaalde Station" style={s.hero}><Image source={assets['/art/station.webp']} style={s.heroImage} /><View style={s.heroLabel}><Text style={s.heroTitle}>Volgende halte:{'\n'}verwondering.</Text><Text style={s.heroAction}>Begin het avontuur →</Text></View></Pressable><TextInput style={s.search} value={query} onChangeText={setQuery} placeholder="Zoek een verhaal…" accessibilityLabel="Zoek een verhaal" placeholderTextColor="#6c7968" /><View style={s.chips}>{['Alles', 'Verder lezen', 'Favorieten'].map(label => <Pressable key={label} accessibilityRole="button" accessibilityState={{ selected: filter === label }} onPress={() => setFilter(label)} style={[s.chip, filter === label && s.chipActive]}><Text style={[s.chipText, filter === label && s.chipTextActive]}>{label}</Text></Pressable>)}</View></>} renderItem={({ item }) => <View style={[s.card, width > 700 && { flex: 1, maxWidth: '49%' }]}><Pressable accessibilityRole="button" onPress={() => openStory(item.id)}><Image source={assets[item.image]} accessibilityLabel={item.imageAlt} style={s.cardImage} /><View style={s.cardCopy}><Text style={s.eyebrow}>{item.tag.toLocaleUpperCase('nl-NL')} · 5 DELEN</Text><Text style={s.cardTitle}>{item.title}</Text><Text style={s.body}>{item.description}</Text><Text style={s.readLink}>{(profile.picks[item.id]?.length || 0) === 5 ? 'Nog een keer beleven' : (profile.picks[item.id]?.length || 0) > 0 ? `Verder bij deel ${profile.picks[item.id].length + 1}` : 'Dit avontuur kies ik'} →</Text></View></Pressable><Pressable accessibilityRole="button" accessibilityLabel={`${profile.favorites.includes(item.id) ? 'Verwijder' : 'Bewaar'} ${item.title} als favoriet`} onPress={() => updateProfile(p => ({ ...p, favorites: p.favorites.includes(item.id) ? p.favorites.filter(id => id !== item.id) : [...p.favorites, item.id] }))} style={s.heart}><Text style={s.heartText}>{profile.favorites.includes(item.id) ? '♥' : '♡'}</Text></Pressable></View>} ListEmptyComponent={<View style={s.empty}><Text style={s.cardTitle}>Hier is nog ruimte voor avontuur.</Text><Text style={s.body}>Kies een verhaal of probeer een andere zoekterm.</Text></View>} ListFooterComponent={<>{runtimeConfig.connected && <Button label="Open mijn online gezinsbibliotheek" onPress={() => setScreen('connected-library')} />}<Text style={s.demoNote}>{runtimeConfig.production ? 'Alle 13 verhalen en illustraties zitten in deze app. Voorlezen werkt alleen met een geïnstalleerde Nederlandse offline apparaatstem.' : 'Native prototype · alle 13 verhalen zitten in deze app. Voorlezen gebruikt alleen een geïnstalleerde Nederlandse offline apparaatstem.'}</Text></>} />}
+    {screen === 'library' && <FlatList key={width > 700 ? 'tablet' : 'phone'} data={visible} numColumns={width > 700 ? 2 : 1} keyExtractor={item => item.id} contentContainerStyle={s.library} ListHeaderComponent={<><Text style={s.eyebrow}>HÉ, {profile.name.toLocaleUpperCase('nl-NL')}!</Text><Text style={s.heading}>Waar gaan we{ '\n' }vandaag naartoe?</Text><Text style={s.subtitle}>Jij kiest het avontuur. Neem je fantasie mee.</Text><Pressable onPress={() => openStory('station')} accessibilityRole="button" accessibilityLabel="Open Het Verdwaalde Station" style={s.hero}><Image source={assets['/art/station.webp']} style={s.heroImage} /><View style={s.heroLabel}><Text style={s.heroTitle}>Volgende halte:{'\n'}verwondering.</Text><Text style={s.heroAction}>Begin het avontuur →</Text></View></Pressable><TextInput style={s.search} value={query} onChangeText={setQuery} placeholder="Zoek een verhaal…" accessibilityLabel="Zoek een verhaal" placeholderTextColor="#6c7968" /><View style={s.chips}>{['Alles', 'Verder lezen', 'Favorieten'].map(label => <Pressable key={label} accessibilityRole="button" accessibilityState={{ selected: filter === label }} onPress={() => setFilter(label)} style={[s.chip, filter === label && s.chipActive]}><Text style={[s.chipText, filter === label && s.chipTextActive]}>{label}</Text></Pressable>)}</View></>} renderItem={({ item }) => <View style={[s.card, width > 700 && { flex: 1, maxWidth: '49%' }]}><Pressable accessibilityRole="button" onPress={() => openStory(item.id)}><Image source={assets[item.image]} accessibilityLabel={item.imageAlt} style={s.cardImage} /><View style={s.cardCopy}><Text style={s.eyebrow}>{item.tag.toLocaleUpperCase('nl-NL')} · 5 DELEN</Text><Text style={s.cardTitle}>{item.title}</Text><Text style={s.body}>{item.description}</Text><Text style={s.readLink}>{(profile.picks[item.id]?.length || 0) === 5 ? 'Nog een keer beleven' : (profile.picks[item.id]?.length || 0) > 0 ? `Verder bij deel ${profile.picks[item.id].length + 1}` : 'Dit avontuur kies ik'} →</Text></View></Pressable><Pressable accessibilityRole="button" accessibilityLabel={`${profile.favorites.includes(item.id) ? 'Verwijder' : 'Bewaar'} ${item.title} als favoriet`} onPress={() => updateProfile(p => ({ ...p, favorites: p.favorites.includes(item.id) ? p.favorites.filter(id => id !== item.id) : [...p.favorites, item.id] }))} style={s.heart}><Text style={s.heartText}>{profile.favorites.includes(item.id) ? '♥' : '♡'}</Text></Pressable></View>} ListEmptyComponent={<View style={s.empty}><Text style={s.cardTitle}>Hier is nog ruimte voor avontuur.</Text><Text style={s.body}>Kies een verhaal of probeer een andere zoekterm.</Text></View>} ListFooterComponent={<>{runtimeConfig.connected && <Button label="Open mijn online gezinsbibliotheek" onPress={() => setScreen('connected-library')} />}<Text style={s.demoNote}>{runtimeConfig.production ? 'Alle 13 verhalen en illustraties zitten in deze app. Je ouder kan beschikbare AI-voorleesaudio downloaden. Zonder passende audio kun je een geïnstalleerde Nederlandse offline apparaatstem gebruiken.' : 'Native prototype · alle 13 verhalen zitten in deze app. Voorleesaudio en lokale aanspreekzinnen beheer je in het ouderhoekje.'}</Text></>} />}
     {screen === 'connected-library' && runtimeConfig.connected && <ConnectedLibrary onClose={() => setScreen('library')} />}
     {screen === 'reader' && passage && <ScrollView ref={scroll} onLayout={event => { readerViewportHeight.current = event.nativeEvent.layout.height; }} onScroll={event => { readerScrollOffset.current = Math.max(0, event.nativeEvent.contentOffset.y); }} scrollEventThrottle={16} contentContainerStyle={[s.reader, width >= 700 && s.readerWide, { minHeight: readerMinHeight }]}>
       <View style={[s.readerHero, { height: Math.round((width >= 700 ? 300 : 220) * Math.max(1, Math.min(fontScale, 1.6))) }]}>
@@ -372,7 +365,7 @@ function Fabelpad() {
         </View>}
       </Animated.View>
       <View style={s.readerControls}>
-        <Button secondary label={speaking ? '■ Stop voorlezen' : '▶ Lees voor met offline apparaatstem'} onPress={speak} />
+        <NarrationPlayer scope={{ kind: 'local' }} profileId={profile.id} storyId={story.id} contentVersion={storyVersion} readingLevel={readingLevel} voiceSlot={profile.voiceSlot} route={picks.join('')} ending={complete} text={`${passage?.title ?? ''}. ${passage?.text ?? ''}`} choices={choices?.map(choice => choice.label)} />
         {!!message && <Text accessibilityLiveRegion="polite" style={s.demoNote}>{message}</Text>}
         <Text style={s.demoNote}>{storageError ? 'Alleen in deze sessie' : saving ? 'Even bewaren…' : replay ? 'Je leest je bewaarde route.' : 'Je plek blijft op dit apparaat bewaard.'}</Text>
       </View>
@@ -411,6 +404,7 @@ function Fabelpad() {
         </View>
         {draftOverride && <><ReadingLevelPicker value={draftOverride} onChange={setDraftOverride} /><Text style={s.small}>Deze handmatige voorkeur blijft actief, ook na een verjaardag of datumwijziging.</Text><Button secondary label="Gebruik automatisch leesniveau" onPress={() => setDraftOverride(undefined)} /></>}
       </View>
+      {editingId ? <NarrationSettings scope={{ kind: 'local' }} profileId={editingId} profileName={draftName} voiceSlot={draftVoice} onVoiceChange={setDraftVoice} /> : <Text style={s.small}>Na het toevoegen kun je hier de vertelstem, aanspreeknaam en lokale ouderopnamen instellen.</Text>}
       {!!profileError && <Text accessibilityLiveRegion="polite" style={s.error}>{profileError}</Text>}
       <Button label={editingId ? 'Opslaan' : 'Profiel toevoegen'} disabled={!draftName.trim() || (!editingId && store.profiles.length >= 5)} onPress={saveProfile} />
       <Button secondary label="Annuleren" onPress={() => { resetProfileDraft(); openParentArea(); }} />
@@ -427,11 +421,13 @@ function Fabelpad() {
     </ScrollView>}
     {screen === 'parent' && hasParentAccess && <ScrollView style={s.scrollPanel} keyboardShouldPersistTaps="handled" contentContainerStyle={s.parentPanel}>
       <ParentOverview store={store} profile={profile} today={today} onEdit={openProfileSettings} onAdd={() => openProfileSettings()} onPreference={(key, value) => requireParentAccess(() => updateProfile(current => ({ ...current, [key]: value })))} onLock={lockParentArea}
-        onOffline={() => requireParentAccess(() => Alert.alert('Verhalen voor onderweg', `${runtimeConfig.connected ? 'De dertien meegeleverde verhalen blijven zonder internet beschikbaar. Online gezinsverhalen kun je tijdelijk offline lezen binnen het laatst door de server bevestigde recht. Afgeschermde downloads worden bij uitloggen gewist en bij accountintrekking zodra de app die status ophaalt.' : 'Alle dertien verhaalteksten en illustraties zitten in de app. Je kunt zonder internet lezen.'}\n\nVoorlezen gebruikt alleen een geïnstalleerde Nederlandse offline apparaatstem. De naam uit het kindprofiel wordt niet aan die stem doorgegeven. Is er geen geschikte stem, dan kun je gewoon verder lezen.`, [{ text: 'Sluiten', style: 'cancel' }], { cancelable: true }))}
+        onOffline={() => requireParentAccess(() => setDownloadsOpen(value => !value))}
         onPrivacy={() => runtimeConfig.privacyUrl ? openParentLink(runtimeConfig.privacyUrl) : requireParentAccess(() => Alert.alert('Privacy op dit apparaat', 'Kindprofielen, geboortedata, favorieten en verhaalroutes blijven in deze lokale app op dit apparaat. Je leest zonder ouderaccount. Je kunt de lokale gegevens hier wissen.'))}
-        onSupport={() => runtimeConfig.supportUrl ? openParentLink(runtimeConfig.supportUrl) : requireParentAccess(() => Alert.alert('Contact en hulp', 'Dit is de lokale Fabelpad-demo. De dertien verhalen zijn inbegrepen. Voor voorlezen is een Nederlandse offline apparaatstem nodig.'))}
+        onSupport={() => runtimeConfig.supportUrl ? openParentLink(runtimeConfig.supportUrl) : requireParentAccess(() => Alert.alert('Contact en hulp', 'Dit is de lokale Fabelpad-demo. De dertien verhalen zijn inbegrepen. Een aanwezige Nederlandse offline apparaatstem blijft beschikbaar als er geen passende audio is.'))}
         onWipe={() => requireParentAccess(() => Alert.alert('Alle lokale gegevens wissen?', runtimeConfig.connected ? 'Dit wist kindprofielen, leesvoortgang, favorieten, voorkeuren, de ouderaanmelding, afgeschermde downloads en nog niet gedeelde gezinsvoortgang van dit apparaat. Je online ouderaccount wordt hiermee niet verwijderd. Dit kun je niet ongedaan maken.' : 'Dit wist alle kindprofielen, leesvoortgang, favorieten en voorkeuren van dit apparaat. De meegeleverde verhalen blijven beschikbaar. Dit kun je niet ongedaan maken.', [{ text: 'Terug', style: 'cancel' }, { text: 'Alles wissen', style: 'destructive', onPress: () => void wipeDevice() }], { cancelable: true }))}>
         {contentChanged && <View style={s.settingCard}><Text style={s.cardTitle}>Nieuwe verhaalversie</Text><Text style={s.body}>Een eerder opgeslagen verhaalversie ontbreekt. Je oude routes zijn bewaard en worden niet op andere teksten toegepast. Je kunt bewust opnieuw beginnen met de meegeleverde verhalen.</Text><Button label="Met nieuwe verhalen opnieuw beginnen" onPress={() => Alert.alert('Alle verhaalroutes opnieuw beginnen?', 'Profielen en favorieten blijven bewaard. De oude routes worden gewist.', [{ text: 'Terug', style: 'cancel' }, { text: 'Opnieuw beginnen', style: 'destructive', onPress: () => { const next = { ...store, contentVersion: content.contentVersion, profiles: store.profiles.map(p => ({ ...p, picks: {}, storyVersions: {}, lastCompletedPicks: {}, lastCompletedStoryVersions: {} })) }; setContentChanged(false); commit(next); } }])} /></View>}{storageError && <View style={s.settingCard}><Text style={s.cardTitle}>Opslag vraagt aandacht</Text><Text style={s.body}>{message}</Text><Button label="Deze sessie alsnog bewaren" onPress={() => { setSaving(true); void persistStore(store).then(() => { setStorageError(false); setSaving(false); setMessage('Deze sessie is nu bewaard.'); }).catch(() => { setSaving(false); setMessage('Bewaren lukt nog niet. Houd de app open.'); }); }} /></View>}
+        {downloadsOpen && <NarrationDownloads scope={{ kind: 'local' }} profile={profile} stories={profileStories} currentVersion={content.contentVersion} resolveStory={(selected, version) => releaseCatalog[version]?.stories.find(item => item.id === selected.id)} />}
+        <NarrationFixture />
         {runtimeConfig.connected && <ConnectedParentArea store={store} />}
       </ParentOverview>
     </ScrollView>}

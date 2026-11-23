@@ -9,6 +9,7 @@ import { mergeConnectedProgress, type ConnectedProgressDraft } from './connected
 import type { BillingEntitlement, BillingPeriod, PurchaseReservation } from '../../lib/billing/types';
 import type { ParentAccountStatus } from '../../lib/parentAccount';
 import { validateHostedEmailTarget } from '../../lib/email/hosted-target';
+import { clearProtectedNarrationData } from './narrationCleanup';
 
 export type PlayOffer = { productId: string; basePlanId: string; offerToken: string; formattedPrice: string; currency: string; priceAmountMicros: string; billingPeriod: string };
 type NativePurchase = { purchaseToken: string; productIds: string[]; state: 'pending' | 'purchased'; acknowledged: boolean };
@@ -58,6 +59,7 @@ async function responseJson(response: Response): Promise<Record<string, unknown>
 async function eraseProtectedContent(): Promise<void> {
   const keys = (await AsyncStorage.getAllKeys()).filter(key => key.startsWith('fabelpad.connected.'));
   await AsyncStorage.multiRemove(keys); await native?.clearContentKey();
+  await clearProtectedNarrationData();
 }
 async function eraseConnectedProgress(): Promise<void> {
   const keys = (await AsyncStorage.getAllKeys()).filter(key => key.startsWith('fabelpad.progress.'));
@@ -101,6 +103,9 @@ export async function familySession(): Promise<Session | null> {
   sameSession(generation);
   return session;
 }
+/** Only use alongside a successfully opened, unexpired encrypted content lease.
+ * This does not establish a new online session or extend offline access. */
+export function cachedConnectedParentId(): string | null { return loaded ? session?.parentId ?? null : null; }
 export async function sendParentCode(email: string): Promise<void> {
   configured();
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/u.test(email) || email.length > 254) throw new ConnectedError('invalid_email', 'Vul je e-mailadres in.');

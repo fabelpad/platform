@@ -4,11 +4,13 @@ const SIGNING_START = '// BEGIN FABELPAD PRODUCTION SIGNING';
 const SIGNING_END = '// END FABELPAD PRODUCTION SIGNING';
 
 module.exports = function withFabelpadProduction(config) {
-  if (!['production', 'connected'].includes(config.extra?.variant)) return config;
+  const production = ['production', 'connected'].includes(config.extra?.variant);
   config = withAndroidManifest(config, value => {
     const application = value.modResults.manifest.application[0];
-    application.$['android:allowBackup'] = 'false';
-    application.$['android:usesCleartextTraffic'] = 'false';
+    if (production) {
+      application.$['android:allowBackup'] = 'false';
+      application.$['android:usesCleartextTraffic'] = 'false';
+    }
     const metadata = application['meta-data'] ||= [];
     for (const [name, entry] of Object.entries({
       'nl.fabelpad.variant': config.extra.variant,
@@ -19,6 +21,10 @@ module.exports = function withFabelpadProduction(config) {
       'nl.fabelpad.deleteAccountUrl': config.extra.deleteAccountUrl || '',
       'nl.fabelpad.supabaseUrl': config.extra.supabaseUrl || '',
       'nl.fabelpad.supabaseKey': config.extra.supabaseKey || '',
+      'nl.fabelpad.audioEnvironment': config.extra.audioEnvironment || '',
+      'nl.fabelpad.audioOrigin': config.extra.audioOrigin || '',
+      'nl.fabelpad.localRecording': config.extra.localRecording === 'enabled' ? 'enabled' : '',
+      'nl.fabelpad.audioFixtureEnabled': config.extra.narrationFixture === true ? 'enabled' : '',
     })) {
       const existing = metadata.find(item => item.$['android:name'] === name);
       if (existing) existing.$['android:value'] = entry;
@@ -26,6 +32,7 @@ module.exports = function withFabelpadProduction(config) {
     }
     return value;
   });
+  if (!production) return config;
   return withAppBuildGradle(config, value => {
     if (value.modResults.language !== 'groovy') throw new Error('Fabelpad production signing expects the generated Groovy Gradle template.');
     let source = value.modResults.contents;

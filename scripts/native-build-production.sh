@@ -54,12 +54,17 @@ npx --no-install expo prebuild --platform android --no-install --clean
 cd android
 task_java_args=()
 if [[ -n "${JAVA_TOOLCHAIN_17:-}" ]]; then task_java_args+=("-Porg.gradle.java.installations.paths=${JAVA_TOOLCHAIN_17},${JAVA_HOME}"); fi
+task_gradle_diagnostic_args=()
+if [[ "${task_unsigned}" == true && "${GITHUB_ACTIONS:-false}" == true ]]; then
+  python3 -B "${task_root}/scripts/native-gradle-diagnostics.py"
+  task_gradle_diagnostic_args+=(--stacktrace --info)
+fi
 ./gradlew app:lintRelease app:bundleRelease --no-daemon --max-workers=1 \
   '-Dorg.gradle.jvmargs=-Xmx2048m -XX:MaxMetaspaceSize=768m' \
   -Pkotlin.compiler.execution.strategy=in-process \
   -PreactNativeArchitectures=arm64-v8a,x86_64 \
   -Pandroid.enableMinifyInReleaseBuilds=true -Pandroid.enableShrinkResourcesInReleaseBuilds=true \
-  "${task_java_args[@]}"
+  "${task_java_args[@]}" "${task_gradle_diagnostic_args[@]}"
 task_suffix=''
 if [[ "${task_variant}" == connected ]]; then task_suffix='-connected'; fi
 if [[ "${task_unsigned}" == true ]]; then task_suffix="${task_suffix}-unsigned"; fi

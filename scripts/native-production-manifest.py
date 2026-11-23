@@ -88,17 +88,35 @@ def main():
     if app.get(ANDROID + 'usesCleartextTraffic') != 'false':
         raise ValueError('De productie-AAB moet cleartext expliciet blokkeren.')
     permissions = sorted(item.get(ANDROID + 'name') for item in manifest if item.tag.startswith('uses-permission'))
-    allowed = {'android.permission.VIBRATE', 'nl.fabelpad.app.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION'}
+    metadata = {item.get(ANDROID + 'name'): item.get(ANDROID + 'value') for item in app.findall('meta-data')}
+    audio_environment = os.environ.get('FABELPAD_CONNECTED_ENVIRONMENT' if connected else 'FABELPAD_AUDIO_ENVIRONMENT', '')
+    audio_origin = os.environ.get('FABELPAD_CONNECTED_ORIGIN' if connected else 'FABELPAD_AUDIO_ORIGIN', '')
+    public_audio = not connected and audio_environment == 'staging' and audio_origin == 'https://staging.fabelpad.nl'
+    if not connected and (audio_environment or audio_origin) and not public_audio:
+        raise ValueError('Lokale audio vereist de expliciete stagingpinnen.')
+    if (metadata.get('nl.fabelpad.audioEnvironment', '') != audio_environment
+            or metadata.get('nl.fabelpad.audioOrigin', '') != audio_origin
+            or metadata.get('nl.fabelpad.localRecording') != 'enabled'):
+        raise ValueError('De vastgelegde audio- of lokale opnameconfiguratie wijkt af.')
+    fixture = os.environ.get('FABELPAD_NARRATION_FIXTURE') == 'true'
+    if fixture and (os.environ.get('FABELPAD_UNSIGNED_CHECK') != 'true' or os.environ.get('CI') != '1'):
+        raise ValueError('De audiofixture is uitsluitend toegestaan in ongesigneerde CI-builds.')
+    if metadata.get('nl.fabelpad.audioFixtureEnabled', '') != ('enabled' if fixture else ''):
+        raise ValueError('De CI-audiofixturemetadata wijkt af.')
+    allowed = {'android.permission.VIBRATE', 'android.permission.RECORD_AUDIO', 'nl.fabelpad.app.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION'}
+    if public_audio:
+        allowed.update({'android.permission.INTERNET', 'android.permission.ACCESS_NETWORK_STATE'})
     if connected:
         allowed.update({'android.permission.INTERNET', 'android.permission.ACCESS_NETWORK_STATE', 'com.android.vending.BILLING'})
     if set(permissions) - allowed:
         raise ValueError('De productie-AAB bevat een permissie buiten de vastgelegde lokale scope.')
-    metadata = {item.get(ANDROID + 'name'): item.get(ANDROID + 'value') for item in app.findall('meta-data')}
     if (metadata.get('nl.fabelpad.variant') != variant
             or metadata.get('nl.fabelpad.privacyUrl') != os.environ.get('FABELPAD_PRIVACY_URL', 'https://fabelpad.nl/privacy')
             or metadata.get('nl.fabelpad.supportUrl') != os.environ.get('FABELPAD_SUPPORT_URL', 'mailto:support@fabelpad.nl')):
         raise ValueError('De productievariant of publieke privacy-/supportconfiguratie wijkt af.')
-    blocked = {'android.permission.INTERNET', 'android.permission.READ_EXTERNAL_STORAGE', 'android.permission.WRITE_EXTERNAL_STORAGE', 'android.permission.SYSTEM_ALERT_WINDOW', 'com.google.android.gms.permission.AD_ID', 'android.permission.ACCESS_FINE_LOCATION', 'android.permission.RECORD_AUDIO'}
+    blocked = {'android.permission.INTERNET', 'android.permission.READ_EXTERNAL_STORAGE', 'android.permission.WRITE_EXTERNAL_STORAGE', 'android.permission.SYSTEM_ALERT_WINDOW', 'com.google.android.gms.permission.AD_ID', 'android.permission.ACCESS_FINE_LOCATION'}
+    if public_audio:
+        blocked.remove('android.permission.INTERNET')
     if connected:
         blocked.remove('android.permission.INTERNET')
         connected_environment = os.environ.get('FABELPAD_CONNECTED_ENVIRONMENT')

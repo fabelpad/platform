@@ -1,0 +1,71 @@
+# Voorlezen op staging
+
+Deze eerste installatie hoort uitsluitend bij `https://staging.fabelpad.nl` en Supabase-project `tlwfpivafcokcjyjwgmq`. Productie, Play-publicatie en betaalde catalogusgeneratie vallen buiten deze uitrol. De eigenaar voert later zelf de bestaande OpenAI-sleutel in. Zonder sleutel blijven lezen, verhaalbewerkingen en de bestaande aantoonbaar lokale Nederlandse spraakfallback werken; de duurzame audiowachtrij wacht op inrichting.
+
+## Eigenaar: koppeling en eerste controle
+
+Open [Platformbeheer → Voorlezen](https://staging.fabelpad.nl/studio/voorlezen) met een actief beheeraccount. Gevoelige acties vereisen een recente aanmelding en zijn gebonden aan hetzelfde ouderaccount en dezelfde instellingenrevisie. De pagina toont de werkelijke sleutelstatus, wachtrij, dekking, budget en workerstatus.
+
+1. Controleer dat de omgeving **staging** is. Voer de sleutel in het wachtwoordveld in en sla op. Het veld wordt geleegd; de opgeslagen sleutel kan niet worden opgevraagd. Deze staat uitsluitend in het Vault van staging.
+2. Gebruik de beperkte verbindingstest met de vaste Nederlandse voorbeeldzin. Controleer model, stem en het echte hoorbare resultaat. De standaard is `gpt-realtime-2.1-mini`; de vijf stabiele slots gebruiken aanvankelijk marin, cedar, sage, ballad en shimmer. Een gewijzigde stem, instructie, uitspraakversie of encoder maakt een nieuwe preset. Oude goedgekeurde publicaties blijven gekoppeld aan hun oorspronkelijke versie.
+3. Maak de catalogusraming en controleer het budget voordat je de generatie start. Bedragen zijn **USD-centen**; de schatting sluit belasting, valutaomrekening, opslag, dataverkeer, menselijke controle en hergeneratie uit. Werkelijk verbruik en nog onbekend verbruik worden afzonderlijk bijgehouden. Een budgetreservering gebeurt vóór een providerverzoek. Zonder geldige verbindingstest kan de wachtrij geen betaalde generatie uitvoeren.
+4. Controleer luistervoorbeelden en transcripties. Keur gemarkeerde fragmenten bewust goed of af; een afwijkend transcript vereist een gemotiveerde beoordeling. Herhaal zo nodig één fragment. Publiceer eerst de bijbehorende gedeelde namenbibliotheek, daarna de complete audio voor de exacte gepubliceerde tekstversie.
+
+Een providerfixture is een testtoon, geen nagebootste Nederlandse stem. Fixtures worden door de hosted worker geweigerd en bevestigen geen providerverbinding of catalogusdekking. De aanvankelijke redactionele namencatalogus is een kleine stagingselectie; echte uitspraakcontrole volgt met de eigenaar.
+
+## Aansluitingen
+
+| Onderdeel | Route of bron |
+| --- | --- |
+| Beheer | `/studio/voorlezen`, `GET/PUT /api/admin/voorlezen` |
+| Beheeracties | `POST /api/admin/voorlezen/test`, `/plan`, `/enqueue`, `/retry`, `/review`, `/publish` |
+| Luistercontrole | `GET /api/admin/voorlezen/preview?jobId=…&itemId=…` |
+| Publieke stemlabels en goedgekeurde generieke samples | `GET /api/voorlezen/voices`, `/api/voorlezen/samples/[voiceSlot]?presetVersion=…` |
+| Exacte tekst-/leeslaag-/stemcombinatie | `GET /api/voorlezen/manifest?storyId=…&version=…&readingLevel=…&voiceSlot=…` |
+| Geautoriseerde audiobytes | `GET /api/voorlezen/assets/[assetId]` met dezelfde vier bronparameters |
+| Hele gedeelde naamzinbundel, inclusief alle bytes | `GET /api/voorlezen/name-pack?voiceSlot=…&presetVersion=…&packVersion=…&packId=…` |
+| Afgeschermde runtime | Supabase Edge Functions `voorlezen-admin` en `voorlezen-worker` |
+| Duurzame uitvoering | Eigen cronjob `fabelpad-voorlezen`, eenmaal per minuut, met korte geldigheid en eenmalig HMAC-bewijs |
+
+Alle audiotoegang volgt de bestaande contentautoriteit. Een preview bevat alleen het toegestane beginhoofdstuk en de bijbehorende keuzes. Een willekeurige asset-ID geeft geen toegang zonder lidmaatschap van het geautoriseerde manifest. Native gebruikt hetzelfde gecontroleerde Bearer-transport als de gezinscontent. De Next-route neemt accountbinding en vervaltijd over uit `getContent`; privébestanden worden niet via onbeperkte publieke of getekende URLs ontsloten.
+
+Het bestaande bevestigde conceptbewaarpunt maakt de outboxopdracht in dezelfde database-transactie. Premiumimport en tekstpublicatie hebben eveneens een outboxtrigger. Invoer is een onveranderlijke redactionele snapshot vóór profielpersonalisatie. Alle bereikbare scènes, originele keuze-indexen en eindes worden verwerkt op `under6`, `6to8` en `9plus`, voor vijf stemmen. Historische databaseversies en de twee reeds geserveerde native archieven behouden hun eigen bron en versie; een eerste catalogusplan registreert de vaste archiefsnapshots. Een oud verhaal zonder expliciete leeslagen krijgt alleen dezelfde compatibele leesweergaven als de bestaande reader wanneer zijn volledige basistekst exact gelijk is aan de vaste referentie. Afwijkende historische tekst krijgt geen nieuwe tekstlaag. Planning, web en gekoppeld Android gebruiken daardoor dezelfde effectieve leestekst.
+
+De compiler gebruikt natuurlijke fragmenten van maximaal 700 tekens en bewaart alinea's en leestekens. Alleen een volledige, exact passende goedgekeurde naamzin wordt een lokaal vervangbaar aanspreekmoment, bijvoorbeeld `Kom mee, {{naam}}.`. Overige placeholders worden **Avonturier**. Een fingerprint omvat tekst, locale, model, providerstem, stijl/instructies, uitspraak- en encoderversie. Hergebruik vereist een reeds goedgekeurde opname. Leases, beperkte retries, reserveringen en configuratiecontrole voorkomen dat een oude worker een nieuw manifest activeert. Nieuwe bestanden zijn onveranderlijk; publicatie gebeurt atomair.
+
+## Naamprivacy en Android
+
+Binnen de nieuwe voorkeuren synchroniseert alleen `prefs.voiceSlot`. Naammodus, gekozen bibliotheeknaam, uitspraak en ouderopnamen blijven per apparaat en profiel opgeslagen. Het apparaat haalt de **hele** redactionele bundel met alle varianten op en kiest lokaal; er bestaat geen geselecteerde-naamrequest. Een onbekende naam of ontbrekende opname valt terug op de hele Avonturier-zin in dezelfde stem. Profielverwijdering, intrekking en relevante account-/gegevensopschoning verwijderen de lokale persoonlijke instellingen en opnamen.
+
+Web gebruikt IndexedDB en lokale Blob-URLs. Een ouderopname vraagt alleen na een expliciete actie in de ouderomgeving om microfoontoestemming. De origin mag daarom `microphone=(self)` gebruiken; de reader opent geen microfoon. Er is geen opname-upload of opnameveld in de gezinsexport.
+
+Android heeft een eigen Expo-module voor afspelen, audiofocus, private opnamen en gecontroleerde offlinepakketten. Een pakket bevat alle bereikbare scènes, keuzes, eindes en het hele passende naamzinnenpakket voor één verhaalversie, leeslaag en stem. Downloads controleren checksums, schrijven tijdelijk en activeren pas als de gehele set compleet is. Pauze/hervat, verwijderen, herstart en vervallen gezinstoegang behouden de bestaande toegangsscope. Navigatie, profiel-/accountwisseling, achtergrond, headsetverlies en audiofocusverlies stoppen oude audio. Parentopnamen vereisen de ouderpoort en runtime-microfoontoestemming.
+
+De lokale Android-variant krijgt alleen met de expliciete buildinstellingen `FABELPAD_AUDIO_ENVIRONMENT=staging` en `FABELPAD_AUDIO_ORIGIN=https://staging.fabelpad.nl` netwerktoegang voor publieke stagingaudio. De gekoppelde variant gebruikt haar bestaande vastgelegde stagingconfiguratie. Gewone productiebuilds krijgen geen nieuwe lokale netwerkconfiguratie. `FABELPAD_NARRATION_FIXTURE=true` is uitsluitend toegestaan samen met `FABELPAD_UNSIGNED_CHECK=true` en `CI=1`; het testpaneel blijft achter de ouderpoort. De emulator controleert echte native decoding en opslag met testtonen. Dit is geen luisterkeuring of acceptatie op een fysiek toestel.
+
+Distributieformaat versie 1 is **WAV, PCM16, mono, 24 kHz**. De Edge-runtime valideert het signaal, normaliseert volume en vaste korte in-/uitloop, bepaalt duur en SHA-256, zonder extern encoderproces. Dit vraagt circa **28,8 MB per tien minuten**, exclusief headers en naamzinnenbundel. De keuze houdt de eerste stagingruntime zelfstandig; mobiele omvang blijft een expliciet acceptatiepunt. Een latere AAC-encoder vereist een nieuwe encoderversie en nieuwe compatibiliteitsproeven.
+
+## Installatie en herstel
+
+1. Laat de normale projectchecks, browserproeven, beide unsigned Android-builds en de emulatorproef slagen op de exacte kandidaat. Inspecteer vóór merge opnieuw productie- en Play-triggers. Productieactivatie blijft handmatig; `scripts/play/config.json` houdt `playEnabled=false`. Maak geen releasetag of signed/Play-dispatch.
+2. Pas uitsluitend op het stagingproject de vier additieve migraties toe, in volgorde: `20261123201152_narration_audio_pipeline.sql`, `20261123205825_narration_claim_explicit_json_null.sql`, `20261123210007_narration_claim_response_envelopes.sql` en `20261123210433_narration_bounded_singleton_updates.sql`. De twee claim-RPC’s gebruiken een strikt objectantwoord met `claim: null|object`. De laatste migratie begrenst de singletonupdates expliciet met `WHERE singleton`, zoals de werkelijke Data API met pg-safeupdate vereist. Een geslaagde directe SQL-test alleen bewijst die transportbeveiliging niet. Deze behoudt oude snapshots/voortgang en breidt het bestaande voorkeurencontract beperkt uit met `voiceSlot`. Privétabellen hebben geen clientrechten. De Data API krijgt expliciete smalle grants; er bestaat geen generieke Vault-uitleesfunctie.
+3. Deploy de twee Edge-entrypoints met hun werkelijke relatieve dependencies. `node scripts/narration/edge-files.mjs` toont de gecontroleerde pakketmetadata. De uploadkopie laat uitsluitend aantoonbaar identieke `9plus`-kopieën weg; de runtime reconstrueert de volledige bron. Regressiecontroles bewijzen dat de 26 originele snapshots gelijk blijven en beide functiepakketten onder de limiet van 5 MB passen. De worker vereist `verify_jwt=false` aan de gateway omdat uitsluitend zijn HMAC-bewijs toegang geeft. De beheerruntime verifieert zelf de actuele gebruiker en databasebevoegdheden, ook als gatewayvalidatie uit staat. Gebruik de automatische Supabase-runtimecredentials; voeg geen providersleutel aan GitHub, Next-config of CLI toe.
+4. Voer als databasebeheerder `scripts/narration/bootstrap-staging.sql` uit op hetzelfde stagingproject. Het script maakt de private bucket `fabelpad-narration` met alleen WAV en maximaal 16 MiB per bestand en configureert de eigen scheduler met `private.configure_narration_worker`. Die functie genereert een eigen HMAC-geheim in Vault. Conflicterende bucket- of cronconfiguratie blijft behouden. Er komen geen clientrechten op de storage-objecten bij. De bestaande lifecycle-/billingworker blijft zelfstandig.
+5. Gebruik de bestaande staging-candidate- en staging-activate-workflows na de verplichte checks op de exacte `main`-SHA. Noteer vooraf actieve release, config-ID en herstelpunt. Verifieer daarna `/api/health`, omgeving/SHA, noindex, onbevoegde beheeracties, de publieke ontbrekende-audiostatus en de eigen workerheartbeat. Health alleen bewijst geen functionele dekking.
+
+De bestaande staging-rollbackroute bewaart app en configuratie samen. Terugzetten naar de vorige release `64c9c64` is alleen gezinscompatibel zolang nog geen nieuw `prefs.voiceSlot` is gesynchroniseerd: die oude validator kent het veld niet en weigert dan de opgeslagen snapshot. Controleer dit vóór een terugzetactie. Na de eerste stemvoorkeur is herstel met uitgeschakelde afspeel-/generatievlaggen of een geteste herstelbuild met de additieve voorkeurenvalidator nodig; wis geen gezinsvoorkeuren om oude code passend te maken. De additieve tabellen en oude publicaties kunnen blijven staan; een rollback van code draait Vault, budget of databasepublicaties niet terug. Kies bij een audio-incident eventueel een eerder goedgekeurde combinatie voor dezelfde tekstversie. Verwijder geen asset zolang een geautoriseerde historische release die nog gebruikt. Verweesde tijdelijke uploads worden alleen opgeruimd na referentiecontrole.
+
+## Controle en afzonderlijke fasen
+
+`bash scripts/local-build.sh` bevat de bestaande checks plus `pnpm check:narration` en de nieuwe native-contractchecks. De narratiesuite test brontraversal, exacte oude versies, naamprivacy, providerfouten en incomplete output, checksum/duur/signaal, databasebevoegdheden, outbox/CAS, budget, leases, reviews en publicatie. De normale suites blijven verantwoordelijk voor bestaande content, ouders, betalingen en deployment. Browsertests controleren afspeelvolgorde, pauze/hervat, late antwoorden, profielopschoning, naamselectie en een echte browser-MediaRecorder met een synthetisch capturedevice. Android-CI bouwt beide varianten en voert `scripts/native-ux-smoke.py --narration-fixture` uit op de emulator.
+
+| Fase | Bewijs dat nodig is |
+| --- | --- |
+| Technisch gereed | Geteste code/migratie/worker, exacte commit en geactiveerde stagingrelease; zonder sleutel bestuurbaar |
+| Provider bevestigd | Eigenaar heeft sleutel ingevoerd; echte verbindingstest en Nederlandse luisterproeven geslaagd |
+| Catalogus compleet | Alle vereiste actuele en nog geserveerde historische tekst-/leeslaag-/stemcombinaties gepubliceerd en functioneel gecontroleerd |
+| Native device-test | Afzonderlijke Android-build-, emulator- en fysieke toesteluitkomsten; gekoppelde toegang/offlinegeldigheid en echte stemkwaliteit gecontroleerd |
+
+De bronnoemer van de huidige 13 bundelverhalen is 403 scènes, 806 keuzes en 416 eindes per leeslaag: **24.375** logische combinaties bij drie lagen en vijf stemmen. Dit is een structurele noemer, geen bewijs dat de opnamen bestaan. De compiler rapporteert unieke opnamen apart. De volledige aanvaarding van provider, catalogus en fysieke toestellen volgt na de eigenaarssleutel en bewuste generatie-/luistercontrole.
+
+Primaire implementatiebronnen: [OpenAI Realtime WebSocket](https://developers.openai.com/api/docs/guides/voice-websockets?voice-api=realtime), [Realtime audio en stemmen](https://developers.openai.com/api/docs/guides/realtime-conversations), [model en actuele prijzen](https://developers.openai.com/api/docs/models/gpt-realtime-2.1-mini), [Deno WebSocket-headers](https://docs.deno.com/api/web/websockets/), [Supabase Vault](https://supabase.com/docs/guides/database/vault). Gecontroleerd op 23 november 2026.

@@ -4,8 +4,16 @@ import android.os.Bundle
 import android.app.DatePickerDialog
 import android.content.res.Configuration
 import android.content.pm.PackageManager
+import android.content.Context
+import android.content.BroadcastReceiver
+import android.content.Intent
+import android.content.IntentFilter
+import android.media.AudioAttributes
+import android.media.AudioFocusRequest
+import android.media.AudioManager
 import android.os.Handler
 import android.os.Looper
+import android.os.Build
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
 import android.speech.tts.Voice
@@ -29,6 +37,10 @@ class FabelpadOfflineSpeechModule : Module() {
   private var engineGeneration = 0L
   private var finalUtterance: String? = null
   private var dateDialog: DatePickerDialog? = null
+  private var focus: AudioFocusRequest? = null
+  private val focusListener = AudioManager.OnAudioFocusChangeListener { change -> if (change <= 0) main.post { stopSpeech() } }
+  private var noisyRegistered = false
+  private val noisy = object : BroadcastReceiver() { override fun onReceive(context: Context?, intent: Intent?) { main.post { stopSpeech() } } }
 
   override fun definition() = ModuleDefinition {
     Name("FabelpadOfflineSpeech")
@@ -52,7 +64,7 @@ class FabelpadOfflineSpeechModule : Module() {
     AsyncFunction("closeBirthDatePicker") { promise: Promise ->
       main.post { dateDialog?.dismiss(); dateDialog = null; promise.resolve(null) }
     }
-    OnActivityEntersBackground { main.post { dateDialog?.dismiss(); dateDialog = null } }
+    OnActivityEntersBackground { main.post { dateDialog?.dismiss(); dateDialog = null; stopSpeech() } }
     OnDestroy {
       main.post {
         destroyed = true
@@ -118,6 +130,7 @@ class FabelpadOfflineSpeechModule : Module() {
     runCatching { engine?.stop() } // Never construct a TTS engine just to stop it.
     request?.resolve("stopped")
     request = null
+    releaseFocus()
   }
 
   private fun fail(message: String) {
@@ -125,6 +138,29 @@ class FabelpadOfflineSpeechModule : Module() {
     finalUtterance = null
     request?.reject("ERR_OFFLINE_VOICE", message, null)
     request = null
+    releaseFocus()
+  }
+  @Suppress("DEPRECATION") private fun releaseFocus() {
+    val context = appContext.reactContext
+    runCatching { val manager = context?.getSystemService(Context.AUDIO_SERVICE) as? AudioManager; if (Build.VERSION.SDK_INT >= 26) focus?.let { manager?.abandonAudioFocusRequest(it) } else manager?.abandonAudioFocus(focusListener) }; focus = null
+    if (noisyRegistered) { runCatching { context?.unregisterReceiver(noisy) }; noisyRegistered = false }
+  }
+  @Suppress("DEPRECATION") private fun requestFocus(): Boolean {
+    val manager = appContext.reactContext?.getSystemService(Context.AUDIO_SERVICE) as? AudioManager ?: return false
+    val attributes = AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA).setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build()
+    engine?.setAudioAttributes(attributes)
+    val result = if (Build.VERSION.SDK_INT >= 26) {
+      val next = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT).setAudioAttributes(attributes).setWillPauseWhenDucked(true).setOnAudioFocusChangeListener(focusListener, main).build()
+      focus = next; manager.requestAudioFocus(next)
+    } else manager.requestAudioFocus(focusListener, AudioManager.STREAM_MUSIC, AudioManager.AUDIOFOCUS_GAIN_TRANSIENT)
+    if (result != AudioManager.AUDIOFOCUS_REQUEST_GRANTED) return false
+    if (!noisyRegistered) {
+      val context = appContext.reactContext ?: return false
+      if (Build.VERSION.SDK_INT >= 33) context.registerReceiver(noisy, IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY), Context.RECEIVER_NOT_EXPORTED)
+      else context.registerReceiver(noisy, IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY))
+      noisyRegistered = true
+    }
+    return true
   }
 
   private fun allowed(voice: Voice): Boolean =
@@ -188,6 +224,7 @@ class FabelpadOfflineSpeechModule : Module() {
       return
     }
     tts.setSpeechRate(0.86f)
+    if (!requestFocus()) { fail("Een andere app gebruikt het geluid. Probeer zelf opnieuw."); return }
     val prefix = UUID.randomUUID().toString()
     val chunks = text.chunked(minOf(1500, TextToSpeech.getMaxSpeechInputLength() - 1))
     finalUtterance = "$prefix-${chunks.lastIndex}"
@@ -199,6 +236,7 @@ class FabelpadOfflineSpeechModule : Module() {
             finalUtterance = null
             request?.resolve("done")
             request = null
+            releaseFocus()
           }
         }
       }

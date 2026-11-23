@@ -25,7 +25,8 @@ class NativeInputRulesTests(unittest.TestCase):
                      'src/storyPlayArt.ts', 'src/storyPlayLogic.ts', 'src/storyTypes.ts', 'src/storyCatalog.ts',
                      'src/newStories.ts', 'src/worlds.ts', 'src/readingLevel.ts', 'src/youngChapterLabels.ts',
                      'src/contentReadingLevels.ts', 'src/profileReading.ts',
-                     'src/storyPersonalization.ts', 'lib/contentHash.ts']:
+                     'src/storyPersonalization.ts', 'lib/contentHash.ts', 'lib/narration/contracts.ts',
+                     'lib/narration/compiler.ts']:
             with self.subTest(path=path): self.assertTrue(scope.is_native_input(path))
 
     def test_export_toolchain_and_native_validation_inputs(self):

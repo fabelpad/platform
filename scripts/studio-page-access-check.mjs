@@ -59,13 +59,13 @@ try {
   process.env.FABELPAD_DATA_MODE = 'local'; delete process.env.NEXT_PUBLIC_SUPABASE_URL; delete process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY; delete process.env.FABELPAD_APP_ORIGIN; await expect({ allowed: true });
   process.env.FABELPAD_DATA_MODE = 'supabase'; delete process.env.NEXT_PUBLIC_SUPABASE_URL;
   await expect({ allowed: false, reason: 'unavailable' });
-  for (const route of ['', 'overzicht', 'email', 'email/templates', 'privacy', 'premium', 'betalingen']) {
+  for (const route of ['', 'overzicht', 'email', 'email/templates', 'privacy', 'premium', 'betalingen', 'voorlezen']) {
     const page = await readFile(new URL(`../app/studio/${route ? `${route}/` : ''}page.tsx`, import.meta.url), 'utf8');
     assert.ok(page.includes(`<StudioPageAccess returnTo="/studio${route ? `/${route}` : ''}">`), `Direct route ${route} needs the server guard`);
   }
   const wrapper = await readFile(new URL('../src/StudioPageAccess.tsx', import.meta.url), 'utf8');
   assert.ok(wrapper.indexOf('await connection();') < wrapper.indexOf('await getStudioPageAccess();'), 'Account decisions must run after the request-time boundary');
-  console.log(`Studio-paginatoegang: ${checks} serverautorisatiechecks en alle 7 directe routes groen.`);
+  console.log(`Studio-paginatoegang: ${checks} serverautorisatiechecks en alle 8 directe routes groen.`);
 } finally {
   globalThis.fetch = beforeFetch;
   if (beforeCookies === undefined) delete globalThis[cookieKey]; else globalThis[cookieKey] = beforeCookies;
