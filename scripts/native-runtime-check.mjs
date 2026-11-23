@@ -3,20 +3,10 @@ import { mkdtemp, rm, readFile, readdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
-import { createRequire } from 'node:module';
 import { compileSource } from './source-test-loader.mjs';
 
 const directory = await mkdtemp(path.join(tmpdir(), 'fabelpad-native-runtime-'));
 try {
-  const nativeRequire = createRequire(new URL('../mobile/package.json', import.meta.url));
-  const metro = nativeRequire('./metro.config.cjs');
-  for (const origin of ['../mobile/App.tsx', '../src/storyPersonalization.ts', '../mobile/node_modules/react-native/index.js']) {
-    for (const request of ['react', 'react/jsx-runtime', 'react/jsx-dev-runtime']) {
-      const resolved = metro.resolver.resolveRequest({ originModulePath: new URL(origin, import.meta.url).pathname, resolveRequest: (_context, target) => target }, request, 'android');
-      assert.equal(resolved, nativeRequire.resolve(request), 'Shared/native/renderer imports must use one mobile React dispatcher');
-    }
-  }
-  assert.equal(metro.resolver.resolveRequest({ resolveRequest: (_context, target) => target }, './readerProgress', 'android'), './readerProgress', 'Normal Metro module resolution remains delegated');
   const { createStationInteraction } = await import(await compileSource(new URL('../mobile/src/stationInteraction.ts', import.meta.url), directory));
   const { appendChoice } = await import(await compileSource(new URL('../mobile/src/readerProgress.ts', import.meta.url), directory));
   const { createStorageQueue } = await import(await compileSource(new URL('../mobile/src/storageQueue.ts', import.meta.url), directory));

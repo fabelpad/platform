@@ -33,7 +33,8 @@ om bevestiging. Een laat antwoord van een gesloten datumkiezer wordt genegeerd.
 - `npm run check --prefix mobile`, `npm run test:runtime --prefix mobile` en
   `npm run check:native`: geslaagd. Gerichte regressies controleren de vier tabs,
   menu/terugvolgorde, directe ouderbestemmingen, vijfminutengrens, behoud van
-  profielgegevens en één React-runtime voor webgedeelde/native modules.
+  profielgegevens. De webfase van deze gedeelde checks vereist geen Expo- of
+  React Native-installatie; de echte emulatorstart controleert de native React-runtime.
 - `node --test scripts/billing/native-connected.test.mjs`: negen tests geslaagd,
   waaronder importtoestemming, vaste verhaalversies, voortgang na herstart,
   CAS-conflicten, volledig wissen en vertraagde antwoorden na uitloggen.

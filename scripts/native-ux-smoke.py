@@ -130,11 +130,21 @@ class Smoke:
         self.wait('Ontdek')
 
     def unlock(self):
-        self.wait('Geboortejaar van de ouder')
+        self.reach('Geboortejaar van de ouder', scroll=6)
         self.input('Geboortejaar van de ouder', '1985')
         self.back()  # IME closes before the screen can navigate.
-        self.tap('Open het ouderhoekje')
-        self.wait('Kindprofielen')
+        self.tap('Open het ouderhoekje', scroll=6)
+        self.reach('Kindprofielen', scroll=6)
+
+    def parent_after_configuration(self):
+        # Android may recreate the Activity after font/rotation settings. Enter
+        # through the existing tab and gate; do not assume React state survived.
+        self.tap('Ouders')
+        self.top()
+        if self.find(self.tree(), 'Alleen voor ouders en verzorgers'):
+            self.unlock()
+        else:
+            self.reach('Kindprofielen', scroll=6)
 
     def assert_targets(self, labels):
         density_text = self.adb('shell', 'wm', 'density')
@@ -250,9 +260,7 @@ class Smoke:
         self.unlock()
         self.adb('shell', 'settings', 'put', 'system', 'font_scale', '1.5')
         time.sleep(2)
-        if self.find(self.tree(), 'Geboortejaar van de ouder'):
-            self.unlock()
-        self.wait('Kindprofielen')
+        self.parent_after_configuration()
         self.capture('08-larger-system-text')
         self.tap('Oudermenu openen')
         self.wait('Ouders, huidige pagina')
@@ -260,14 +268,13 @@ class Smoke:
         self.adb('shell', 'settings', 'put', 'system', 'user_rotation', '1')
         time.sleep(2)
         self.capture('09-landscape')
-        # Some emulators recreate the activity on configuration changes; use the
-        # actual gate when that happens instead of changing its implementation.
-        if self.find(self.tree(), 'Geboortejaar van de ouder'):
-            self.unlock()
-        self.wait('Kindprofielen')
+        self.parent_after_configuration()
+        self.capture('09-landscape')
         self.adb('shell', 'settings', 'put', 'system', 'user_rotation', '0')
         self.adb('shell', 'settings', 'put', 'system', 'font_scale', '1.0')
         time.sleep(2)
+        self.capture('09b-portrait-restored')
+        self.parent_after_configuration()
         self.capture('09b-portrait-restored')
         self.passed('larger system text and landscape retain usable parent controls')
         self.tap('Ouderhoekje vergrendelen', scroll=6)
