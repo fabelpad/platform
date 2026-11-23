@@ -167,6 +167,10 @@ class Smoke:
         for key in ['window_animation_scale', 'transition_animation_scale', 'animator_duration_scale']:
             self.adb('shell', 'settings', 'put', 'global', key, '0')
         self.adb('shell', 'settings', 'put', 'system', 'font_scale', '1.0')
+        # Keep the activity foregrounded during the real five-minute deadline;
+        # screen sleep would exercise the background lock instead.
+        self.adb('shell', 'settings', 'put', 'global', 'stay_on_while_plugged_in', '7')
+        self.adb('shell', 'settings', 'put', 'system', 'screen_off_timeout', '1800000')
         self.adb('shell', 'settings', 'put', 'secure', 'show_ime_with_hard_keyboard', '1')
         self.adb('shell', 'settings', 'put', 'system', 'accelerometer_rotation', '0')
         self.adb('shell', 'settings', 'put', 'system', 'user_rotation', '0')
@@ -232,6 +236,8 @@ class Smoke:
         self.wait('Kindprofiel bewerken')
         manual, _ = self.reach('Handmatig', scroll=5)
         assert manual.get('checked') == 'true', 'Manual reading mode did not survive the cold restart'
+        level, _ = self.reach('9+ jaar', scroll=3)
+        assert level.get('checked') == 'true', 'The selected 9+ reading level did not survive the cold restart'
         self.capture('07-profile-after-restart')
         self.back()
         self.wait('Kindprofielen')
