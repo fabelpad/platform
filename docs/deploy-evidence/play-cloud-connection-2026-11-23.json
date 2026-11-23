@@ -1,0 +1,349 @@
+{
+  "checkedAt": "2026-11-23T10:49:41.849444+00:00",
+  "repository": "fabelpad/platform",
+  "repositoryId": "1446419952",
+  "ownerId": "352706055",
+  "packageName": "nl.fabelpad.app",
+  "cloudOwnerReadback": {
+    "checkedAt": "2026-11-23T10:33:14.401247+00:00",
+    "source": "Owner-supplied successful resume-v2 Cloud Shell report",
+    "projectId": "fabelpad",
+    "projectNumber": "471984799009",
+    "cloudConfigurationReadBackVerified": true,
+    "serviceAccountKeysCreated": false
+  },
+  "playPermissions": {
+    "source": "Owner confirmed both app-specific service accounts have prescribed permissions",
+    "ownerConfirmed": true,
+    "writePermissionsTested": false
+  },
+  "github": {
+    "oidc": {
+      "use_default": true,
+      "use_immutable_subject": true,
+      "sub_claim_prefix": "repo:fabelpad@352706055/platform@1446419952"
+    },
+    "playEnvironments": {
+      "fabelpad-play-internal": {
+        "deploymentPolicies": [
+          {
+            "id": 67891324,
+            "node_id": "MDE2OkdhdGVCcmFuY2hQb2xpY3k2Nzg5MTMyNA==",
+            "name": "main",
+            "type": "branch"
+          }
+        ],
+        "secretNames": [
+          "ANDROID_UPLOAD_KEYSTORE_BASE64",
+          "ANDROID_UPLOAD_KEY_ALIAS",
+          "ANDROID_UPLOAD_KEY_PASSWORD",
+          "ANDROID_UPLOAD_STORE_PASSWORD",
+          "PLAY_SERVICE_ACCOUNT",
+          "PLAY_WIF_PROVIDER"
+        ]
+      },
+      "fabelpad-play-production": {
+        "deploymentPolicies": [
+          {
+            "id": 67891331,
+            "node_id": "MDE2OkdhdGVCcmFuY2hQb2xpY3k2Nzg5MTMzMQ==",
+            "name": "main",
+            "type": "branch"
+          },
+          {
+            "id": 67891333,
+            "node_id": "MDE2OkdhdGVCcmFuY2hQb2xpY3k2Nzg5MTMzMw==",
+            "name": "fabelpad-v*",
+            "type": "tag"
+          }
+        ],
+        "secretNames": [
+          "PLAY_SERVICE_ACCOUNT",
+          "PLAY_WIF_PROVIDER"
+        ]
+      }
+    },
+    "rulesets": [
+      {
+        "id": 27891000,
+        "name": "Fabelpad Play releasetags aanmaken",
+        "target": "tag",
+        "source_type": "Repository",
+        "source": "fabelpad/platform",
+        "enforcement": "active",
+        "conditions": {
+          "ref_name": {
+            "exclude": [],
+            "include": [
+              "refs/tags/fabelpad-v*"
+            ]
+          }
+        },
+        "rules": [
+          {
+            "type": "creation"
+          }
+        ],
+        "node_id": "RRS_lACqUmVwb3NpdG9yec5WNp3wzgGplTg",
+        "created_at": "2026-11-23T11:43:36.400+01:00",
+        "updated_at": "2026-11-23T11:43:36.447+01:00",
+        "bypass_actors": [
+          {
+            "actor_id": 5,
+            "actor_type": "RepositoryRole",
+            "bypass_mode": "always"
+          }
+        ],
+        "current_user_can_bypass": "always",
+        "_links": {
+          "self": {
+            "href": "https://api.github.com/repos/fabelpad/platform/rulesets/27891000"
+          },
+          "html": {
+            "href": "https://github.com/fabelpad/platform/rules/27891000"
+          }
+        }
+      },
+      {
+        "id": 27891001,
+        "name": "Fabelpad Play releasetags onveranderlijk",
+        "target": "tag",
+        "source_type": "Repository",
+        "source": "fabelpad/platform",
+        "enforcement": "active",
+        "conditions": {
+          "ref_name": {
+            "exclude": [],
+            "include": [
+              "refs/tags/fabelpad-v*"
+            ]
+          }
+        },
+        "rules": [
+          {
+            "type": "update"
+          },
+          {
+            "type": "deletion"
+          }
+        ],
+        "node_id": "RRS_lACqUmVwb3NpdG9yec5WNp3wzgGplTk",
+        "created_at": "2026-11-23T11:43:37.498+01:00",
+        "updated_at": "2026-11-23T11:43:37.527+01:00",
+        "bypass_actors": [],
+        "current_user_can_bypass": "never",
+        "_links": {
+          "self": {
+            "href": "https://api.github.com/repos/fabelpad/platform/rulesets/27891001"
+          },
+          "html": {
+            "href": "https://github.com/fabelpad/platform/rules/27891001"
+          }
+        }
+      },
+      {
+        "id": 27891237,
+        "name": "Fabelpad main via PR en geslaagde CI",
+        "target": "branch",
+        "source_type": "Repository",
+        "source": "fabelpad/platform",
+        "enforcement": "active",
+        "conditions": {
+          "ref_name": {
+            "exclude": [],
+            "include": [
+              "refs/heads/main"
+            ]
+          }
+        },
+        "rules": [
+          {
+            "type": "deletion"
+          },
+          {
+            "type": "non_fast_forward"
+          },
+          {
+            "type": "pull_request",
+            "parameters": {
+              "required_approving_review_count": 0,
+              "dismiss_stale_reviews_on_push": true,
+              "required_reviewers": [],
+              "require_code_owner_review": false,
+              "dismissal_restriction": {
+                "enabled": false,
+                "allowed_actors": []
+              },
+              "require_last_push_approval": false,
+              "required_review_thread_resolution": true,
+              "require_extra_approval_for_unattributed_changes": true,
+              "allowed_merge_methods": [
+                "merge",
+                "squash",
+                "rebase"
+              ]
+            }
+          },
+          {
+            "type": "required_status_checks",
+            "parameters": {
+              "strict_required_status_checks_policy": true,
+              "do_not_enforce_on_create": false,
+              "required_status_checks": [
+                {
+                  "context": "verify",
+                  "integration_id": 15368
+                },
+                {
+                  "context": "Native Android-controles",
+                  "integration_id": 15368
+                }
+              ]
+            }
+          }
+        ],
+        "node_id": "RRS_lACqUmVwb3NpdG9yec5WNp3wzgGpliU",
+        "created_at": "2026-11-23T11:48:26.906+01:00",
+        "updated_at": "2026-11-23T11:48:27.085+01:00",
+        "bypass_actors": [],
+        "current_user_can_bypass": "never",
+        "_links": {
+          "self": {
+            "href": "https://api.github.com/repos/fabelpad/platform/rulesets/27891237"
+          },
+          "html": {
+            "href": "https://github.com/fabelpad/platform/rules/27891237"
+          }
+        }
+      }
+    ],
+    "webEnvironmentMetadataUnchanged": true,
+    "webVariableNamesUnchanged": true,
+    "webVariableNames": {
+      "staging": [
+        "FABELPAD_APP_ORIGIN",
+        "FABELPAD_DATA_MODE",
+        "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY",
+        "NEXT_PUBLIC_SUPABASE_URL"
+      ],
+      "production": [
+        "FABELPAD_APP_ORIGIN",
+        "FABELPAD_DATA_MODE",
+        "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY",
+        "NEXT_PUBLIC_SUPABASE_URL"
+      ]
+    },
+    "repositoryVariableNames": []
+  },
+  "configuration": {
+    "schemaVersion": 1,
+    "signingEnabled": false,
+    "playEnabled": false,
+    "connectionCheckEnabled": true,
+    "versionCodeBase": 1000,
+    "internalTracks": [],
+    "productionTracks": [],
+    "rolloutFraction": 1
+  },
+  "checks": {
+    "helperUnitTests": {
+      "result": "passed",
+      "count": 97,
+      "command": "python3 -B -m unittest discover -s scripts/play -p 'test_*.py'"
+    },
+    "actionlint": {
+      "result": "passed",
+      "version": "1.7.12",
+      "existingSyntaxIgnored": "concurrency.queue: max; supported by executed GitHub Actions workflows"
+    },
+    "workflowCommit": "6d4ac925086026d7f05d81385afcffe1d4237949",
+    "webCiRun": "https://github.com/fabelpad/platform/actions/runs/45159353583",
+    "nativeCiRun": "https://github.com/fabelpad/platform/actions/runs/45159353606",
+    "connectionRuns": {
+      "internal": "https://github.com/fabelpad/platform/actions/runs/45159353606",
+      "production": "https://github.com/fabelpad/platform/actions/runs/45159365178"
+    }
+  },
+  "connectionReports": {
+    "internal": {
+      "checkedAt": "2026-11-23T10:48:16.382183+00:00",
+      "projectId": "fabelpad",
+      "projectNumber": "471984799009",
+      "repository": "fabelpad/platform",
+      "repositoryId": "1446419952",
+      "ownerId": "352706055",
+      "packageName": "nl.fabelpad.app",
+      "environment": "fabelpad-play-internal",
+      "serviceAccount": "fabelpad-play-internal@fabelpad.iam.gserviceaccount.com",
+      "commit": "6d4ac925086026d7f05d81385afcffe1d4237949",
+      "runId": "45159353606",
+      "runAttempt": "1",
+      "workflowRef": "fabelpad/platform/.github/workflows/fabelpad-android-ci.yml@refs/heads/main",
+      "oidcExchangeVerified": true,
+      "tokenIdentityVerified": true,
+      "scopes": [
+        "https://www.googleapis.com/auth/androidpublisher",
+        "https://www.googleapis.com/auth/userinfo.email"
+      ],
+      "returnedScopes": [
+        "email",
+        "https://www.googleapis.com/auth/androidpublisher",
+        "https://www.googleapis.com/auth/userinfo.email"
+      ],
+      "tokenExpiresAt": "2026-11-23T11:48:15+00:00",
+      "playHttpStatus": 200,
+      "playReadAccessVerified": true,
+      "playReleasePermissionsVerified": false,
+      "playPublicationPerformed": false,
+      "playEditCreated": false,
+      "reviewResponseBodyRead": false,
+      "serviceAccountKeysCreated": false
+    },
+    "production": {
+      "checkedAt": "2026-11-23T10:48:27.016241+00:00",
+      "projectId": "fabelpad",
+      "projectNumber": "471984799009",
+      "repository": "fabelpad/platform",
+      "repositoryId": "1446419952",
+      "ownerId": "352706055",
+      "packageName": "nl.fabelpad.app",
+      "environment": "fabelpad-play-production",
+      "serviceAccount": "fabelpad-play-production@fabelpad.iam.gserviceaccount.com",
+      "commit": "6d4ac925086026d7f05d81385afcffe1d4237949",
+      "runId": "45159365178",
+      "runAttempt": "1",
+      "workflowRef": "fabelpad/platform/.github/workflows/fabelpad-play-production.yml@refs/heads/main",
+      "oidcExchangeVerified": true,
+      "tokenIdentityVerified": true,
+      "scopes": [
+        "https://www.googleapis.com/auth/androidpublisher",
+        "https://www.googleapis.com/auth/userinfo.email"
+      ],
+      "returnedScopes": [
+        "email",
+        "https://www.googleapis.com/auth/androidpublisher",
+        "https://www.googleapis.com/auth/userinfo.email"
+      ],
+      "tokenExpiresAt": "2026-11-23T11:48:26+00:00",
+      "playHttpStatus": 200,
+      "playReadAccessVerified": true,
+      "playReleasePermissionsVerified": false,
+      "playPublicationPerformed": false,
+      "playEditCreated": false,
+      "reviewResponseBodyRead": false,
+      "serviceAccountKeysCreated": false
+    }
+  },
+  "limitations": [
+    "Readonly API checks do not prove release write permissions.",
+    "No Play edit, upload, release, review submission or publication performed.",
+    "No new Android device or emulator test performed.",
+    "Existing Play version codes, exact tracks, first completed production release and account-specific Store/test gates require verification.",
+    "Signing and publication remain explicitly disabled."
+  ],
+  "initialProbeCorrection": {
+    "symptom": "Google tokeninfo returns redundant email alias alongside both requested URI scopes",
+    "resolution": "Accept only redundant email alias; canonical scopes remain required; all other additional scopes rejected",
+    "initialDiagnosticProductionRun": "https://github.com/fabelpad/platform/actions/runs/45158925349"
+  }
+}
