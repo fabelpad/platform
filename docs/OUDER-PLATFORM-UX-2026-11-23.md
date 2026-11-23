@@ -19,6 +19,8 @@ Deze herinrichting gebruikt de bestaande gegevens, autorisatie, routes en native
 
 De compacte boek-/menunavigatie heeft toegankelijke labels, actuele bestemming, Escape-/buitenklikbediening en focusherstel. Profielen staan bovenaan, met één bewerkactie per rij en toevoegen bij de kop. Geboortedatum en leesniveau blijven in de profielbewerking. Maximaal vijf profielen en twintig tekens blijven gelden.
 
+Na registratie is telkens één profielkeuze actief: bestaande apparaatprofielen meenemen of een nieuw profiel maken. Ook bij meenemen is de naam direct bewerkbaar, met één geboortedatumveld en afzonderlijke toestemming per kind. Een gebruikt standaardprofiel zoals Avonturier behoudt bij hernoemen dezelfde ID en leesgegevens. Vernieuwen van een nog leeg online gezin wist de formulierinvoer niet; accountwissels en verlate antwoorden kunnen geen profiel in de opslag van een andere ouder plaatsen.
+
 Online intrekking gebeurt pas na bevestiging via de bestaande serveractie. De synchronisatie blokkeert verouderde writes, verwijdert de bevestigde profielkopie en haalt de gezaghebbende servergegevens op. Een mislukte herlaadactie blijft zichtbaar en blokkeert hervatting; wijzigingen en leesactiviteiten voor andere kinderen blijven bewaard. Late antwoorden kunnen het ingetrokken profiel niet terugplaatsen.
 
 De beheercockpit toont alleen beschikbare catalogusgegevens en echte bestemmingen. Er zijn geen verzonnen omzet-, gebruikers- of mailaantallen. De Studio maakt alle 31 paden bereikbaar, terwijl de bestaande gegevensstructuur één hoofdstukoverride per deel bewaart. De interface benoemt dit; een aparte tekst voor ieder keuzepad zou een inhoudelijke modelwijziging zijn. `baseRevision`, 409-conflicten, download/herstel en expliciet publiceren blijven onderdeel van de normale editor.
@@ -31,7 +33,7 @@ Android behoudt de gratis lokale variant en de reeds afzonderlijk bestaande geko
 
 ## Controle en grenzen
 
-De volledige lokale repositorycontrole is geslaagd via `scripts/local-build.sh`: configuratie, typen, content, database/API, e-mail, betalingen, deploymentcontracten, native runtime en Next.js-productiebuild. Alle 116 Playwright-tests slagen op de productiebuild. Ze controleren de webomgeving op 320, 390, 768 en desktopbreedte; de nieuwe regressies behandelen menu/focus, profielbewerking, toestemming en herlaadfouten, Studio-conflicten/herstel, templates en beheerrechten.
+De volledige lokale repositorycontrole is geslaagd via `scripts/local-build.sh`: configuratie, typen, content, database/API, e-mail, betalingen, deploymentcontracten, native runtime en Next.js-productiebuild. De volledige Playwright-suite slaagt op de productiebuild; het afzonderlijke uitrolbewijs bevat het actuele aantal tests. Ze controleren de webomgeving op 320, 390, 768 en desktopbreedte; de nieuwe regressies behandelen menu/focus, profielbewerking en de eerste profielkeuze na registratie, toestemming en herlaadfouten, Studio-conflicten/herstel, templates en beheerrechten.
 
 De Android-CI bouwt de bestaande lokale en gekoppelde AAB's. Een nieuwe afzonderlijke emulatorjob gebruikt de echte gebouwde lokale AAB met een tijdelijke emulatorhandtekening, controleert de native interface via adb/uiautomator en bewaart screenshots, UI-XML en logcat. Die testsigning is geen Play-upload- of app-signingcertificaat.
 
