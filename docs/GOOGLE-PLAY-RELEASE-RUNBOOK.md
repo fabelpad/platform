@@ -17,8 +17,8 @@ De gecontroleerde, ondertekende bundel is **Fabelpad 1.0.1 (2)**, gebouwd uit sc
 | Google Cloud | Project en beide beperkte WIF-identiteiten door de gebruiker ingericht en uitgelezen; details in §2. |
 | GitHub | Beide Play-environments aangemaakt en eigen signing-/WIF-secrets geplaatst; main en releasetags beschermd; details in §3. |
 | Play-apprechten | Eigenaar bevestigt appgebonden test-/productierechten. Beide echte WIF-proeven en Play-leestoegang zijn geslaagd (HTTP 200); release-schrijfrechten zijn nog niet getest. |
-| Automatische signing / publicatie | Nog uit: `signingEnabled=false`, `playEnabled=false`. Alleen de afzonderlijke verbindingsproef is vrijgegeven. |
-| Eerste interne en productierelease | Nog niet bevestigd. Controleer de werkelijke Play-status voordat je releasepoorten inschakelt. |
+| Signing / publicatie | Handmatige signing zonder upload is vrijgegeven: `signingEnabled=true`. Play-publicatie blijft uit: `playEnabled=false`. De afzonderlijke verbindings- en statuscontrole kunnen geen release starten. |
+| Eerste interne en productierelease | De eigenaar bevestigde een bestaande AAB-upload en nog geen productierelease. Controleer versiecode, bundelhash en trackstatus met de hieronder beschreven `status`-actie. |
 | Toestelacceptatie / Store-assets | Echte telefoon-/tablet- en offline-voorleestests, externe Store-beelden en eventuele account-/testtaken afzonderlijk afronden. Een geslaagde build vervangt die niet. |
 
 Upload de **AAB**, niet de APK, JSON, PEM of ZIP, onder **Testen en releasen → Testen → Intern testen → Nieuwe release maken**. Controleer eerst dat versiecode **2** nog niet door een andere bundel is gebruikt. Kies bij de eerste Play App Signing-inrichting dat **Google de app-signingsleutel genereert en beheert**. De AAB is al met de uploadsleutel ondertekend; daarvoor is geen PEPK-export nodig. Het openbare `fabelpad-upload-certificate.pem` is alleen voor een expliciet gevraagd uploadcertificaat of een sleutelreset. [Android signing, gecontroleerd 23-11-2026](https://developer.android.com/studio/publish/app-signing)
@@ -81,7 +81,7 @@ Niet-geheime Android/Play-instellingen staan ter review in [`scripts/play/config
 ```json
 {
   "schemaVersion": 1,
-  "signingEnabled": false,
+  "signingEnabled": true,
   "playEnabled": false,
   "connectionCheckEnabled": true,
   "versionCodeBase": 1000,
@@ -133,6 +133,19 @@ Een rapport met `oidcExchangeVerified=true` bevestigt de tokenuitwisseling. `pla
 
 Zet na de eenmalige verificatie `connectionCheckEnabled=false` via een gereviewde configuratiecommit als herhaalde diagnostiek niet nodig is. Signing en publicatie veranderen daardoor niet.
 
+### Werkelijke tracks en geüploade bundels controleren
+
+Gebruik de afzonderlijke statusactie om de reeds geüploade AAB te controleren:
+
+```bash
+gh workflow run fabelpad-play-production.yml \
+  --repo fabelpad/platform --ref main -f action=status
+```
+
+Deze actie gebruikt dezelfde beperkte productie-identiteit en OAuth-scope `androidpublisher`. Ze maakt een tijdelijke Play-edit, leest tracks en bundels en verwijdert de edit zonder validatie of commit. Daarna leest ze per track de [release-lifecycle](https://developers.google.com/android-publisher/api-ref/rest/v3/applications.tracks.releases/list), die concept, beoordeling en publicatie onderscheidt. Bij HTTP 403/404 blijft die lifecycle expliciet onbekend. Uploaden, trackwijzigingen en publicatie zijn uitgesloten; een mislukte verwijdering laat de job falen. Het artefact `fabelpad-play-production-status` bevat alleen release-identificatie en bundelhashes, zonder tokens of reviews. Een geslaagde statusjob alleen bewijst geen Store-goedkeuring; gebruik de gerapporteerde lifecycle. Een toesteltest blijft afzonderlijk.
+
+Vergelijk de bij versiecode **2** gerapporteerde `sha256` met **`6e32d9faed68febb783e9a0c2a0a2683cd418858fbc7af3e78ca539bea9de746`**. Bij gelijkheid is de upload exact de aangeleverde ondertekende 1.0.1-bundel uit appcommit `228d951`. Een nieuwe signingbuild of herupload is voor die controle niet nodig. Gebruik de gevonden trackstatus voor de vervolgstap; een bestaande draft mag niet door de automatische releasehelper worden vervangen.
+
 ## 5. Eerste interne en productierelease in Play Console
 
 Deze handelingen zijn nog niet als uitgevoerd bevestigd. Een Cloud-koppeling vult Store- of beleidsformulieren niet in.
@@ -151,21 +164,7 @@ Als goedgekeurde latere updates vanzelf beschikbaar moeten worden, controleer on
 
 ## 6. Alleen een nieuwe gesigneerde AAB bouwen
 
-Deze stap uploadt niets. Controleer eerst de definitieve versiecodebasis en houd `playEnabled=false`. Wijzig uitsluitend de publieke JSON via de afgesproken reviewroute:
-
-```bash
-python3 - <<'PY'
-import json
-from pathlib import Path
-path = Path('scripts/play/config.json')
-value = json.loads(path.read_text())
-assert value['playEnabled'] is False
-value['signingEnabled'] = True
-path.write_text(json.dumps(value, indent=2) + '\n')
-PY
-```
-
-Commit en integreer de gecontroleerde wijziging op `main`; start daarna:
+Handmatige signing is vrijgegeven. Deze stap bouwt een nieuwe ondertekende AAB en uploadt niets. Controleer de actuele versiecodes met `action=status`, houd `playEnabled=false` en gebruik de vastgelegde versiecodebasis. Start vanaf de gecontroleerde mainstand:
 
 ```bash
 gh workflow run fabelpad-android-ci.yml \

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "signingEnabled": false,
+  "signingEnabled": true,
   "playEnabled": false,
   "connectionCheckEnabled": true,
   "versionCodeBase": 1000,
