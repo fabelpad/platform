@@ -44,6 +44,9 @@ export class ParentActivityQueue {
       let response: Response;
       try { response = await fetcher('/api/parent/activity', { method: 'POST', credentials: 'same-origin', cache: 'no-store', signal: AbortSignal.timeout(5000), headers: { 'Content-Type': 'application/json', 'X-Fabelpad-Parent': this.owner }, body: JSON.stringify(event) }); } catch { return; }
       if (this.stopped) return;
+      // Consent can be withdrawn while this request is in flight. Its late
+      // rejection must not stop activity for the remaining children.
+      if (!this.events.some(item => item.eventId === event.eventId)) continue;
       if (response.status === 403 || response.status === 410 || response.status === 423) { this.events = []; this.persist(); this.stopped = true; this.options.onBlocked?.(); return; }
       if (response.status === 401 || response.status === 429 || response.status >= 500) return;
       // Invalid/too-old events cannot extend a deadline; do not retry them with a newer time.
@@ -52,4 +55,5 @@ export class ParentActivityQueue {
   }
   stop() { this.stopped = true; }
   discard() { this.events = []; this.persist(); }
+  discardProfile(profileId: string) { this.events = this.events.filter(event => event.profileId !== profileId); this.persist(); }
 }

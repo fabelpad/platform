@@ -39,7 +39,7 @@ export default {
     userInterfaceStyle: 'light',
     scheme: production ? 'fabelpad' : 'fabelpaddemo',
     android: {
-      package: packageId, versionCode,
+      package: packageId, versionCode, softwareKeyboardLayoutMode: 'resize',
       ...(production ? { allowBackup: false, blockedPermissions: [
         ...(!connected ? ['android.permission.INTERNET', 'com.android.vending.BILLING'] : []), 'android.permission.SYSTEM_ALERT_WINDOW',
         'android.permission.READ_EXTERNAL_STORAGE', 'android.permission.WRITE_EXTERNAL_STORAGE',

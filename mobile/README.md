@@ -4,6 +4,12 @@ De eerste productieversie is een gratis, lokale leesapp met dertien gebundelde v
 
 De nieuwe, afzonderlijk gekozen variant `connected` voegt ouderaanmelding, gedeelde online gezinstoegang en Google Play Billing 9.1.0 toe. De oorspronkelijke variant `production` houdt haar lokale scope. Alleen `connected` resolveert de Billing SDK en krijgt netwerktoegang. Lees de configuratie, testgrenzen en externe providerstappen in [BETALINGEN-BEHEER.md](../docs/BETALINGEN-BEHEER.md). De gekoppelde variant gebruikt een hogere versionCode dan de bestaande versie `1.0.1 (2)`; zij wordt met deze wijziging niet gepubliceerd.
 
+Versie `1.0.2` vernieuwt de native ouderomgeving met een compacte appbalk, de
+bestaande vier bestemmingen in een menu, profielrijen en leesinstellingen. De
+geboortejaarpoort sluit na vijf minuten of bij achtergrond. De bestaande lokale
+profielen en de afzonderlijke verbonden variant blijven behouden. Zie de
+[inventarisatie, emulator-smoke en acceptatiegrenzen](OUDEROMGEVING-VALIDATIE.md).
+
 Productie-identiteit: `nl.fabelpad.app`, versie `1.0.0`, eerste `versionCode` `1`. De eigenaar heeft deze identiteit en lokale productscope bevestigd. Iedere volgende Play-versie krijgt een hoger versionCode. De historische demo heeft een afzonderlijk pakket en sleutel; die APK kan niet als productie-upload worden gebruikt.
 
 ## Installeren en controleren

@@ -101,12 +101,13 @@ test('legacy profile keeps route when a date enables automatic, including downlo
   await page.locator('.illustrated-choice-option').first().click();
   const before = await page.evaluate(key => JSON.parse(localStorage.getItem(key)!), `${prefix}fabelpad-child-legacy-story-dream`);
   await editLocal(page, 'Noor');
+  await page.getByRole('button', { name: 'Annuleren', exact: true }).click();
   await page.getByRole('button', { name: 'Voor onderweg', exact: true }).click();
   await page.getByRole('button', { name: 'De Droompost downloaden', exact: true }).click();
   await expect(page.getByRole('button', { name: 'De Droompost download verwijderen', exact: true })).toBeVisible();
   const downloaded = await page.evaluate(async () => { const cache = await caches.open('fabelpad-downloads-v1'); return (await (await cache.match('/art/download-dream.json'))!.json()).readingLevels; });
   expect(Object.keys(downloaded).sort()).toEqual(['6to8', '9plus', 'under6']);
-  await page.getByRole('button', { name: 'Ons gezin', exact: true }).click();
+  await page.getByRole('button', { name: 'Mijn gezin', exact: true }).click();
   await page.getByRole('button', { name: 'Profiel van Noor bewerken', exact: true }).click();
   await expect(page.getByLabel('Geboortedatum toevoegen', { exact: true })).toBeVisible();
   await page.locator('#pd-profile-birth-date').fill('2021-11-23');

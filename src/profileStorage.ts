@@ -199,7 +199,8 @@ export function isLocalStorageDurable(): boolean { return ![...volatileKeys].som
 export function clearParentDeviceData(parentId: string): void {
   const prefix = `fabelpad-scope-${encodeURIComponent(`parent:${parentId}`)}::`;
   const draft = `fabelpad-cloud-draft-${encodeURIComponent(parentId)}`;
-  const matches = (key: string) => key.startsWith(prefix) || key === draft || key === `${draft}-recovery` || key === `fabelpad-import-pending-${encodeURIComponent(parentId)}` || key === `fabelpad-parent-activity-${encodeURIComponent(parentId)}`;
+  const studioRecovery = `fabelpad-studio-recovery-v1:${encodeURIComponent(parentId)}:`;
+  const matches = (key: string) => key.startsWith(studioRecovery) || key.startsWith(prefix) || key === draft || key === `${draft}-recovery` || key === `fabelpad-import-pending-${encodeURIComponent(parentId)}` || key === `fabelpad-parent-activity-${encodeURIComponent(parentId)}`;
   for (const key of [...memory.keys()]) if (matches(key)) { memory.delete(key); volatileKeys.delete(key); }
   try {
     const stored = window.localStorage;

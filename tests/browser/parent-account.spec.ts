@@ -113,7 +113,7 @@ test('signing into a pending deletion never restores it; a separate explicit act
 test('deletion shows family impact, requires fresh authentication and purges only the current parent cache', async ({ page }) => {
   await session(page);
   let fresh = false;
-  await page.addInitScript(id => { localStorage.setItem(`fabelpad-scope-${encodeURIComponent(`parent:${id}`)}::fabelpad-family`, 'synthetic-current'); localStorage.setItem('fabelpad-scope-other::fabelpad-family', 'synthetic-other'); }, parent.id);
+  await page.addInitScript(id => { localStorage.setItem(`fabelpad-scope-${encodeURIComponent(`parent:${id}`)}::fabelpad-family`, 'synthetic-current'); localStorage.setItem('fabelpad-scope-other::fabelpad-family', 'synthetic-other'); localStorage.setItem(`fabelpad-studio-recovery-v1:${encodeURIComponent(id)}:station`, 'private-current-draft'); localStorage.setItem('fabelpad-studio-recovery-v1:other-parent:station', 'private-other-draft'); }, parent.id);
   await page.route('**/api/parent/deletion', route => {
     if (route.request().method() === 'GET') return route.fulfill({ json: { deletionDeadlineMinute: '2026-12-22T12:00:00Z', expiresAt: '2026-11-22T12:01:00Z' } });
     expect(route.request().postDataJSON()).toEqual({ confirm: true, expectedDeadlineMinute: '2026-12-22T12:00:00Z' });
@@ -133,6 +133,8 @@ test('deletion shows family impact, requires fresh authentication and purges onl
   await expect(page.getByText('De definitieve verwijderdeadline is', { exact: false })).toBeVisible();
   expect(await page.evaluate(id => localStorage.getItem(`fabelpad-scope-${encodeURIComponent(`parent:${id}`)}::fabelpad-family`), parent.id)).toBeNull();
   expect(await page.evaluate(() => localStorage.getItem('fabelpad-scope-other::fabelpad-family'))).toBe('synthetic-other');
+  expect(await page.evaluate(id => localStorage.getItem(`fabelpad-studio-recovery-v1:${encodeURIComponent(id)}:station`), parent.id)).toBeNull();
+  expect(await page.evaluate(() => localStorage.getItem('fabelpad-studio-recovery-v1:other-parent:station'))).toBe('private-other-draft');
 });
 
 test('deletion waits for an exact server preview and a changed minute requires a new explicit confirmation', async ({ page }) => {

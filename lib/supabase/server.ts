@@ -22,6 +22,18 @@ export async function createSupabaseServerClient() {
   });
 }
 
+/** Server Components can read cookies but cannot persist a refreshed session.
+ * The account/session route remains responsible for writing refreshed cookies. */
+export async function createSupabasePageClient() {
+  const config = getSupabaseConfig();
+  if (!config) throw new BackendConfigurationError();
+  const store = await cookies();
+  return createServerClient(config.url, config.publishableKey, {
+    cookieOptions: { httpOnly: true, sameSite: 'lax', secure: new URL(config.appUrl).protocol === 'https:', path: '/' },
+    cookies: { getAll: () => store.getAll(), setAll() {} },
+  });
+}
+
 const requestTokens = new WeakMap<SupabaseClient, string>();
 /** Native requests carry an Auth token, cookie requests use the existing SSR
  * session. A token is verified through getUser(token) before any family RPC. */

@@ -4,7 +4,7 @@ import { clearParentDeviceData, isFamilySnapshot } from './profileStorage';
 export type ParentIdentity = { id: string; email: string; displayName: string };
 export type CloudEnvelope = { parent: ParentIdentity; revision: number; snapshot: FamilySnapshot | null };
 export type SyncPhase = 'loading' | 'empty' | 'saved' | 'pending' | 'saving' | 'offline' | 'conflict' | 'signed-out' | 'error';
-export type SyncState = { phase: SyncPhase; revision: number; snapshot: FamilySnapshot | null; dirty: boolean; remote?: { revision: number; snapshot: FamilySnapshot | null }; message?: string; localDurable?: boolean };
+export type SyncState = { phase: SyncPhase; revision: number; snapshot: FamilySnapshot | null; dirty: boolean; remote?: { revision: number; snapshot: FamilySnapshot | null }; message?: string; localDurable?: boolean; consentReloadRequired?: string };
 type Draft = { owner: string; revision: number; snapshot: FamilySnapshot; dirty: boolean; baseSnapshot?: FamilySnapshot | null };
 type Store = { getItem(key: string): string | null; setItem(key: string, value: string): void };
 type Fetcher = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
@@ -30,6 +30,9 @@ export class FamilySyncClient {
   private refreshing = false;
   private disposed = false;
   private revoked = false;
+  private consentReload: string | null = null;
+  private consentEpoch = 0;
+  private withdrawalReload: Promise<void> | null = null;
   private store: Store;
   private fetcher: Fetcher;
   private debounceMs: number;
@@ -104,11 +107,13 @@ export class FamilySyncClient {
     return this.envelope(await response.json());
   }
   async load(): Promise<void> {
+    if (this.consentReload) { await this.reloadAfterConsentWithdrawal(this.consentReload); return; }
+    const consentEpoch = this.consentEpoch;
     const cached = this.draft();
     this.emit({ ...this.state, phase: 'loading' });
     try {
       const remote = await this.getCloud();
-      if (this.disposed || this.revoked) return;
+      if (this.disposed || this.revoked || this.consentReload || consentEpoch !== this.consentEpoch) return;
       if (this.adoptRemoteRemoval(remote, cached?.baseSnapshot ?? (cached?.dirty ? null : cached?.snapshot))) return;
       this.baseSnapshot = remote.snapshot;
       if (cached?.dirty && cached.revision !== remote.revision && !sameContent(cached.snapshot, remote.snapshot)) {
@@ -131,7 +136,7 @@ export class FamilySyncClient {
       this.emit({ phase: remote.snapshot ? 'saved' : 'empty', revision: remote.revision, snapshot: remote.snapshot, dirty: false });
       this.cache(); this.onRemote(remote.snapshot);
     } catch (error) {
-      if (this.disposed) return;
+      if (this.disposed || this.consentReload || consentEpoch !== this.consentEpoch) return;
       if (error instanceof AccountBlockedError) return;
       if (error instanceof AuthError) { this.emit({ ...this.state, phase: 'signed-out', message: 'Log opnieuw in om jullie verhalen te openen.' }); return; }
       if (cached) {
@@ -143,7 +148,7 @@ export class FamilySyncClient {
     }
   }
   enqueue(snapshot: FamilySnapshot): void {
-    if (this.disposed || this.revoked || !isFamilySnapshot(snapshot) || sameContent(snapshot, this.state.snapshot)) return;
+    if (this.disposed || this.revoked || this.consentReload || !isFamilySnapshot(snapshot) || sameContent(snapshot, this.state.snapshot)) return;
     this.generation += 1;
     this.emit({ ...this.state, snapshot: copy(snapshot), dirty: true, phase: this.state.phase === 'conflict' ? 'conflict' : this.state.phase === 'signed-out' ? 'signed-out' : 'pending', message: undefined });
     this.cache();
@@ -153,24 +158,26 @@ export class FamilySyncClient {
   async flush(): Promise<void> {
     clearTimeout(this.timer);
     if (this.writing) return this.writing;
-    if (this.disposed || !this.state.dirty || !this.state.snapshot || this.state.phase === 'conflict' || this.state.phase === 'signed-out') return;
+    if (this.disposed || this.consentReload || !this.state.dirty || !this.state.snapshot || this.state.phase === 'conflict' || this.state.phase === 'signed-out') return;
     this.writing = this.runWrites();
     try { await this.writing; } finally { this.writing = null; }
   }
   private async runWrites() {
     let mergeRetries = 0;
-    while (!this.disposed && this.state.dirty && this.state.snapshot && this.state.phase !== 'conflict' && this.state.phase !== 'signed-out') {
+    while (!this.disposed && !this.consentReload && this.state.dirty && this.state.snapshot && this.state.phase !== 'conflict' && this.state.phase !== 'signed-out') {
+      const consentEpoch = this.consentEpoch;
       const submittedGeneration = this.generation;
       const submitted = copy(this.state.snapshot);
       const baseRevision = this.state.revision;
       this.emit({ ...this.state, phase: 'saving', message: undefined });
       try {
         const response = await this.fetcher('/api/family', { method: 'PUT', credentials: 'same-origin', cache: 'no-store', headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'X-Fabelpad-Parent': this.owner }, body: JSON.stringify({ baseRevision, snapshot: submitted }) });
-        if (this.disposed || this.revoked) return;
+        if (this.disposed || this.revoked || this.consentReload || consentEpoch !== this.consentEpoch) return;
         await this.checkBlocked(response);
         if (response.status === 401 || response.status === 403 || response.redirected || response.headers.get('Content-Type')?.includes('text/html')) { this.emit({ ...this.state, phase: 'signed-out', message: 'Log opnieuw in. Je veranderingen blijven op dit apparaat bewaard.' }); this.cache(); return; }
         if (response.status === 409) {
           const value = await response.json() as { revision?: number; snapshot?: unknown };
+          if (this.disposed || this.consentReload || consentEpoch !== this.consentEpoch) return;
           if (!Number.isSafeInteger(value.revision) || (value.revision ?? -1) < 0 || (value.snapshot !== null && !isFamilySnapshot(value.snapshot))) throw new Error('Ongeldig versieantwoord.');
           const remote = { revision: value.revision!, snapshot: value.snapshot as FamilySnapshot | null };
           if (this.adoptRemoteRemoval(remote)) return;
@@ -189,30 +196,36 @@ export class FamilySyncClient {
         }
         if (!response.ok) { this.emit({ ...this.state, phase: 'error', message: 'Bewaren lukt nu niet. Je veranderingen staan nog op dit apparaat.' }); this.cache(); return; }
         const remote = this.envelope(await response.json());
+        if (this.disposed || this.consentReload || consentEpoch !== this.consentEpoch) return;
         this.baseSnapshot = remote.snapshot ?? submitted;
         const changedDuringWrite = this.generation !== submittedGeneration;
         this.emit({ phase: changedDuringWrite ? 'pending' : 'saved', revision: remote.revision, snapshot: changedDuringWrite ? this.state.snapshot : (remote.snapshot ?? submitted), dirty: changedDuringWrite });
         this.cache();
       } catch (error) {
         if (error instanceof AccountBlockedError) return;
-        if (!this.disposed) { this.emit({ ...this.state, phase: error instanceof AuthError ? 'signed-out' : 'offline', message: error instanceof AuthError ? 'Het ouderaccount is gewijzigd. Log opnieuw in om verder te gaan.' : 'Geen verbinding. Veranderingen blijven op dit apparaat bewaard.' }); this.cache(); }
+        if (!this.disposed && !this.consentReload && consentEpoch === this.consentEpoch) { this.emit({ ...this.state, phase: error instanceof AuthError ? 'signed-out' : 'offline', message: error instanceof AuthError ? 'Het ouderaccount is gewijzigd. Log opnieuw in om verder te gaan.' : 'Geen verbinding. Veranderingen blijven op dit apparaat bewaard.' }); this.cache(); }
         return;
       }
     }
   }
   /** Check a changed session without applying data while an edit or story dialog is open. */
   async verifyIdentity(): Promise<void> {
+    if (this.consentReload) { await this.reloadAfterConsentWithdrawal(this.consentReload).catch(() => {}); return; }
     if (this.disposed || this.state.phase === 'signed-out') return;
-    try { const remote = await this.getCloud(); if (!this.disposed) this.adoptRemoteRemoval(remote); }
-    catch (error) { if (!this.disposed && error instanceof AuthError) this.emit({ ...this.state, phase: 'signed-out', message: 'Het ouderaccount is gewijzigd. Log opnieuw in om verder te gaan.' }); }
+    const consentEpoch = this.consentEpoch;
+    try { const remote = await this.getCloud(); if (!this.disposed && !this.consentReload && consentEpoch === this.consentEpoch) this.adoptRemoteRemoval(remote); }
+    catch (error) { if (!this.disposed && !this.consentReload && consentEpoch === this.consentEpoch && error instanceof AuthError) this.emit({ ...this.state, phase: 'signed-out', message: 'Het ouderaccount is gewijzigd. Log opnieuw in om verder te gaan.' }); }
   }
   async refresh(): Promise<void> {
+    if (this.consentReload) { await this.reloadAfterConsentWithdrawal(this.consentReload).catch(() => {}); return; }
     if (this.disposed || this.refreshing || this.state.phase === 'conflict' || this.state.phase === 'signed-out') return;
     if (this.state.dirty) { await this.flush(); return; }
     this.refreshing = true;
     const generation = this.generation;
+    const consentEpoch = this.consentEpoch;
     try {
       const remote = await this.getCloud();
+      if (this.consentReload || consentEpoch !== this.consentEpoch) return;
       if (!this.disposed && this.adoptRemoteRemoval(remote)) return;
       if (this.disposed || this.state.dirty || this.generation !== generation) return;
       const changed = !sameContent(remote.snapshot, this.state.snapshot);
@@ -222,10 +235,57 @@ export class FamilySyncClient {
       this.cache(); if (changed) this.onRemote(remote.snapshot);
     } catch (error) {
       if (error instanceof AccountBlockedError) return;
-      if (!this.disposed) this.emit({ ...this.state, phase: error instanceof AuthError ? 'signed-out' : 'offline', message: error instanceof AuthError ? 'Log opnieuw in om te synchroniseren.' : 'Geen verbinding. Jullie verhalen blijven beschikbaar op dit apparaat.' });
+      if (!this.disposed && !this.consentReload && consentEpoch === this.consentEpoch) this.emit({ ...this.state, phase: error instanceof AuthError ? 'signed-out' : 'offline', message: error instanceof AuthError ? 'Log opnieuw in om te synchroniseren.' : 'Geen verbinding. Jullie verhalen blijven beschikbaar op dit apparaat.' });
     } finally { this.refreshing = false; }
   }
+  /** Only after a confirmed server withdrawal: stop writes and discard that
+   * profile, then adopt the authenticated server snapshot without a draft flush. */
+  async reloadAfterConsentWithdrawal(profileId: string): Promise<void> {
+    if (this.withdrawalReload) return this.withdrawalReload;
+    if (this.disposed || this.revoked) throw new Error('De gezinsverbinding is gesloten. Open je gezin opnieuw.');
+    const run = async () => {
+      this.consentReload = profileId; this.consentEpoch += 1; this.generation += 1; clearTimeout(this.timer);
+      const remove = (snapshot: FamilySnapshot | null | undefined): FamilySnapshot | null => {
+        if (!snapshot) return null;
+        const children = snapshot.family.children.filter(child => child.id !== profileId);
+        return { ...snapshot, family: { ...snapshot.family, children, activeId: children.some(child => child.id === snapshot.family.activeId) ? snapshot.family.activeId : children[0]?.id ?? '' }, data: Object.fromEntries(Object.entries(snapshot.data).filter(([id]) => id !== profileId)) };
+      };
+      const retained = remove(this.state.snapshot);
+      this.baseSnapshot = remove(this.baseSnapshot);
+      const retainedChanges = this.state.dirty && !sameContent(retained, this.baseSnapshot ?? null);
+      this.emit({ ...this.state, snapshot: retained, remote: undefined, dirty: retainedChanges, phase: 'loading', consentReloadRequired: profileId, message: 'De toestemming is ingetrokken. De bevestigde gezinsgegevens ophalen…' });
+      if (retained?.family.children.length) this.onMerged(retained);
+      else if (retained) clearParentDeviceData(this.owner);
+      this.cache();
+      try { this.store.setItem(`${this.cacheKey}-recovery`, 'null'); } catch { /* The active draft is sanitized as well. */ }
+      try {
+        const remote = await this.getCloud();
+        if (this.disposed || this.revoked) return;
+        if (remote.snapshot?.family.children.some(child => child.id === profileId)) throw new Error('Het ingetrokken profiel staat nog in het antwoord.');
+        this.consentReload = null;
+        if (retainedChanges && retained && !sameContent(retained, remote.snapshot)) {
+          const merged = this.baseSnapshot && mergeDisjointChildren(this.baseSnapshot, retained, remote.snapshot);
+          if (merged) {
+            this.baseSnapshot = remote.snapshot;
+            this.emit({ phase: 'pending', revision: remote.revision, snapshot: merged, dirty: true });
+            this.cache(); this.onRemote(merged); void (this.writing ?? Promise.resolve()).then(() => this.flush()); return;
+          }
+          this.emit({ phase: 'conflict', revision: this.state.revision, snapshot: retained, dirty: true, remote });
+          this.cache(); this.backup(remote); this.onRemote(retained); return;
+        }
+        this.baseSnapshot = remote.snapshot;
+        this.emit({ phase: remote.snapshot?.family.children.length ? 'saved' : 'empty', revision: remote.revision, snapshot: remote.snapshot, dirty: false });
+        this.cache(); this.onRemote(remote.snapshot);
+      } catch (error) {
+        if (!this.disposed && !this.revoked) { this.emit({ ...this.state, phase: error instanceof AuthError ? 'signed-out' : 'error', consentReloadRequired: profileId, message: 'De toestemming is ingetrokken. Ophalen lukt nu niet; synchronisatie blijft gepauzeerd. Probeer opnieuw.' }); this.cache(); }
+        throw error;
+      }
+    };
+    this.withdrawalReload = run();
+    try { await this.withdrawalReload; } finally { this.withdrawalReload = null; }
+  }
   chooseRemote(): void {
+    if (this.consentReload) return;
     if (!this.state.remote) return;
     const remote = this.state.remote;
     this.backup(remote); this.generation += 1; this.baseSnapshot = remote.snapshot;
@@ -233,6 +293,7 @@ export class FamilySyncClient {
     this.cache(); this.onRemote(remote.snapshot);
   }
   async chooseLocal(): Promise<void> {
+    if (this.consentReload) return;
     if (!this.state.remote || !this.state.snapshot) return;
     const chosen = this.baseSnapshot ? preferLocalChangedChildren(this.baseSnapshot, this.state.snapshot, this.state.remote.snapshot) : this.state.snapshot;
     this.backup(this.state.remote); this.generation += 1; this.baseSnapshot = this.state.remote.snapshot;

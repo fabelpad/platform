@@ -54,6 +54,8 @@ export async function emailAdminRequest(request: Request, action: Action): Promi
     const client = await createSupabaseServerClient();
     const parent = await getVerifiedParent(client);
     if (!parent) throw new RequestError(401, 'sign_in_required', messages.sign_in_required);
+    const expected = request.headers.get('x-fabelpad-parent');
+    if ((request.method !== 'GET' || expected !== null) && expected !== parent.id) throw new RequestError(401, 'account_changed', 'Het beheeraccount is gewijzigd. Laad de e-mailinstellingen opnieuw.');
     if (!await isContentAdmin(client, parent.id)) throw new RequestError(403, 'admin_required', messages.admin_required);
     // getSession supplies transport only, after getUser and the current DB role.
     const { data: { session }, error } = await client.auth.getSession();
