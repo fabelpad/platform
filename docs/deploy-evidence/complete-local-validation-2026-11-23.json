@@ -1,0 +1,82 @@
+{
+  "checkedAt": "2026-11-22T23:46:10.211902+00:00",
+  "applicationSha": "ec82395ba57904302bc4a93e71e5dba63def2950",
+  "cleanWorktree": "git archive of exact application commit into a separate development directory",
+  "configuration": "isolated local mode; no remote database, provider, migration or mail action",
+  "toolchain": {
+    "node": "24.18.0",
+    "pnpm": "11.25.0",
+    "next": "16.3.4"
+  },
+  "installCommand": "pnpm install --frozen-lockfile",
+  "buildCommand": "bash scripts/local-build.sh",
+  "buildPassed": true,
+  "buildSeconds": 46.8,
+  "buildLogSha256": "0d73e4fa09016c32f5bf4bc03155eb9acd3ec9bce414b14c04371657921e71a0",
+  "browser": {
+    "command": "pnpm test:browser",
+    "passed": 68,
+    "failed": 0,
+    "skipped": 0,
+    "flaky": 0,
+    "seconds": 75.868,
+    "newCompleteAdventureCases": 18,
+    "deviceWidths": [
+      360,
+      390,
+      768,
+      1440
+    ],
+    "actualNativeDeviceTest": false
+  },
+  "readingLevels": {
+    "storyCount": 13,
+    "chaptersPerStory": 5,
+    "choicesPerChapter": 2,
+    "chapterVariantsPerLevel": 403,
+    "completeRoutesPerLevel": 416,
+    "levelNames": [
+      "under6",
+      "6to8",
+      "9plus"
+    ],
+    "default": "6to8",
+    "under6RouteLengthPercent": [
+      95.2,
+      101.9
+    ],
+    "6to8RouteLengthPercent": [
+      95.7,
+      101.8
+    ],
+    "futureChoicesDoNotChangeEarlierPassages": true,
+    "keepsakesAndRouteMeaningsPreserved": true
+  },
+  "storage": {
+    "fiveFullyExploredProfilesBytes": 219763,
+    "limitBytes": 262144
+  },
+  "postgresContract": {
+    "snapshotCases": 38,
+    "releaseBundleCases": 37,
+    "existingRegistrationCases": 27,
+    "legacyRowsAndImmutableReleasesPreserved": true,
+    "parentIsolationAndConsentTested": true
+  },
+  "normalBuildIncludes": [
+    "TypeScript",
+    "configuration",
+    "content and route/reading-level checks",
+    "existing Station play checks",
+    "family/auth/privacy/email/PostgreSQL contracts",
+    "deploy contract checks",
+    "native runtime checks",
+    "native export reproducibility including release catalog and archives",
+    "Next.js production build"
+  ],
+  "limitations": [
+    "Synthetic browser speech does not establish an audible device voice.",
+    "No real OTP, Google login or provider email sent.",
+    "No native device or emulator test."
+  ]
+}

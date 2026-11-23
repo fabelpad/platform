@@ -1,0 +1,138 @@
+{
+  "environment": "staging",
+  "project_id": "tlwfpivafcokcjyjwgmq",
+  "sha": "ec82395ba57904302bc4a93e71e5dba63def2950",
+  "migration": {
+    "version": "20261122233351",
+    "name": "reading_levels_completed_routes",
+    "sha256": "d9ce497ef92498134daccff233ee0ce05a3ad9216577840fa15d2e29b95a9265",
+    "mcpGeneratedVersion": "20261122234217",
+    "historyNormalization": "Only the newly applied own row was matched by name, generated version and exact SQL MD5, then aligned with the CLI-created repository filename. Prior migration rows unchanged."
+  },
+  "checks": {
+    "new_release_count": 13,
+    "all_new_hashes_match": true,
+    "reject_invalid_level": true,
+    "all_new_releases_valid": true,
+    "level_count_per_release": true,
+    "reject_incomplete_history": true,
+    "all_new_originals_preserved": true,
+    "valid_preferences_and_history": true,
+    "private_helper_not_app_executable": true,
+    "all_existing_families_valid": true
+  },
+  "preserved": {
+    "familyAndAuthBeforeMigrationDigestsMatch": true,
+    "familyAndAuthAfterAppendUnchanged": true,
+    "oldReleasePayloadsUnchanged": true,
+    "publicFunctionsAndACLUnchanged": true,
+    "priorMigrationsUnchanged": true
+  },
+  "before": {
+    "families": 1,
+    "auth": 1,
+    "releases": 13
+  },
+  "after": {
+    "families": 1,
+    "auth": 1,
+    "releases": 26,
+    "migrations": 12
+  },
+  "newReleases": [
+    {
+      "id": "station",
+      "legacyVersion": "ca198208a7956125",
+      "version": "3581891717faaab2",
+      "bytes": 247116
+    },
+    {
+      "id": "dream",
+      "legacyVersion": "e638171351a5e505",
+      "version": "470d5b64942f9fc7",
+      "bytes": 247180
+    },
+    {
+      "id": "toy",
+      "legacyVersion": "3b2e35cd16e8b03b",
+      "version": "1e344652e4266c47",
+      "bytes": 238791
+    },
+    {
+      "id": "weather",
+      "legacyVersion": "e3bf31c26e46e900",
+      "version": "deb1be4321757c72",
+      "bytes": 364622
+    },
+    {
+      "id": "moonbakery",
+      "legacyVersion": "0fe4cd9c9555f2e6",
+      "version": "8bafdf3377622c7e",
+      "bytes": 370178
+    },
+    {
+      "id": "ocean",
+      "legacyVersion": "6333c5c7bc819a75",
+      "version": "c0d7e7e0eec06e99",
+      "bytes": 368823
+    },
+    {
+      "id": "garden",
+      "legacyVersion": "71135aed442bb8e9",
+      "version": "407f562fe597862b",
+      "bytes": 376275
+    },
+    {
+      "id": "clock",
+      "legacyVersion": "bf8fa50ec2f16db3",
+      "version": "9c6c1b987b9664e0",
+      "bytes": 375606
+    },
+    {
+      "id": "library",
+      "legacyVersion": "a1b461260ffa2ec8",
+      "version": "82e8214be3817de1",
+      "bytes": 356624
+    },
+    {
+      "id": "balloon",
+      "legacyVersion": "66bac902d4b515d7",
+      "version": "d8630af2e6702ed2",
+      "bytes": 355898
+    },
+    {
+      "id": "forest",
+      "legacyVersion": "4c449f80517524a7",
+      "version": "6a3cff8dbc1b6433",
+      "bytes": 360823
+    },
+    {
+      "id": "snow",
+      "legacyVersion": "4daf5aaf01c71b02",
+      "version": "9a9b52dee9da6c8a",
+      "bytes": 354834
+    },
+    {
+      "id": "stars",
+      "legacyVersion": "036f22e483fd7e96",
+      "version": "e3da9f7d675ce570",
+      "bytes": 363092
+    }
+  ],
+  "securityAdvisories": [
+    {
+      "name": "rls_enabled_no_policy",
+      "level": "INFO",
+      "count": 15,
+      "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy"
+    },
+    {
+      "name": "auth_leaked_password_protection",
+      "level": "WARN",
+      "count": 1,
+      "remediation": "https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection"
+    }
+  ],
+  "nonMutatingSyntheticTest": true,
+  "noUserCreationMailOrAuthChanges": true
+}

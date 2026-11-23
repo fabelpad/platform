@@ -1,0 +1,105 @@
+{
+  "checkedAt": "2026-11-22T23:55:51.859532+00:00",
+  "repo": "fabelpad/platform",
+  "sourceSha": "ec82395ba57904302bc4a93e71e5dba63def2950",
+  "runId": 45084662867,
+  "runUrl": "https://github.com/fabelpad/platform/actions/runs/45084662867",
+  "passed": true,
+  "event": "push",
+  "requiredNativeJob": {
+    "id": 137400432914,
+    "url": "https://github.com/fabelpad/platform/actions/runs/45084662867/job/137400432914",
+    "conclusion": "success",
+    "allRequiredStepsSuccess": true
+  },
+  "signedUploadJob": "skipped",
+  "githubArtifact": {
+    "id": 14778499904,
+    "name": "fabelpad-android-check-ec82395ba57904302bc4a93e71e5dba63def2950",
+    "url": "https://github.com/fabelpad/platform/actions/runs/45084662867/artifacts/14778499904",
+    "sha256": "3cdbb3a70913c5ae7d6a0abd12bdceeec8813e6a4978b9cf1a13c87316e983d4",
+    "githubDigestVerified": true,
+    "zipCrcVerified": true,
+    "bytes": 38574516
+  },
+  "aab": {
+    "file": "fabelpad-production-unsigned.aab",
+    "sha256": "8b721b648b293583ce415f276f2cb68490381ab5e1cebc294f31b3ef650731a3",
+    "bytes": 38871026,
+    "reportHashAndBytesVerified": true,
+    "packageId": "nl.fabelpad.app",
+    "versionName": "1.0.0",
+    "versionCode": 1,
+    "sourceIdentityAndCleanWorkingTreeVerified": true,
+    "variant": "production",
+    "signed": false,
+    "playUploaded": false,
+    "bundletoolValidate": true,
+    "bundletoolVersion": "1.18.3",
+    "bundletoolChecksumVerified": true,
+    "targetSdk": 36,
+    "minSdk": 24,
+    "architectures": [
+      "arm64-v8a",
+      "x86_64"
+    ],
+    "nativeLibraries": 44,
+    "allElfLoadAlignmentsAtLeast16KiB": true,
+    "minimumElfLoadAlignment": 16384,
+    "bundlePageAlignment16K": true,
+    "permissions": [
+      "android.permission.VIBRATE",
+      "nl.fabelpad.app.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
+    ],
+    "debuggable": false,
+    "allowBackup": false,
+    "cleartextTraffic": false,
+    "contentVersion": "247d7d1c63cc4fa3",
+    "runtimeAssets": {
+      "count": 20,
+      "allSourceHashesMatchBundledImages": true,
+      "entries": {
+        "/art/station.webp": "base/res/drawable-mdpi-v4/assets_art_station.webp",
+        "/art/play/station-scene.webp": "base/res/drawable-mdpi-v4/assets_art_play_stationscene.webp",
+        "/art/dream.webp": "base/res/drawable-mdpi-v4/assets_art_dream.webp",
+        "/art/play/dream-scene.webp": "base/res/drawable-mdpi-v4/assets_art_play_dreamscene.webp",
+        "/art/toy.webp": "base/res/drawable-mdpi-v4/assets_art_toy.webp",
+        "/art/play/toy-scene.webp": "base/res/drawable-mdpi-v4/assets_art_play_toyscene.webp",
+        "/art/weather-v2.webp": "base/res/drawable-mdpi-v4/assets_art_weatherv2.webp",
+        "/art/moonbakery.webp": "base/res/drawable-mdpi-v4/assets_art_moonbakery.webp",
+        "/art/ocean.webp": "base/res/drawable-mdpi-v4/assets_art_ocean.webp",
+        "/art/play/ocean-scene.webp": "base/res/drawable-mdpi-v4/assets_art_play_oceanscene.webp",
+        "/art/garden.webp": "base/res/drawable-mdpi-v4/assets_art_garden.webp",
+        "/art/clock.webp": "base/res/drawable-mdpi-v4/assets_art_clock.webp",
+        "/art/library.webp": "base/res/drawable-mdpi-v4/assets_art_library.webp",
+        "/art/balloon.webp": "base/res/drawable-mdpi-v4/assets_art_balloon.webp",
+        "/art/forest.webp": "base/res/drawable-mdpi-v4/assets_art_forest.webp",
+        "/art/snow.webp": "base/res/drawable-mdpi-v4/assets_art_snow.webp",
+        "/art/stars.webp": "base/res/drawable-mdpi-v4/assets_art_stars.webp",
+        "/art/play/station-platform.webp": "base/res/drawable-mdpi-v4/assets_art_play_stationplatform.webp",
+        "/brand/logo.webp": "base/res/drawable-mdpi-v4/assets_brand_logo.webp",
+        "/brand/mascot.webp": "base/res/drawable-mdpi-v4/assets_brand_mascot.webp"
+      }
+    },
+    "hermes": {
+      "hermesMagicVerified": true,
+      "bytecodeVersion": 99,
+      "bytes": 3618824,
+      "sha256": "0f5983180668a67f9f178e2e6a64d7b131a702de8a73684b890bc239e2838035",
+      "currentContentVersionTokenPresent": true,
+      "archivedContentVersionTokenPresent": true,
+      "readingLevelTokensPresent": [
+        "under6",
+        "6to8",
+        "9plus"
+      ],
+      "allThirteenStoryIdTokensPresent": true,
+      "limitation": "Hermes bytecode string presence and source/artifact provenance were checked; this is not executed device behavior or a full bytecode decompilation."
+    },
+    "versionCodeScope": "Unsigned CI validation artifact. A signed upload release must use the release workflow and its unique increasing versionCode."
+  },
+  "artifactDirectory": "/tmp/fabelpad-complete-native-ci-20261123-bbmvqkm_",
+  "deviceInstallationTested": false,
+  "deviceRuntimeTested": false,
+  "scope": "Read-only CI and downloaded unsigned artifact validation. No workflow dispatch, signing, Play upload, repository change, host or database action, or actual device test."
+}

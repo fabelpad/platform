@@ -1,0 +1,25 @@
+{
+  "applicationSha": "ec82395ba57904302bc4a93e71e5dba63def2950",
+  "node": "24.18.0",
+  "commands": [
+    "node scripts/export-native-content.mjs",
+    "node scripts/native-runtime-check.mjs",
+    "pnpm --dir mobile check",
+    "pnpm --dir mobile export:android --output-dir /tmp/fabelpad-native-complete-export-20261123"
+  ],
+  "allCommandsPassed": true,
+  "contentVersion": "247d7d1c63cc4fa3",
+  "previousContentVersion": "4e48e9296a01fff5",
+  "previousReleaseBytesUnchanged": true,
+  "contentArchiveSha256": "af110acdcf41e49886d21e11f612854c0b70091a06f9dbc9b1b1b71644d32dea",
+  "chapterVariants": 1209,
+  "endings": 1248,
+  "illustrationAssets": 20,
+  "metroModules": 1139,
+  "hermesBundleApproxBytes": 4300000,
+  "exportReproducible": true,
+  "sourceAndAssetHashesChecked": true,
+  "nativeReader": "illustration and two direct choices on all 65 chapters, with reading-button toggle",
+  "deviceOrEmulatorTestPerformed": false,
+  "signedAabOrPlayUploadPerformed": false
+}

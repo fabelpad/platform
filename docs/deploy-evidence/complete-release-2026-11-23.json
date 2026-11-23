@@ -1,0 +1,646 @@
+{
+  "checkedAt": "2026-11-23T00:01:49.821119+00:00",
+  "repository": "fabelpad/platform",
+  "integrationBranch": "main",
+  "applicationSha": "ec82395ba57904302bc4a93e71e5dba63def2950",
+  "scope": "Thirteen adventures, five chapters, two choices, illustrated scenes, three reading levels, completed-route replay/history and immutable existing releases on web and native Android.",
+  "githubRuns": {
+    "webCi": {
+      "conclusion": "success",
+      "createdAt": "2026-11-22T23:42:12Z",
+      "databaseId": 45084662737,
+      "event": "push",
+      "headSha": "ec82395ba57904302bc4a93e71e5dba63def2950",
+      "status": "completed",
+      "updatedAt": "2026-11-22T23:43:54Z",
+      "url": "https://github.com/fabelpad/platform/actions/runs/45084662737"
+    },
+    "nativeCi": {
+      "conclusion": "success",
+      "createdAt": "2026-11-22T23:42:12Z",
+      "databaseId": 45084662867,
+      "event": "push",
+      "headSha": "ec82395ba57904302bc4a93e71e5dba63def2950",
+      "status": "completed",
+      "updatedAt": "2026-11-22T23:55:33Z",
+      "url": "https://github.com/fabelpad/platform/actions/runs/45084662867"
+    },
+    "stagingCandidate": {
+      "conclusion": "success",
+      "createdAt": "2026-11-22T23:55:50Z",
+      "databaseId": 45085866014,
+      "event": "workflow_dispatch",
+      "headSha": "ec82395ba57904302bc4a93e71e5dba63def2950",
+      "status": "completed",
+      "updatedAt": "2026-11-22T23:57:41Z",
+      "url": "https://github.com/fabelpad/platform/actions/runs/45085866014"
+    },
+    "productionCandidate": {
+      "conclusion": "success",
+      "createdAt": "2026-11-22T23:58:14Z",
+      "databaseId": 45086060176,
+      "event": "workflow_dispatch",
+      "headSha": "ec82395ba57904302bc4a93e71e5dba63def2950",
+      "status": "completed",
+      "updatedAt": "2026-11-23T00:00:00Z",
+      "url": "https://github.com/fabelpad/platform/actions/runs/45086060176"
+    },
+    "stagingActivation": {
+      "conclusion": "success",
+      "createdAt": "2026-11-22T23:58:16Z",
+      "databaseId": 45086062913,
+      "event": "workflow_dispatch",
+      "headSha": "ec82395ba57904302bc4a93e71e5dba63def2950",
+      "status": "completed",
+      "updatedAt": "2026-11-22T23:59:08Z",
+      "url": "https://github.com/fabelpad/platform/actions/runs/45086062913"
+    },
+    "productionActivation": {
+      "conclusion": "success",
+      "createdAt": "2026-11-23T00:00:23Z",
+      "databaseId": 45086241991,
+      "event": "workflow_dispatch",
+      "headSha": "ec82395ba57904302bc4a93e71e5dba63def2950",
+      "status": "completed",
+      "updatedAt": "2026-11-23T00:01:17Z",
+      "url": "https://github.com/fabelpad/platform/actions/runs/45086241991"
+    }
+  },
+  "localValidation": {
+    "checkedAt": "2026-11-22T23:46:10.211902+00:00",
+    "applicationSha": "ec82395ba57904302bc4a93e71e5dba63def2950",
+    "cleanWorktree": "git archive of exact application commit into a separate development directory",
+    "configuration": "isolated local mode; no remote database, provider, migration or mail action",
+    "toolchain": {
+      "node": "24.18.0",
+      "pnpm": "11.25.0",
+      "next": "16.3.4"
+    },
+    "installCommand": "pnpm install --frozen-lockfile",
+    "buildCommand": "bash scripts/local-build.sh",
+    "buildPassed": true,
+    "buildSeconds": 46.8,
+    "buildLogSha256": "0d73e4fa09016c32f5bf4bc03155eb9acd3ec9bce414b14c04371657921e71a0",
+    "browser": {
+      "command": "pnpm test:browser",
+      "passed": 68,
+      "failed": 0,
+      "skipped": 0,
+      "flaky": 0,
+      "seconds": 75.868,
+      "newCompleteAdventureCases": 18,
+      "deviceWidths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "actualNativeDeviceTest": false
+    },
+    "readingLevels": {
+      "storyCount": 13,
+      "chaptersPerStory": 5,
+      "choicesPerChapter": 2,
+      "chapterVariantsPerLevel": 403,
+      "completeRoutesPerLevel": 416,
+      "levelNames": [
+        "under6",
+        "6to8",
+        "9plus"
+      ],
+      "default": "6to8",
+      "under6RouteLengthPercent": [
+        95.2,
+        101.9
+      ],
+      "6to8RouteLengthPercent": [
+        95.7,
+        101.8
+      ],
+      "futureChoicesDoNotChangeEarlierPassages": true,
+      "keepsakesAndRouteMeaningsPreserved": true
+    },
+    "storage": {
+      "fiveFullyExploredProfilesBytes": 219763,
+      "limitBytes": 262144
+    },
+    "postgresContract": {
+      "snapshotCases": 38,
+      "releaseBundleCases": 37,
+      "existingRegistrationCases": 27,
+      "legacyRowsAndImmutableReleasesPreserved": true,
+      "parentIsolationAndConsentTested": true
+    },
+    "normalBuildIncludes": [
+      "TypeScript",
+      "configuration",
+      "content and route/reading-level checks",
+      "existing Station play checks",
+      "family/auth/privacy/email/PostgreSQL contracts",
+      "deploy contract checks",
+      "native runtime checks",
+      "native export reproducibility including release catalog and archives",
+      "Next.js production build"
+    ],
+    "limitations": [
+      "Synthetic browser speech does not establish an audible device voice.",
+      "No real OTP, Google login or provider email sent.",
+      "No native device or emulator test."
+    ]
+  },
+  "environments": {
+    "staging": {
+      "candidateId": "ec82395ba57904302bc4a93e71e5dba63def2950-45085866014-1",
+      "configId": "complete-20261123-stg",
+      "artifactDigest": "fe475181d48b5231652212ec6f2b54a72e458e4accb0f5528f66c13587e3066b",
+      "runtimeConfigDigest": "c4ddef2350d174daee33787fede61307741a7b104e4412395d5a27365290d842",
+      "serviceActive": true,
+      "serviceEnabled": true,
+      "healthExactSha": true,
+      "current": "/srv/sites/fabelpad-vps08-staging/releases/ec82395ba57904302bc4a93e71e5dba63def2950-45085866014-1",
+      "previous": "releases/96ef208439a8b4af1dca985ed7192fb286686b13-45080430787-1",
+      "loopbackPort": 4188,
+      "publiclyActive": true
+    },
+    "production": {
+      "candidateId": "ec82395ba57904302bc4a93e71e5dba63def2950-45086060176-1",
+      "configId": "complete-20261123-prd",
+      "artifactDigest": "51c661f8781967064ec25991442f03b70d263d10bc49d749d1938e2c44ef0f59",
+      "runtimeConfigDigest": "83ffbd21e60be511fd75a777ade86b6845242dc3f731c34a5af1991e1e70c7c7",
+      "serviceActive": true,
+      "serviceEnabled": true,
+      "healthExactSha": true,
+      "current": "/srv/sites/fabelpad-vps08-production/releases/ec82395ba57904302bc4a93e71e5dba63def2950-45086060176-1",
+      "previous": "releases/96ef208439a8b4af1dca985ed7192fb286686b13-45080609989-1",
+      "loopbackPort": 4189,
+      "publiclyActive": false
+    }
+  },
+  "publicStaging": {
+    "httpTlsChecksPassed": 23,
+    "browserChecksPassed": 1817,
+    "readOnly": true,
+    "realAuthOrMailPerformed": false
+  },
+  "existingEnvironmentPreservation": {
+    "beforeAndAfterAuditsPassed": true,
+    "sixExistingServicesMatchBaseline": true,
+    "sharedConfigurationHashesMatchBaseline": true,
+    "productionPublicRouteRemainsAbsent": true,
+    "stagingProxyUnchanged": true,
+    "defaultHostsUnchanged": true,
+    "dnsFirewallSharedSshPackagesChanged": false,
+    "hostAdaptersChanged": false,
+    "databaseChangesPerformed": true,
+    "userRowsRewritten": false,
+    "priorReleasePayloadsRewritten": false
+  },
+  "configuration": {
+    "githubVariableNamesUnchanged": [
+      "FABELPAD_APP_ORIGIN",
+      "FABELPAD_DATA_MODE",
+      "NEXT_PUBLIC_SUPABASE_URL",
+      "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY"
+    ],
+    "newSecretsAdded": false
+  },
+  "rollback": {
+    "previousAppSha": "96ef208439a8b4af1dca985ed7192fb286686b13",
+    "appAndRuntimePaired": true,
+    "liveRollbackPerformed": false,
+    "previousReaderLayoutWouldReturn": true,
+    "oldServerAcceptsNewPreferenceFields": false,
+    "restoreRequiresCompatibleValidator": true,
+    "note": "Keep additive database validation and immutable releases. Previous app/config is process-restorable but old TypeScript validation rejects the new preference/history fields; use a compatible recovery build or a verified forward fix for parent synchronization."
+  },
+  "androidAndStore": {
+    "nativeSourceChanged": true,
+    "typecheckRuntimeAndProductionExportPassed": true,
+    "nativeCiUnsignedBuildPassed": true,
+    "deviceOrEmulatorTestPerformed": false,
+    "signedBundleOrPlayUploadTriggered": false,
+    "playConsoleChanged": false
+  },
+  "acceptanceLimits": [
+    "No connected native device/emulator: rendering, TalkBack, system font scaling and audible offline speech are not device-tested.",
+    "Access gate reviewed in source only; the current App does not pass previewLimit.",
+    "Synthetic browser speech proves state handling, not an audible device voice.",
+    "No real OTP, Google login or email delivery test in this adventure integration."
+  ],
+  "database": {
+    "staging": {
+      "environment": "staging",
+      "project_id": "tlwfpivafcokcjyjwgmq",
+      "sha": "ec82395ba57904302bc4a93e71e5dba63def2950",
+      "migration": {
+        "version": "20261122233351",
+        "name": "reading_levels_completed_routes",
+        "sha256": "d9ce497ef92498134daccff233ee0ce05a3ad9216577840fa15d2e29b95a9265",
+        "mcpGeneratedVersion": "20261122234217",
+        "historyNormalization": "Only the newly applied own row was matched by name, generated version and exact SQL MD5, then aligned with the CLI-created repository filename. Prior migration rows unchanged."
+      },
+      "checks": {
+        "new_release_count": 13,
+        "all_new_hashes_match": true,
+        "reject_invalid_level": true,
+        "all_new_releases_valid": true,
+        "level_count_per_release": true,
+        "reject_incomplete_history": true,
+        "all_new_originals_preserved": true,
+        "valid_preferences_and_history": true,
+        "private_helper_not_app_executable": true,
+        "all_existing_families_valid": true
+      },
+      "preserved": {
+        "familyAndAuthBeforeMigrationDigestsMatch": true,
+        "familyAndAuthAfterAppendUnchanged": true,
+        "oldReleasePayloadsUnchanged": true,
+        "publicFunctionsAndACLUnchanged": true,
+        "priorMigrationsUnchanged": true
+      },
+      "before": {
+        "families": 1,
+        "auth": 1,
+        "releases": 13
+      },
+      "after": {
+        "families": 1,
+        "auth": 1,
+        "releases": 26,
+        "migrations": 12
+      },
+      "newReleases": [
+        {
+          "id": "station",
+          "legacyVersion": "ca198208a7956125",
+          "version": "3581891717faaab2",
+          "bytes": 247116
+        },
+        {
+          "id": "dream",
+          "legacyVersion": "e638171351a5e505",
+          "version": "470d5b64942f9fc7",
+          "bytes": 247180
+        },
+        {
+          "id": "toy",
+          "legacyVersion": "3b2e35cd16e8b03b",
+          "version": "1e344652e4266c47",
+          "bytes": 238791
+        },
+        {
+          "id": "weather",
+          "legacyVersion": "e3bf31c26e46e900",
+          "version": "deb1be4321757c72",
+          "bytes": 364622
+        },
+        {
+          "id": "moonbakery",
+          "legacyVersion": "0fe4cd9c9555f2e6",
+          "version": "8bafdf3377622c7e",
+          "bytes": 370178
+        },
+        {
+          "id": "ocean",
+          "legacyVersion": "6333c5c7bc819a75",
+          "version": "c0d7e7e0eec06e99",
+          "bytes": 368823
+        },
+        {
+          "id": "garden",
+          "legacyVersion": "71135aed442bb8e9",
+          "version": "407f562fe597862b",
+          "bytes": 376275
+        },
+        {
+          "id": "clock",
+          "legacyVersion": "bf8fa50ec2f16db3",
+          "version": "9c6c1b987b9664e0",
+          "bytes": 375606
+        },
+        {
+          "id": "library",
+          "legacyVersion": "a1b461260ffa2ec8",
+          "version": "82e8214be3817de1",
+          "bytes": 356624
+        },
+        {
+          "id": "balloon",
+          "legacyVersion": "66bac902d4b515d7",
+          "version": "d8630af2e6702ed2",
+          "bytes": 355898
+        },
+        {
+          "id": "forest",
+          "legacyVersion": "4c449f80517524a7",
+          "version": "6a3cff8dbc1b6433",
+          "bytes": 360823
+        },
+        {
+          "id": "snow",
+          "legacyVersion": "4daf5aaf01c71b02",
+          "version": "9a9b52dee9da6c8a",
+          "bytes": 354834
+        },
+        {
+          "id": "stars",
+          "legacyVersion": "036f22e483fd7e96",
+          "version": "e3da9f7d675ce570",
+          "bytes": 363092
+        }
+      ],
+      "securityAdvisories": [
+        {
+          "name": "rls_enabled_no_policy",
+          "level": "INFO",
+          "count": 15,
+          "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy"
+        },
+        {
+          "name": "auth_leaked_password_protection",
+          "level": "WARN",
+          "count": 1,
+          "remediation": "https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection"
+        }
+      ],
+      "nonMutatingSyntheticTest": true,
+      "noUserCreationMailOrAuthChanges": true
+    },
+    "production": {
+      "environment": "production",
+      "project_id": "aptprpkosqctwrzeetgs",
+      "sha": "ec82395ba57904302bc4a93e71e5dba63def2950",
+      "migration": {
+        "version": "20261122233351",
+        "name": "reading_levels_completed_routes",
+        "sha256": "d9ce497ef92498134daccff233ee0ce05a3ad9216577840fa15d2e29b95a9265",
+        "mcpGeneratedVersion": "20261122234228",
+        "historyNormalization": "Only the newly applied own row was matched by name, generated version and exact SQL MD5, then aligned with the CLI-created repository filename. Prior migration rows unchanged."
+      },
+      "checks": {
+        "new_release_count": 13,
+        "all_new_hashes_match": true,
+        "reject_invalid_level": true,
+        "all_new_releases_valid": true,
+        "level_count_per_release": true,
+        "reject_incomplete_history": true,
+        "all_new_originals_preserved": true,
+        "valid_preferences_and_history": true,
+        "private_helper_not_app_executable": true,
+        "all_existing_families_valid": true
+      },
+      "preserved": {
+        "familyAndAuthBeforeMigrationDigestsMatch": true,
+        "familyAndAuthAfterAppendUnchanged": true,
+        "oldReleasePayloadsUnchanged": true,
+        "publicFunctionsAndACLUnchanged": true,
+        "priorMigrationsUnchanged": true
+      },
+      "before": {
+        "families": 0,
+        "auth": 0,
+        "releases": 13
+      },
+      "after": {
+        "families": 0,
+        "auth": 0,
+        "releases": 26,
+        "migrations": 12
+      },
+      "newReleases": [
+        {
+          "id": "station",
+          "legacyVersion": "ca198208a7956125",
+          "version": "3581891717faaab2",
+          "bytes": 247116
+        },
+        {
+          "id": "dream",
+          "legacyVersion": "e638171351a5e505",
+          "version": "470d5b64942f9fc7",
+          "bytes": 247180
+        },
+        {
+          "id": "toy",
+          "legacyVersion": "3b2e35cd16e8b03b",
+          "version": "1e344652e4266c47",
+          "bytes": 238791
+        },
+        {
+          "id": "weather",
+          "legacyVersion": "e3bf31c26e46e900",
+          "version": "deb1be4321757c72",
+          "bytes": 364622
+        },
+        {
+          "id": "moonbakery",
+          "legacyVersion": "0fe4cd9c9555f2e6",
+          "version": "8bafdf3377622c7e",
+          "bytes": 370178
+        },
+        {
+          "id": "ocean",
+          "legacyVersion": "6333c5c7bc819a75",
+          "version": "c0d7e7e0eec06e99",
+          "bytes": 368823
+        },
+        {
+          "id": "garden",
+          "legacyVersion": "71135aed442bb8e9",
+          "version": "407f562fe597862b",
+          "bytes": 376275
+        },
+        {
+          "id": "clock",
+          "legacyVersion": "bf8fa50ec2f16db3",
+          "version": "9c6c1b987b9664e0",
+          "bytes": 375606
+        },
+        {
+          "id": "library",
+          "legacyVersion": "a1b461260ffa2ec8",
+          "version": "82e8214be3817de1",
+          "bytes": 356624
+        },
+        {
+          "id": "balloon",
+          "legacyVersion": "66bac902d4b515d7",
+          "version": "d8630af2e6702ed2",
+          "bytes": 355898
+        },
+        {
+          "id": "forest",
+          "legacyVersion": "4c449f80517524a7",
+          "version": "6a3cff8dbc1b6433",
+          "bytes": 360823
+        },
+        {
+          "id": "snow",
+          "legacyVersion": "4daf5aaf01c71b02",
+          "version": "9a9b52dee9da6c8a",
+          "bytes": 354834
+        },
+        {
+          "id": "stars",
+          "legacyVersion": "036f22e483fd7e96",
+          "version": "e3da9f7d675ce570",
+          "bytes": 363092
+        }
+      ],
+      "securityAdvisories": [
+        {
+          "name": "rls_enabled_no_policy",
+          "level": "INFO",
+          "count": 15,
+          "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy"
+        }
+      ],
+      "nonMutatingSyntheticTest": true,
+      "noUserCreationMailOrAuthChanges": true
+    }
+  },
+  "nativeValidation": {
+    "applicationSha": "ec82395ba57904302bc4a93e71e5dba63def2950",
+    "node": "24.18.0",
+    "commands": [
+      "node scripts/export-native-content.mjs",
+      "node scripts/native-runtime-check.mjs",
+      "pnpm --dir mobile check",
+      "pnpm --dir mobile export:android --output-dir /tmp/fabelpad-native-complete-export-20261123"
+    ],
+    "allCommandsPassed": true,
+    "contentVersion": "247d7d1c63cc4fa3",
+    "previousContentVersion": "4e48e9296a01fff5",
+    "previousReleaseBytesUnchanged": true,
+    "contentArchiveSha256": "af110acdcf41e49886d21e11f612854c0b70091a06f9dbc9b1b1b71644d32dea",
+    "chapterVariants": 1209,
+    "endings": 1248,
+    "illustrationAssets": 20,
+    "metroModules": 1139,
+    "hermesBundleApproxBytes": 4300000,
+    "exportReproducible": true,
+    "sourceAndAssetHashesChecked": true,
+    "nativeReader": "illustration and two direct choices on all 65 chapters, with reading-button toggle",
+    "deviceOrEmulatorTestPerformed": false,
+    "signedAabOrPlayUploadPerformed": false
+  },
+  "nativeCiValidation": {
+    "checkedAt": "2026-11-22T23:55:51.859532+00:00",
+    "repo": "fabelpad/platform",
+    "sourceSha": "ec82395ba57904302bc4a93e71e5dba63def2950",
+    "runId": 45084662867,
+    "runUrl": "https://github.com/fabelpad/platform/actions/runs/45084662867",
+    "passed": true,
+    "event": "push",
+    "requiredNativeJob": {
+      "id": 137400432914,
+      "url": "https://github.com/fabelpad/platform/actions/runs/45084662867/job/137400432914",
+      "conclusion": "success",
+      "allRequiredStepsSuccess": true
+    },
+    "signedUploadJob": "skipped",
+    "githubArtifact": {
+      "id": 14778499904,
+      "name": "fabelpad-android-check-ec82395ba57904302bc4a93e71e5dba63def2950",
+      "url": "https://github.com/fabelpad/platform/actions/runs/45084662867/artifacts/14778499904",
+      "sha256": "3cdbb3a70913c5ae7d6a0abd12bdceeec8813e6a4978b9cf1a13c87316e983d4",
+      "githubDigestVerified": true,
+      "zipCrcVerified": true,
+      "bytes": 38574516
+    },
+    "aab": {
+      "file": "fabelpad-production-unsigned.aab",
+      "sha256": "8b721b648b293583ce415f276f2cb68490381ab5e1cebc294f31b3ef650731a3",
+      "bytes": 38871026,
+      "reportHashAndBytesVerified": true,
+      "packageId": "nl.fabelpad.app",
+      "versionName": "1.0.0",
+      "versionCode": 1,
+      "sourceIdentityAndCleanWorkingTreeVerified": true,
+      "variant": "production",
+      "signed": false,
+      "playUploaded": false,
+      "bundletoolValidate": true,
+      "bundletoolVersion": "1.18.3",
+      "bundletoolChecksumVerified": true,
+      "targetSdk": 36,
+      "minSdk": 24,
+      "architectures": [
+        "arm64-v8a",
+        "x86_64"
+      ],
+      "nativeLibraries": 44,
+      "allElfLoadAlignmentsAtLeast16KiB": true,
+      "minimumElfLoadAlignment": 16384,
+      "bundlePageAlignment16K": true,
+      "permissions": [
+        "android.permission.VIBRATE",
+        "nl.fabelpad.app.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
+      ],
+      "debuggable": false,
+      "allowBackup": false,
+      "cleartextTraffic": false,
+      "contentVersion": "247d7d1c63cc4fa3",
+      "runtimeAssets": {
+        "count": 20,
+        "allSourceHashesMatchBundledImages": true,
+        "entries": {
+          "/art/station.webp": "base/res/drawable-mdpi-v4/assets_art_station.webp",
+          "/art/play/station-scene.webp": "base/res/drawable-mdpi-v4/assets_art_play_stationscene.webp",
+          "/art/dream.webp": "base/res/drawable-mdpi-v4/assets_art_dream.webp",
+          "/art/play/dream-scene.webp": "base/res/drawable-mdpi-v4/assets_art_play_dreamscene.webp",
+          "/art/toy.webp": "base/res/drawable-mdpi-v4/assets_art_toy.webp",
+          "/art/play/toy-scene.webp": "base/res/drawable-mdpi-v4/assets_art_play_toyscene.webp",
+          "/art/weather-v2.webp": "base/res/drawable-mdpi-v4/assets_art_weatherv2.webp",
+          "/art/moonbakery.webp": "base/res/drawable-mdpi-v4/assets_art_moonbakery.webp",
+          "/art/ocean.webp": "base/res/drawable-mdpi-v4/assets_art_ocean.webp",
+          "/art/play/ocean-scene.webp": "base/res/drawable-mdpi-v4/assets_art_play_oceanscene.webp",
+          "/art/garden.webp": "base/res/drawable-mdpi-v4/assets_art_garden.webp",
+          "/art/clock.webp": "base/res/drawable-mdpi-v4/assets_art_clock.webp",
+          "/art/library.webp": "base/res/drawable-mdpi-v4/assets_art_library.webp",
+          "/art/balloon.webp": "base/res/drawable-mdpi-v4/assets_art_balloon.webp",
+          "/art/forest.webp": "base/res/drawable-mdpi-v4/assets_art_forest.webp",
+          "/art/snow.webp": "base/res/drawable-mdpi-v4/assets_art_snow.webp",
+          "/art/stars.webp": "base/res/drawable-mdpi-v4/assets_art_stars.webp",
+          "/art/play/station-platform.webp": "base/res/drawable-mdpi-v4/assets_art_play_stationplatform.webp",
+          "/brand/logo.webp": "base/res/drawable-mdpi-v4/assets_brand_logo.webp",
+          "/brand/mascot.webp": "base/res/drawable-mdpi-v4/assets_brand_mascot.webp"
+        }
+      },
+      "hermes": {
+        "hermesMagicVerified": true,
+        "bytecodeVersion": 99,
+        "bytes": 3618824,
+        "sha256": "0f5983180668a67f9f178e2e6a64d7b131a702de8a73684b890bc239e2838035",
+        "currentContentVersionTokenPresent": true,
+        "archivedContentVersionTokenPresent": true,
+        "readingLevelTokensPresent": [
+          "under6",
+          "6to8",
+          "9plus"
+        ],
+        "allThirteenStoryIdTokensPresent": true,
+        "limitation": "Hermes bytecode string presence and source/artifact provenance were checked; this is not executed device behavior or a full bytecode decompilation."
+      },
+      "versionCodeScope": "Unsigned CI validation artifact. A signed upload release must use the release workflow and its unique increasing versionCode."
+    },
+    "artifactDirectory": "/tmp/fabelpad-complete-native-ci-20261123-bbmvqkm_",
+    "deviceInstallationTested": false,
+    "deviceRuntimeTested": false,
+    "scope": "Read-only CI and downloaded unsigned artifact validation. No workflow dispatch, signing, Play upload, repository change, host or database action, or actual device test."
+  },
+  "evidenceFiles": [
+    "complete-activated-2026-11-23.json",
+    "complete-database-production-2026-11-23.json",
+    "complete-database-staging-2026-11-23.json",
+    "complete-host-before-2026-11-23.json",
+    "complete-local-validation-2026-11-23.json",
+    "complete-native-ci-2026-11-23.json",
+    "complete-native-validation-2026-11-23.json",
+    "complete-production-candidate-2026-11-23.json",
+    "complete-routing-2026-11-23.json",
+    "complete-staging-browser-2026-11-23.json",
+    "complete-staging-candidate-2026-11-23.json",
+    "complete-staging-public-2026-11-23.json"
+  ]
+}
