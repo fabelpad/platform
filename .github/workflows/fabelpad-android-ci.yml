@@ -17,10 +17,10 @@ permissions:
 
 env:
   CI: '1'
-  FABELPAD_ANDROID_PACKAGE: ${{ vars.PLAY_PACKAGE_NAME || 'nl.fabelpad.app' }}
-  FABELPAD_PRIVACY_URL: ${{ vars.FABELPAD_PRIVACY_URL || 'https://fabelpad.nl/privacy' }}
-  FABELPAD_SUPPORT_URL: ${{ vars.FABELPAD_SUPPORT_URL || 'mailto:support@fabelpad.nl' }}
-  FABELPAD_ANDROID_ICON: ${{ vars.FABELPAD_ANDROID_ICON }}
+  FABELPAD_ANDROID_PACKAGE: 'nl.fabelpad.app'
+  FABELPAD_PRIVACY_URL: 'https://fabelpad.nl/privacy'
+  FABELPAD_SUPPORT_URL: 'mailto:support@fabelpad.nl'
+  FABELPAD_ANDROID_ICON: './assets/brand/launcher.png'
 
 jobs:
   verify:
@@ -37,24 +37,17 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version-file: .nvmrc
-      - name: Bepaal of deze main-push de Android-app wijzigt
+      - name: Controleer alle native buildinputs van deze main-push
         id: native_scope
         env:
           BEFORE_SHA: ${{ github.event.before }}
         shell: bash
         run: |
           set -euo pipefail
-          changed=false
-          if [[ "$GITHUB_EVENT_NAME" == push && "$BEFORE_SHA" =~ ^[a-f0-9]{40}$ && "$BEFORE_SHA" != 0000000000000000000000000000000000000000 ]]; then
-            if git diff --quiet "$BEFORE_SHA" "$GITHUB_SHA" -- mobile/; then
-              changed=false
-            else
-              result=$?
-              [[ "$result" == 1 ]] || exit "$result"
-              changed=true
-            fi
-          fi
-          printf 'changed=%s\n' "$changed" >> "$GITHUB_OUTPUT"
+          python3 -B scripts/play/native_scope.py \
+            --event "$GITHUB_EVENT_NAME" --ref "$GITHUB_REF" \
+            --repository "$GITHUB_REPOSITORY" --before "$BEFORE_SHA" \
+            --sha "$GITHUB_SHA" --github-output "$GITHUB_OUTPUT"
       - name: Maak ruimte op de tijdelijke GitHub-runner
         run: |
           set -euo pipefail
@@ -153,10 +146,71 @@ jobs:
           retention-days: 14
           if-no-files-found: error
 
+  play_config:
+    name: Controleer vastgelegde Play-configuratie
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      signing_enabled: ${{ steps.config.outputs.signing_enabled }}
+      play_enabled: ${{ steps.config.outputs.play_enabled }}
+      connection_check_enabled: ${{ steps.config.outputs.connection_check_enabled }}
+      version_code_base: ${{ steps.config.outputs.version_code_base }}
+      internal_tracks: ${{ steps.config.outputs.internal_tracks }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Valideer niet-geheime release-instellingen zonder Google-toegang
+        id: config
+        run: python3 -B scripts/play/read_config.py --config scripts/play/config.json --github-output "$GITHUB_OUTPUT"
+
+  connection:
+    name: Controleer interne Google Play-verbinding zonder wijzigingen
+    needs: play_config
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'fabelpad/platform' && needs.play_config.outputs.connection_check_enabled == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment: fabelpad-play-internal
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Autoriseer tijdelijk voor de alleen-lezen verbindingscontrole
+        id: play-auth
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
+        with:
+          workload_identity_provider: ${{ secrets.PLAY_WIF_PROVIDER }}
+          service_account: ${{ secrets.PLAY_SERVICE_ACCOUNT }}
+          token_format: access_token
+          access_token_scopes: https://www.googleapis.com/auth/androidpublisher,https://www.googleapis.com/auth/userinfo.email
+          create_credentials_file: false
+          export_environment_variables: false
+      - name: Controleer doelidentiteit en app-toegang zonder een Play-edit
+        id: connection
+        env:
+          PLAY_ACCESS_TOKEN: ${{ steps.play-auth.outputs.access_token }}
+          PLAY_SERVICE_ACCOUNT: ${{ secrets.PLAY_SERVICE_ACCOUNT }}
+        run: |
+          python3 -B scripts/play/probe_connection.py \
+            --project fabelpad --project-number 471984799009 --environment internal \
+            --service-account "$PLAY_SERVICE_ACCOUNT" \
+            --output "$RUNNER_TEMP/fabelpad-play-connection.json" --github-output "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: fabelpad-play-internal-connection
+          path: ${{ runner.temp }}/fabelpad-play-connection.json
+          retention-days: 30
+          if-no-files-found: error
+
   signed:
     name: Productie-AAB signeren en eventueel intern uploaden
-    if: github.ref == 'refs/heads/main' && ((github.event_name == 'push' && needs.verify.outputs.native_changed == 'true' && vars.FABELPAD_PLAY_ENABLED == 'true') || (github.event_name == 'workflow_dispatch' && inputs.signed_bundle && vars.FABELPAD_SIGNING_ENABLED == 'true'))
-    needs: verify
+    if: github.ref == 'refs/heads/main' && ((github.event_name == 'push' && needs.verify.outputs.native_changed == 'true' && needs.play_config.outputs.play_enabled == 'true') || (github.event_name == 'workflow_dispatch' && inputs.signed_bundle && needs.play_config.outputs.signing_enabled == 'true'))
+    needs: [verify, play_config]
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     environment: fabelpad-play-internal
@@ -168,8 +222,8 @@ jobs:
       actions: read
       id-token: write
     env:
-      VERSION_CODE_BASE: ${{ vars.FABELPAD_VERSION_CODE_BASE || '1000' }}
-      INTERNAL_TRACKS: ${{ vars.PLAY_INTERNAL_TRACKS }}
+      VERSION_CODE_BASE: ${{ needs.play_config.outputs.version_code_base }}
+      INTERNAL_TRACKS: ${{ needs.play_config.outputs.internal_tracks }}
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
@@ -209,6 +263,7 @@ jobs:
           mkdir -p artifacts/native
           unzip -p "$RUNNER_TEMP/fabelpad-signed-aab.zip" fabelpad-production.aab > artifacts/native/fabelpad-production.aab
           unzip -p "$RUNNER_TEMP/fabelpad-signed-aab.zip" fabelpad-production.json > artifacts/native/fabelpad-production.json
+          unzip -p "$RUNNER_TEMP/fabelpad-signed-aab.zip" fabelpad-production-mapping.txt > artifacts/native/fabelpad-production-mapping.txt
           echo 'found=true' >> "$GITHUB_OUTPUT"
       - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
         id: java17
@@ -319,18 +374,18 @@ jobs:
           retention-days: 90
           if-no-files-found: error
       - name: Autoriseer tijdelijk bij Google Play
-        if: github.event_name == 'push' && vars.FABELPAD_PLAY_ENABLED == 'true'
+        if: github.event_name == 'push' && needs.play_config.outputs.play_enabled == 'true'
         id: play-auth
         uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
         with:
-          workload_identity_provider: ${{ vars.PLAY_WIF_PROVIDER }}
-          service_account: ${{ vars.PLAY_SERVICE_ACCOUNT }}
+          workload_identity_provider: ${{ secrets.PLAY_WIF_PROVIDER }}
+          service_account: ${{ secrets.PLAY_SERVICE_ACCOUNT }}
           token_format: access_token
           access_token_scopes: https://www.googleapis.com/auth/androidpublisher
           create_credentials_file: false
           export_environment_variables: false
       - name: Upload dezelfde AAB naar de geverifieerde interne track
-        if: github.event_name == 'push' && vars.FABELPAD_PLAY_ENABLED == 'true'
+        if: github.event_name == 'push' && needs.play_config.outputs.play_enabled == 'true'
         env:
           PLAY_ACCESS_TOKEN: ${{ steps.play-auth.outputs.access_token }}
           VERSION_CODE: ${{ steps.version.outputs.code }}
@@ -338,11 +393,13 @@ jobs:
         run: |
           python3 -B scripts/play/release.py upload-internal \
             --package "$FABELPAD_ANDROID_PACKAGE" --bundle artifacts/native/fabelpad-production.aab \
+            --mapping artifacts/native/fabelpad-production-mapping.txt \
+            --build-report artifacts/native/fabelpad-production.json \
             --version-code "$VERSION_CODE" --tracks "$INTERNAL_TRACKS" \
             --release-name "Fabelpad $VERSION_NAME ($VERSION_CODE)" \
             --release-notes scripts/play/release-notes.json
       - name: Bewaar bewijs van de intern geaccepteerde AAB
-        if: github.event_name == 'push' && vars.FABELPAD_PLAY_ENABLED == 'true'
+        if: github.event_name == 'push' && needs.play_config.outputs.play_enabled == 'true'
         env:
           VERSION_CODE: ${{ steps.version.outputs.code }}
           VERSION_NAME: ${{ steps.version.outputs.name }}
@@ -355,7 +412,7 @@ jobs:
             '{commit:$commit,package:$package,versionName:$versionName,versionCode:$versionCode,bundleSha256:$bundleSha256,tracks:($tracks|split(",")),runId:$runId}' \
             > "$RUNNER_TEMP/fabelpad-play-receipt.json"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
-        if: github.event_name == 'push' && vars.FABELPAD_PLAY_ENABLED == 'true'
+        if: github.event_name == 'push' && needs.play_config.outputs.play_enabled == 'true'
         with:
           name: fabelpad-play-receipt
           path: ${{ runner.temp }}/fabelpad-play-receipt.json

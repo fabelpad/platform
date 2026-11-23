@@ -6,14 +6,14 @@ on:
   workflow_dispatch:
     inputs:
       action:
-        description: Actie voor een bestaande gefaseerde uitrol
+        description: Alleen-lezen verbindingscontrole of actie voor een bestaande gefaseerde uitrol
         type: choice
-        options: [complete, halt]
+        options: [verify, complete, halt]
         required: true
       version_code:
         description: Exacte Google Play-versionCode van die uitrol
         type: string
-        required: true
+        required: false
 
 permissions:
   contents: read
@@ -25,16 +25,78 @@ concurrency:
   queue: max
 
 jobs:
+  play_config:
+    name: Controleer vastgelegde Play-configuratie
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      play_enabled: ${{ steps.config.outputs.play_enabled }}
+      connection_check_enabled: ${{ steps.config.outputs.connection_check_enabled }}
+      internal_tracks: ${{ steps.config.outputs.internal_tracks }}
+      production_tracks: ${{ steps.config.outputs.production_tracks }}
+      rollout_fraction: ${{ steps.config.outputs.rollout_fraction }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Valideer niet-geheime release-instellingen zonder Google-toegang
+        id: config
+        run: python3 -B scripts/play/read_config.py --config scripts/play/config.json --github-output "$GITHUB_OUTPUT"
+
+  connection:
+    name: Controleer productieverbinding met Google Play zonder wijzigingen
+    needs: play_config
+    if: github.event_name == 'workflow_dispatch' && inputs.action == 'verify' && github.ref == 'refs/heads/main' && github.repository == 'fabelpad/platform' && needs.play_config.outputs.connection_check_enabled == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment: fabelpad-play-production
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Autoriseer tijdelijk voor de alleen-lezen verbindingscontrole
+        id: play-auth
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
+        with:
+          workload_identity_provider: ${{ secrets.PLAY_WIF_PROVIDER }}
+          service_account: ${{ secrets.PLAY_SERVICE_ACCOUNT }}
+          token_format: access_token
+          access_token_scopes: https://www.googleapis.com/auth/androidpublisher,https://www.googleapis.com/auth/userinfo.email
+          create_credentials_file: false
+          export_environment_variables: false
+      - name: Controleer doelidentiteit en app-toegang zonder een Play-edit
+        id: connection
+        env:
+          PLAY_ACCESS_TOKEN: ${{ steps.play-auth.outputs.access_token }}
+          PLAY_SERVICE_ACCOUNT: ${{ secrets.PLAY_SERVICE_ACCOUNT }}
+        run: |
+          python3 -B scripts/play/probe_connection.py \
+            --project fabelpad --project-number 471984799009 --environment production \
+            --service-account "$PLAY_SERVICE_ACCOUNT" \
+            --output "$RUNNER_TEMP/fabelpad-play-connection.json" --github-output "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: fabelpad-play-production-connection
+          path: ${{ runner.temp }}/fabelpad-play-connection.json
+          retention-days: 30
+          if-no-files-found: error
+
   release:
-    if: vars.FABELPAD_PLAY_ENABLED == 'true' && (github.event_name == 'push' || github.ref == 'refs/heads/main')
+    needs: play_config
+    if: needs.play_config.outputs.play_enabled == 'true' && (github.event_name == 'push' || (github.ref == 'refs/heads/main' && inputs.action != 'verify'))
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     environment: fabelpad-play-production
     env:
-      PLAY_PACKAGE: ${{ vars.PLAY_PACKAGE_NAME }}
-      INTERNAL_TRACKS: ${{ vars.PLAY_INTERNAL_TRACKS }}
-      PRODUCTION_TRACKS: ${{ vars.PLAY_PRODUCTION_TRACKS }}
-      ROLLOUT_FRACTION: ${{ vars.PLAY_ROLLOUT_FRACTION || '1' }}
+      PLAY_PACKAGE: 'nl.fabelpad.app'
+      INTERNAL_TRACKS: ${{ needs.play_config.outputs.internal_tracks }}
+      PRODUCTION_TRACKS: ${{ needs.play_config.outputs.production_tracks }}
+      ROLLOUT_FRACTION: ${{ needs.play_config.outputs.rollout_fraction }}
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
@@ -112,8 +174,8 @@ jobs:
         id: play-auth
         uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
         with:
-          workload_identity_provider: ${{ vars.PLAY_WIF_PROVIDER }}
-          service_account: ${{ vars.PLAY_SERVICE_ACCOUNT }}
+          workload_identity_provider: ${{ secrets.PLAY_WIF_PROVIDER }}
+          service_account: ${{ secrets.PLAY_SERVICE_ACCOUNT }}
           token_format: access_token
           access_token_scopes: https://www.googleapis.com/auth/androidpublisher
           create_credentials_file: false

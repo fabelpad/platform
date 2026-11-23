@@ -9,6 +9,7 @@ import math
 import os
 import re
 import sys
+import zipfile
 from pathlib import Path
 from urllib.parse import quote, urlencode
 
@@ -16,6 +17,7 @@ HOST = "androidpublisher.googleapis.com"
 INTERNAL_TRACKS = {"internal", "qa"}
 PRODUCTION_TRACKS = {"production"}
 RELEASE_STATUSES = {"draft", "inProgress", "halted", "completed"}
+R8_MAPPING_ENTRY = "BUNDLE-METADATA/com.android.tools.build.obfuscation/proguard.map"
 
 
 class ReleaseError(Exception):
@@ -279,6 +281,51 @@ def verify_bundle(bundle, version_code, expected_hash):
         raise ReleaseError(f"De SHA-256 voor versionCode {version_code} wijkt af van de verwachte bundel.")
 
 
+def verify_upload_mapping(args):
+    """Bind the R8 map to the exact AAB; Play imports this embedded map itself.
+
+    Google Play Help, checked 2026-11-23:
+    https://support.google.com/googleplay/android-developer/answer/9848633?hl=en-GB
+    A separate deobfuscationFiles POST is unnecessary for our AGP-built AAB.
+    """
+    try:
+        report = json.loads(args.build_report.read_text(encoding="utf-8"))
+        with args.bundle.open("rb") as stream:
+            bundle_digest = hashlib.file_digest(stream, "sha256").hexdigest()
+        mapping = report.get("r8Mapping", {})
+        expected_mapping = mapping.get("sha256", "")
+        if (report.get("packageId") != args.package
+                or report.get("versionCode") != args.version_code
+                or report.get("sha256") != bundle_digest
+                or report.get("bytes") != args.bundle.stat().st_size
+                or report.get("variant") != "production"
+                or report.get("signed") is not True
+                or report.get("source", {}).get("workingTreeDirty") is not False
+                or not isinstance(expected_mapping, str)
+                or not re.fullmatch(r"[a-fA-F0-9]{64}", expected_mapping)):
+            raise ValueError("build receipt mismatch")
+        with zipfile.ZipFile(args.bundle) as bundle:
+            entries = [item for item in bundle.infolist() if item.filename == R8_MAPPING_ENTRY]
+            if len(entries) != 1 or entries[0].file_size == 0:
+                raise ValueError("missing or ambiguous embedded R8 map")
+            with bundle.open(entries[0]) as stream:
+                embedded_digest = hashlib.file_digest(stream, "sha256").hexdigest()
+        if embedded_digest != expected_mapping.lower():
+            raise ValueError("embedded R8 map mismatch")
+        if args.mapping is not None:
+            with args.mapping.open("rb") as stream:
+                external_digest = hashlib.file_digest(stream, "sha256").hexdigest()
+            if external_digest != embedded_digest:
+                raise ValueError("external R8 map mismatch")
+    except (OSError, UnicodeError, ValueError, TypeError, AttributeError,
+            zipfile.BadZipFile, RuntimeError) as error:
+        raise ReleaseError(
+            "AAB-vrijgave geweigerd: de ingebedde R8-mapping, losse mapping en het "
+            "ondertekende buildbewijs horen niet aantoonbaar bij dezelfde bundel en versie."
+        ) from error
+    return bundle_digest
+
+
 def track_ids(value):
     names = [name.strip() for name in value.split(",")]
     if not all(re.fullmatch(r"[A-Za-z0-9_.:-]+", name) for name in names) or len(set(names)) != len(names):
@@ -344,6 +391,8 @@ def make_parser():
     internal.add_argument("--bundle", required=True, type=Path)
     internal.add_argument("--release-name")
     internal.add_argument("--release-notes", required=True, type=Path, help="UTF-8 JSON met language/text per taal (maximaal 500 tekens).")
+    internal.add_argument("--build-report", required=True, type=Path, help="JSON-buildbewijs met AAB-identiteit en r8Mapping.sha256.")
+    internal.add_argument("--mapping", type=Path, help="Controleer ook het losse R8-mappingbestand tegen de ingebedde AAB-mapping.")
     production.add_argument("--source-tracks", required=True, type=track_ids)
     production.add_argument("--action", required=True, choices=("start", "complete", "halt"))
     production.add_argument(
@@ -362,6 +411,8 @@ def validate_args(args):
             raise ReleaseError("Gebruik voor upload alleen bestaande interne telefoon/tablettracks: internal of qa.")
         if args.bundle.suffix.lower() != ".aab" or not args.bundle.is_file():
             raise ReleaseError("Geef een bestaande .aab op.")
+        if not args.build_report.is_file() or (args.mapping is not None and not args.mapping.is_file()):
+            raise ReleaseError("Geef het bestaande buildrapport en, indien opgegeven, het losse R8-mappingbestand op.")
     if args.command == "promote":
         if not set(args.tracks) <= PRODUCTION_TRACKS or not set(args.source_tracks) <= INTERNAL_TRACKS:
             raise ReleaseError("Kies interne brontracks en de bijbehorende productietracks.")
@@ -383,10 +434,10 @@ def execute(args, edit):
         print(json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True))
         return
 
+    # Refuse stale/mismatched maps before the first bundle upload or track mutation.
+    digest = verify_upload_mapping(args) if args.command == "upload-internal" else None
     tracks = read_tracks(edit, args.tracks)
     if args.command == "upload-internal":
-        with args.bundle.open("rb") as file:
-            digest = hashlib.file_digest(file, "sha256").hexdigest()
         notes = load_release_notes(args.release_notes)
         changes = plan_internal(tracks, args.version_code, args.release_name or f"Fabelpad {args.version_code}", notes)
         bundle = edit.get_bundle(args.version_code)

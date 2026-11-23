@@ -1,10 +1,16 @@
 """Offline regression coverage for the real Google Play release planner."""
 import argparse
+import hashlib
 import importlib.util
+import io
 import json
 from pathlib import Path
 import tempfile
 import unittest
+from contextlib import redirect_stdout
+from unittest.mock import Mock
+import warnings
+import zipfile
 
 spec=importlib.util.spec_from_file_location('play_release',Path(__file__).with_name('release.py'))
 play=importlib.util.module_from_spec(spec)
@@ -98,5 +104,134 @@ class ReleaseNotes(unittest.TestCase):
                       [{'language':'nl NL','text':'x'}],[{'language':'nl-NL','text':'x','extra':'bad'}]):
             with self.subTest(notes=notes):
                 with self.assertRaises(play.ReleaseError):self.check_notes(notes)
+
+class EmbeddedMapping(unittest.TestCase):
+    """Exercise the upload entrypoint with stale build and R8 artifacts, offline."""
+
+    def setUp(self):
+        self.directory = tempfile.TemporaryDirectory()
+        self.addCleanup(self.directory.cleanup)
+        root = Path(self.directory.name)
+        self.mapping_bytes = b'# compiler: R8\nexample.Reader -> a:\n    void open() -> b\n'
+        self.args = argparse.Namespace(
+            command='upload-internal', package='nl.fabelpad.app', version_code=11,
+            bundle=root/'fabelpad-production.aab', mapping=root/'fabelpad-production-mapping.txt',
+            build_report=root/'fabelpad-production.json', release_name='Fabelpad 1.0.2 (11)',
+            release_notes=root/'notes.json', tracks=['internal'], validate_only=False,
+        )
+        self.args.mapping.write_bytes(self.mapping_bytes)
+        self.args.release_notes.write_text(json.dumps([{'language':'nl-NL','text':'Nieuwe verhalen.'}]))
+        self.report = {
+            'packageId':self.args.package, 'versionCode':11, 'variant':'production',
+            'signed':True, 'source':{'workingTreeDirty':False},
+            'r8Mapping':{'sha256':hashlib.sha256(self.mapping_bytes).hexdigest()},
+        }
+        self.write_bundle([self.mapping_bytes])
+
+    def write_bundle(self, maps):
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore',UserWarning)
+            with zipfile.ZipFile(self.args.bundle,'w') as bundle:
+                for mapping in maps:
+                    bundle.writestr(play.R8_MAPPING_ENTRY,mapping)
+        self.write_report()
+
+    def write_report(self):
+        self.report.update(sha256=hashlib.sha256(self.args.bundle.read_bytes()).hexdigest(),
+                           bytes=self.args.bundle.stat().st_size)
+        self.args.build_report.write_text(json.dumps(self.report),encoding='utf-8')
+
+    def fake_edit(self, *, existing=False):
+        edit = Mock()
+        edit.list_tracks.return_value = {'internal':{'releases':[release(11)] if existing else []}}
+        bundle = {'versionCode':11,'sha256':self.report['sha256']}
+        edit.get_bundle.return_value = bundle if existing else None
+        edit.upload_bundle.return_value = bundle
+        return edit
+
+    def test_exact_embedded_map_and_build_report_are_accepted(self):
+        play.validate_args(self.args)
+        self.assertEqual(play.verify_upload_mapping(self.args),self.report['sha256'])
+        # A separately named copy is acceptable: byte identity, not its basename, binds the map.
+        renamed = self.args.mapping.with_name('mapping-copy.txt')
+        renamed.write_bytes(self.mapping_bytes)
+        self.args.mapping = renamed
+        self.assertEqual(play.verify_upload_mapping(self.args),self.report['sha256'])
+
+    def test_external_copy_is_optional_but_embedded_map_is_always_required(self):
+        self.args.mapping = None
+        self.assertEqual(play.verify_upload_mapping(self.args),self.report['sha256'])
+        self.write_bundle([])
+        with self.assertRaises(play.ReleaseError):play.verify_upload_mapping(self.args)
+
+    def test_wrong_external_map_stops_before_any_upload_or_track_access(self):
+        self.args.mapping.write_bytes(b'R8 map from a different build')
+        edit = self.fake_edit()
+        with self.assertRaises(play.ReleaseError):play.execute(self.args,edit)
+        self.assertEqual(edit.mock_calls,[])
+
+    def test_missing_empty_duplicate_and_wrong_embedded_maps_are_rejected(self):
+        for maps in ([],[b''],[self.mapping_bytes,self.mapping_bytes],[b'wrong build']):
+            with self.subTest(maps=maps):
+                self.write_bundle(maps)
+                with self.assertRaises(play.ReleaseError):play.verify_upload_mapping(self.args)
+
+    def test_missing_or_malformed_mapping_receipt_is_rejected(self):
+        for value in (None,{},'not an object',{'sha256':'not a hash'},{'sha256':True},
+                      {'sha256':'0'*64}):
+            with self.subTest(value=value):
+                self.report['r8Mapping'] = value
+                self.write_report()
+                with self.assertRaises(play.ReleaseError):play.verify_upload_mapping(self.args)
+
+    def test_stale_bundle_version_package_and_unsafe_build_receipts_are_rejected(self):
+        for key,value in (('packageId','nl.other.app'),('versionCode',10),('sha256','0'*64),
+                          ('bytes',1),('signed',False),('variant','debug'),
+                          ('source',{'workingTreeDirty':True})):
+            with self.subTest(key=key,value=value):
+                changed = {**self.report,key:value}
+                self.args.build_report.write_text(json.dumps(changed),encoding='utf-8')
+                with self.assertRaises(play.ReleaseError):play.verify_upload_mapping(self.args)
+
+    def test_unreadable_missing_and_non_zip_artifacts_fail_closed(self):
+        self.args.build_report.write_text('{broken',encoding='utf-8')
+        with self.assertRaises(play.ReleaseError):play.verify_upload_mapping(self.args)
+        self.write_report()
+        self.args.mapping.unlink()
+        with self.assertRaises(play.ReleaseError):play.verify_upload_mapping(self.args)
+        self.args.mapping.write_bytes(self.mapping_bytes)
+        self.args.bundle.write_bytes(b'not an AAB')
+        self.write_report()
+        with self.assertRaises(play.ReleaseError):play.verify_upload_mapping(self.args)
+
+    def test_missing_explicit_mapping_is_rejected_by_argument_validation(self):
+        self.args.mapping.unlink()
+        with self.assertRaises(play.ReleaseError):play.validate_args(self.args)
+
+    def test_fresh_upload_sends_only_the_exact_bundle_containing_the_mapping(self):
+        edit = self.fake_edit()
+        with redirect_stdout(io.StringIO()):play.execute(self.args,edit)
+        edit.upload_bundle.assert_called_once_with(self.args.bundle)
+        edit.update_track.assert_called_once()
+        edit.commit.assert_called_once_with(validate_only=False)
+        # No second deobfuscation upload: Google imports the verified map from the AAB.
+        self.assertEqual([call[0] for call in edit.mock_calls],
+                         ['list_tracks','get_bundle','upload_bundle','update_track','commit'])
+
+    def test_retry_checks_same_mapping_and_bundle_without_duplicate_uploads(self):
+        edit = self.fake_edit(existing=True)
+        with redirect_stdout(io.StringIO()):play.execute(self.args,edit)
+        edit.upload_bundle.assert_not_called()
+        edit.update_track.assert_not_called()
+        edit.commit.assert_not_called()
+        self.args.mapping.write_bytes(b'wrong retry map')
+        with self.assertRaises(play.ReleaseError):play.execute(self.args,edit)
+
+    def test_validate_only_preserves_upload_validation_without_committing(self):
+        self.args.validate_only = True
+        edit = self.fake_edit()
+        with redirect_stdout(io.StringIO()):play.execute(self.args,edit)
+        edit.commit.assert_called_once_with(validate_only=True)
+
 
 if __name__=='__main__':unittest.main()

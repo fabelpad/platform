@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "signingEnabled": false,
+  "playEnabled": false,
+  "connectionCheckEnabled": true,
+  "versionCodeBase": 1000,
+  "internalTracks": [],
+  "productionTracks": [],
+  "rolloutFraction": 1
+}
