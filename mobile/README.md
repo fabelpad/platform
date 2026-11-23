@@ -2,6 +2,8 @@
 
 De eerste productieversie is een gratis, lokale leesapp met dertien gebundelde verhalen, 403 scènes en 416 eindes. Kinderen kiezen hun eigen verhaalroute; vijf lokale profielen bewaren afzonderlijke voortgang, favorieten, voorkeuren en schatkisten. De stationsspeelprent gebruikt native weergaven, Gesture Handler en Reanimated. De app gebruikt geen WebView, account, backend, advertenties, analytics of aankopen.
 
+De nieuwe, afzonderlijk gekozen variant `connected` voegt ouderaanmelding, gedeelde online gezinstoegang en Google Play Billing 9.1.0 toe. De oorspronkelijke variant `production` houdt haar lokale scope. Alleen `connected` resolveert de Billing SDK en krijgt netwerktoegang. Lees de configuratie, testgrenzen en externe providerstappen in [BETALINGEN-BEHEER.md](../docs/BETALINGEN-BEHEER.md). De gekoppelde variant gebruikt een hogere versionCode dan de bestaande versie `1.0.1 (2)`; zij wordt met deze wijziging niet gepubliceerd.
+
 Productie-identiteit: `nl.fabelpad.app`, versie `1.0.0`, eerste `versionCode` `1`. De eigenaar heeft deze identiteit en lokale productscope bevestigd. Iedere volgende Play-versie krijgt een hoger versionCode. De historische demo heeft een afzonderlijk pakket en sleutel; die APK kan niet als productie-upload worden gebruikt.
 
 ## Installeren en controleren

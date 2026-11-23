@@ -1,7 +1,19 @@
 import nativePackage from './package.json';
 const variant = process.env.FABELPAD_VARIANT || 'demo';
-if (variant !== 'demo' && variant !== 'production') throw new Error('FABELPAD_VARIANT moet demo of production zijn.');
-const production = variant === 'production';
+if (!['demo', 'production', 'connected'].includes(variant)) throw new Error('FABELPAD_VARIANT moet demo, production of connected zijn.');
+const connected = variant === 'connected';
+const production = variant === 'production' || connected;
+const environment = process.env.FABELPAD_CONNECTED_ENVIRONMENT || '';
+const backendOrigin = process.env.FABELPAD_CONNECTED_ORIGIN || '';
+const supabaseUrl = process.env.FABELPAD_CONNECTED_SUPABASE_URL || '';
+const supabaseKey = process.env.FABELPAD_CONNECTED_SUPABASE_PUBLISHABLE_KEY || '';
+if (connected && (!['staging', 'production'].includes(environment) || backendOrigin !== (environment === 'production' ? 'https://fabelpad.nl' : 'https://staging.fabelpad.nl'))) throw new Error('De gekoppelde Android-build vereist een expliciete passende Fabelpad-omgeving en HTTPS-origin.');
+if (connected && (!/^https:\/\/[a-z0-9]{20}\.supabase\.co$/u.test(supabaseUrl) || !/^sb_publishable_[A-Za-z0-9_-]{7,}$/u.test(supabaseKey))) throw new Error('De gekoppelde build vereist het expliciete Supabase-project en uitsluitend de openbare publishable key van dezelfde omgeving.');
+// Expo loads this config without recursively transpiling imported TypeScript.
+// These public project identities also receive runtime validation against the
+// shared hosted-target contract in connected.ts before any network request.
+const connectedProjects: Record<string, string> = { staging: 'https://tlwfpivafcokcjyjwgmq.supabase.co', production: 'https://aptprpkosqctwrzeetgs.supabase.co' };
+if (connected && supabaseUrl !== connectedProjects[environment]) throw new Error('De Android-backendconfiguratie past niet bij het vastgelegde staging- of productieproject.');
 const packageId = production ? process.env.FABELPAD_ANDROID_PACKAGE || 'nl.fabelpad.app' : 'nl.dgwebservices.fabelpad.demo';
 if (!packageId || !/^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*){2,}$/.test(packageId)) {
   throw new Error('Stel FABELPAD_ANDROID_PACKAGE expliciet in op de definitief vastgelegde productie-package-ID.');
@@ -12,6 +24,7 @@ if (!Number.isSafeInteger(versionCode) || versionCode < 1 || versionCode > 2_100
 const versionName = production ? process.env.FABELPAD_ANDROID_VERSION_NAME || nativePackage.version : '0.1.0';
 if (!/^\d+\.\d+\.\d+$/.test(versionName)) throw new Error('FABELPAD_ANDROID_VERSION_NAME moet major.minor.patch zijn.');
 if (production && !process.env.FABELPAD_ANDROID_VERSION_CODE) throw new Error('Leg FABELPAD_ANDROID_VERSION_CODE expliciet vast voor iedere productiebuild.');
+if (connected && versionCode <= 2) throw new Error('De gekoppelde upgrade vereist een versionCode hoger dan de bestaande lokale release (2).');
 const privacyUrl = process.env.FABELPAD_PRIVACY_URL || (production ? 'https://fabelpad.nl/privacy' : '');
 const supportUrl = process.env.FABELPAD_SUPPORT_URL || (production ? 'mailto:support@fabelpad.nl' : '');
 if (privacyUrl && !/^https:\/\/[^\s]+$/.test(privacyUrl)) throw new Error('FABELPAD_PRIVACY_URL moet een openbare HTTPS-URL zijn.');
@@ -28,7 +41,7 @@ export default {
     android: {
       package: packageId, versionCode,
       ...(production ? { allowBackup: false, blockedPermissions: [
-        'android.permission.INTERNET', 'android.permission.SYSTEM_ALERT_WINDOW',
+        ...(!connected ? ['android.permission.INTERNET', 'com.android.vending.BILLING'] : []), 'android.permission.SYSTEM_ALERT_WINDOW',
         'android.permission.READ_EXTERNAL_STORAGE', 'android.permission.WRITE_EXTERNAL_STORAGE',
         'android.permission.USE_BIOMETRIC', 'android.permission.USE_FINGERPRINT',
         'com.google.android.gms.permission.AD_ID',
@@ -36,6 +49,7 @@ export default {
     },
     ios: { bundleIdentifier: packageId, supportsTablet: true },
     plugins: ['expo-secure-store', './plugins/withFabelpadProduction.cjs'],
-    extra: { prototype: !production, variant: production ? 'production' : 'demo', backendConnected: false, privacyUrl, supportUrl },
+    extra: { prototype: !production, variant, backendConnected: connected, privacyUrl, supportUrl,
+      ...(connected ? { environment, backendOrigin, supabaseUrl, supabaseKey, deleteAccountUrl: `${backendOrigin}/account-verwijderen` } : {}) },
   },
 };

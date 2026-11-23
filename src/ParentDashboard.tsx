@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import { ArrowDownToLine, ArrowLeft, ArrowRight, BookOpen, Check, ChevronRight, CloudOff, Download, FileJson, Leaf, LoaderCircle, Pencil, Plus, ShieldCheck, Sparkles, Star, Trash2, Users, Volume2, Wifi, X } from 'lucide-react';
-import { CHILD_FIELDS, createChild, exportSnapshot, loadFamily, MAX_CHILDREN, readChild, saveChild, saveFamily, subscribeStorage } from './profileStorage';
+import { childFields, createChild, exportSnapshot, loadFamily, MAX_CHILDREN, readChild, saveChild, saveFamily, subscribeStorage } from './profileStorage';
 import type { ChildProfile, Family } from './profileStorage';
 import { downloadStory, getDownloads, removeDownload, subscribeDownloads } from './prototypeDownloads';
 import { worlds } from './worlds';
@@ -99,7 +99,7 @@ export default function ParentDashboard({ onOpenApp, onOpenStory }: Props) {
     if (confirmation?.type === 'delete') {
       const child = confirmation.child;
       if (family.children.length < 2) { setConfirmation(null); return; }
-      for (const field of CHILD_FIELDS) saveChild(child.id, field, null);
+      for (const field of childFields(child.id)) saveChild(child.id, field, null);
       const children = family.children.filter(item => item.id !== child.id);
       updateFamily({ ...family, children, activeId: family.activeId === child.id ? children[0].id : family.activeId });
       setDraft(null); setNotice(`Het lokale profiel van ${child.name} is verwijderd.`);

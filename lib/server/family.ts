@@ -1,11 +1,11 @@
 import { MAX_FAMILY_BYTES, validPutBody, validateFamilyProfileChanges, validateFamilySnapshot } from '../familyValidation';
-import { createSupabaseServerClient, getVerifiedParent } from '../supabase/server';
+import { createSupabaseRequestClient, getVerifiedParent } from '../supabase/server';
 import { checkMutationOrigin, handleApiError, privateJson, readJson, RequestError } from './http';
 import { parentRpcError, requireActiveParentAccount } from './parent';
 
 export async function handleSupabaseFamilyRequest(request: Request): Promise<Response> {
   try {
-    const client = await createSupabaseServerClient();
+    const client = await createSupabaseRequestClient(request);
     const parent = await getVerifiedParent(client);
     if (!parent) throw new RequestError(401, 'not_authenticated', 'Log opnieuw in om jouw gezin op te halen.');
     await requireActiveParentAccount(client);

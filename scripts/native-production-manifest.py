@@ -54,6 +54,10 @@ def elf_load_alignments(data):
 def main():
     artifact = Path(sys.argv[1]).resolve()
     unsigned = os.environ.get('FABELPAD_UNSIGNED_CHECK') == 'true'
+    variant = os.environ.get('FABELPAD_VARIANT', 'production')
+    connected = variant == 'connected'
+    if variant not in {'production', 'connected'}:
+        raise ValueError('Onbekende productievariant.')
     source_sha = os.environ.get('FABELPAD_BUILD_SOURCE_SHA')
     source_dirty = os.environ.get('FABELPAD_BUILD_SOURCE_DIRTY') != 'false'
     if source_sha and (run(['git', 'rev-parse', 'HEAD']) != source_sha or
@@ -85,14 +89,28 @@ def main():
         raise ValueError('De productie-AAB moet cleartext expliciet blokkeren.')
     permissions = sorted(item.get(ANDROID + 'name') for item in manifest if item.tag.startswith('uses-permission'))
     allowed = {'android.permission.VIBRATE', 'nl.fabelpad.app.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION'}
+    if connected:
+        allowed.update({'android.permission.INTERNET', 'android.permission.ACCESS_NETWORK_STATE', 'com.android.vending.BILLING'})
     if set(permissions) - allowed:
         raise ValueError('De productie-AAB bevat een permissie buiten de vastgelegde lokale scope.')
     metadata = {item.get(ANDROID + 'name'): item.get(ANDROID + 'value') for item in app.findall('meta-data')}
-    if (metadata.get('nl.fabelpad.variant') != 'production'
+    if (metadata.get('nl.fabelpad.variant') != variant
             or metadata.get('nl.fabelpad.privacyUrl') != os.environ.get('FABELPAD_PRIVACY_URL', 'https://fabelpad.nl/privacy')
             or metadata.get('nl.fabelpad.supportUrl') != os.environ.get('FABELPAD_SUPPORT_URL', 'mailto:support@fabelpad.nl')):
         raise ValueError('De productievariant of publieke privacy-/supportconfiguratie wijkt af.')
     blocked = {'android.permission.INTERNET', 'android.permission.READ_EXTERNAL_STORAGE', 'android.permission.WRITE_EXTERNAL_STORAGE', 'android.permission.SYSTEM_ALERT_WINDOW', 'com.google.android.gms.permission.AD_ID', 'android.permission.ACCESS_FINE_LOCATION', 'android.permission.RECORD_AUDIO'}
+    if connected:
+        blocked.remove('android.permission.INTERNET')
+        connected_environment = os.environ.get('FABELPAD_CONNECTED_ENVIRONMENT')
+        connected_origin = os.environ.get('FABELPAD_CONNECTED_ORIGIN')
+        if connected_environment not in {'staging', 'production'} or connected_origin != ('https://fabelpad.nl' if connected_environment == 'production' else 'https://staging.fabelpad.nl'):
+            raise ValueError('Gekoppelde build mist een expliciete passende omgeving.')
+        if (code <= 2 or metadata.get('nl.fabelpad.backendOrigin') != connected_origin
+                or metadata.get('nl.fabelpad.environment') != connected_environment
+                or metadata.get('nl.fabelpad.deleteAccountUrl') != connected_origin + '/account-verwijderen'
+                or metadata.get('com.google.android.play.billingclient.version') != '9.1.0'
+                or not {'android.permission.INTERNET', 'com.android.vending.BILLING'}.issubset(permissions)):
+            raise ValueError('De gekoppelde variant, verwijderroute of werkelijk opgeloste Play Billing 9.1.0 wijkt af.')
     if blocked.intersection(permissions):
         raise ValueError('De productie-AAB bevat een ongebruikte of beperkte permissie.')
     with zipfile.ZipFile(artifact) as archive:
@@ -157,7 +175,7 @@ def main():
     versions = (ROOT / 'mobile/node_modules/react-native/gradle/libs.versions.toml').read_text()
     wrapper = (ROOT / 'mobile/android/gradle/wrapper/gradle-wrapper.properties').read_text()
     report = {
-        'schemaVersion': 1, 'variant': 'production', 'packageId': package,
+        'schemaVersion': 1, 'variant': variant, 'packageId': package,
         'versionName': name, 'versionCode': code, 'artifact': artifact.name,
         'sha256': hashlib.sha256(artifact.read_bytes()).hexdigest(), 'bytes': artifact.stat().st_size,
         'signed': not unsigned, 'uploadCertificateSha256': certificate_sha,
@@ -173,14 +191,17 @@ def main():
                       'ndk': re.search(r'^ndkVersion = "([^"]+)"', versions, re.MULTILINE)[1]},
         'source': {'gitSha': source_sha or run(['git', 'rev-parse', 'HEAD']), 'workingTreeDirty': source_dirty,
                    'buildStartIdentityRecorded': source_sha is not None},
-        'backendConnected': False, 'deviceInstallationTested': False, 'deviceRuntimeTested': False,
+        'backendConnected': connected, 'deviceInstallationTested': False, 'deviceRuntimeTested': False,
         'playUploaded': False,
-        'configuration': {'variant': 'production', 'contentVersion': json.loads((ROOT / 'mobile/src/content.json').read_text())['contentVersion'],
+        'configuration': {'variant': variant, 'contentVersion': json.loads((ROOT / 'mobile/src/content.json').read_text())['contentVersion'],
                           'privacyUrl': os.environ.get('FABELPAD_PRIVACY_URL', 'https://fabelpad.nl/privacy'),
                           'supportUrl': os.environ.get('FABELPAD_SUPPORT_URL', 'mailto:support@fabelpad.nl'),
                           'launcherSha256': hashlib.sha256((ROOT / 'mobile' / (os.environ.get('FABELPAD_ANDROID_ICON') or 'assets/brand/launcher.png')).read_bytes()).hexdigest()},
         'universalApk': apk_report,
     }
+    if connected:
+        report['configuration'].update({'environment': connected_environment, 'backendOrigin': connected_origin,
+                                        'deleteAccountUrl': connected_origin + '/account-verwijderen', 'playBillingVersion': '9.1.0'})
     mappings = ROOT / 'mobile/android/app/build/outputs/mapping/release/mapping.txt'
     if mappings.is_file():
         import shutil

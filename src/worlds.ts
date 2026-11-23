@@ -1,7 +1,6 @@
-import type { StoryId } from './storyCatalog';
 
 export type World = {
-  id: StoryId; title: string; subtitle: string; description: string;
+  id: string; title: string; subtitle: string; description: string;
   tag: 'Avontuur' | 'Dromen' | 'Grappig'; duration: string;
   color: 'mint' | 'lilac' | 'peach'; icon: 'train' | 'moon' | 'star';
   stamp: string; image: string; imageAlt: string; isNew?: boolean;

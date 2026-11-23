@@ -13,7 +13,8 @@ import type { ReadingVariants } from '../../src/contentReadingLevels';
 export type ContentRelease = {
   storyId: string; contentVersion: string; publishedAt: string | null; bundled: boolean;
   metadata: { title: string; description: string; image: string };
-  parts: 5; nameToken: '__FABELPAD_CHILD__'; scenes: Record<string, StoryScene>; endings: Record<string, StoryEnding>;
+  access?: 'full' | 'preview'; offlineUntil?: string; cacheOwnerId?: string;
+  parts: 5 | 1; nameToken: '__FABELPAD_CHILD__'; scenes: Record<string, StoryScene>; endings: Record<string, StoryEnding>;
   readingLevels?: ReadingVariants;
 };
 export function initialDraft(storyId: string): EditorialDraft {

@@ -42,7 +42,7 @@ jobs:
         run: node scripts/local-preflight.mjs --android
       - name: Installeer webdependencies uit lockfile
         run: pnpm install --frozen-lockfile
-      - name: Webtypen, domeincontracten en Next.js-productiebuild
+      - name: Webtypen, abonnements- en betaalcontroles en Next.js-productiebuild
         run: bash scripts/local-build.sh
       - name: Installeer native dependencies uit lockfile
         env:

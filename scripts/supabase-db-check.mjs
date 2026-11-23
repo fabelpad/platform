@@ -1,3 +1,4 @@
+import { currentLegalVersions } from './legal-fixture.mjs';
 import assert from 'node:assert/strict';
 import { readFile, readdir, mkdtemp, rm } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
@@ -17,7 +18,7 @@ const pendingAdministrator = '55555555-5555-4555-8555-555555555555';
 const fixture = name => ({ schemaVersion: 1, family: { version: 1, children: [{ id: 'shared-child-id', name, avatar: 0, birthDate: '2019-05-14' }], activeId: 'shared-child-id' }, data: { 'shared-child-id': { favorites: ['station'], started: ['station'], completed: {}, prefs: { muted: false, calm: true }, 'story-station': { picks: [0], updatedAt: 1790000000000, contentVersion: 'a'.repeat(16), storyId: 'station', revision: 1 }, memory: { version: 1, encounters: [], items: [], openThreads: [], events: [] } } } });
 async function identity(id, role = 'authenticated', extra = {}) {
   await db.exec('reset role');
-  const privacy = (await db.query("select version from private.legal_document_versions where kind='privacy' order by version desc limit 1")).rows[0].version;
+  const { terms, privacy } = await currentLegalVersions(db);
   const session = id;
   if (id && role === 'authenticated' && !extra.is_anonymous) {
     await db.query("update auth.users set email=coalesce(email,'synthetic-'||id::text||'@example.test'),email_confirmed_at=coalesce(email_confirmed_at,now()) where id=$1",[id]);
@@ -26,7 +27,7 @@ async function identity(id, role = 'authenticated', extra = {}) {
   await db.query("select set_config('request.jwt.claims', $1, false)", [JSON.stringify({ sub: id,session_id:session,amr:[{method:'otp',timestamp:Math.floor(Date.now()/1000)}], ...extra })]);
   await db.exec(`set role ${role}`);
   if (id && role === 'authenticated' && !extra.is_anonymous) {
-    await db.query("select public.complete_parent_onboarding('2026-11-22',$1,true,true)", [privacy]);
+    await db.query("select public.complete_parent_onboarding($1,$2,true,true)", [terms,privacy]);
     await db.query("select public.consent_child_profile('shared-child-id',true,true)");
   }
 }
@@ -173,7 +174,7 @@ try {
   assert.equal((await save(2,remembered)).saved,true,'Real generated memories remain compatible with the database boundary');
   for (const alter of [
     value => { value.events[0].source = null; },
-    value => { value.events[0].worldId = 'foreign-world'; },
+    value => { value.events[0].worldId = '../foreign-world'; },
     value => { value.encounters[0].facts = [null]; },
     value => { value.events.push(structuredClone(value.events[0])); },
   ]) {
@@ -211,7 +212,8 @@ try {
   await identity(parentB);
   assert.equal((await db.query('select * from public.content_drafts')).rows.length, 0, 'A published release never exposes the draft');
   await identity(null, 'anon');
-  assert.equal((await db.query('select * from public.content_releases')).rows.length, 1);
+  await denied('select * from public.content_releases');
+  assert.equal((await db.query('select * from public.get_content_catalog()')).rows.length, 1, 'The public catalog exposes metadata while direct chapter-table reads stay denied');
   await denied('select * from public.content_drafts');
   await db.exec('reset role');
   // Keep the regression larger than Supabase's default Data API maximum.

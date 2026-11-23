@@ -136,13 +136,30 @@ jobs:
           set -euo pipefail
           FABELPAD_ANDROID_VERSION_NAME="$(node -p "require('./mobile/package.json').version")"
           export FABELPAD_ANDROID_VERSION_NAME
-          bash scripts/native-build-production.sh --unsigned-check
+          FABELPAD_VARIANT=production bash scripts/native-build-production.sh --unsigned-check
+          # Compile-only connected staging build. This deliberately synthetic
+          # public key cannot authenticate or contact a payment provider.
+          FABELPAD_VARIANT=connected \
+            FABELPAD_ANDROID_VERSION_CODE=3 \
+            FABELPAD_CONNECTED_ENVIRONMENT=staging \
+            FABELPAD_CONNECTED_ORIGIN=https://staging.fabelpad.nl \
+            FABELPAD_CONNECTED_SUPABASE_URL=https://tlwfpivafcokcjyjwgmq.supabase.co \
+            FABELPAD_CONNECTED_SUPABASE_PUBLISHABLE_KEY=sb_publishable_ci_build_validation_only \
+            bash scripts/native-build-production.sh --unsigned-check
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: fabelpad-android-check-${{ github.sha }}
           path: |
             artifacts/native/fabelpad-production-unsigned.aab
             artifacts/native/fabelpad-production-unsigned.json
+          retention-days: 14
+          if-no-files-found: error
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: fabelpad-android-connected-check-${{ github.sha }}
+          path: |
+            artifacts/native/fabelpad-production-connected-unsigned.aab
+            artifacts/native/fabelpad-production-connected-unsigned.json
           retention-days: 14
           if-no-files-found: error
 

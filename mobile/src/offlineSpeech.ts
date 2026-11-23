@@ -1,7 +1,7 @@
 import { requireOptionalNativeModule } from 'expo';
 
 type OfflineSpeechModule = {
-  variant: 'demo' | 'production';
+  variant: 'demo' | 'production' | 'connected';
   privacyUrl: string;
   supportUrl: string;
   speak(text: string): Promise<'done' | 'stopped'>;
@@ -11,7 +11,8 @@ type OfflineSpeechModule = {
 };
 const native = requireOptionalNativeModule<OfflineSpeechModule>('FabelpadOfflineSpeech');
 export const runtimeConfig = {
-  production: native?.variant === 'production',
+  production: native?.variant === 'production' || native?.variant === 'connected',
+  connected: native?.variant === 'connected',
   privacyUrl: native?.privacyUrl || '',
   supportUrl: native?.supportUrl || '',
 };

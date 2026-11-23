@@ -9,12 +9,13 @@ import { compileSource } from './source-test-loader.mjs';
 // are intercepted: only synthetic Auth, status, family reads and RPC may run.
 const root = new URL('../', import.meta.url);
 const temporary = await mkdtemp(join(tmpdir(), 'fabelpad-birth-date-api-'));
+const { TERMS_VERSION, PRIVACY_VERSION } = await import(await compileSource(new URL('../lib/legal/documents.ts', import.meta.url), temporary));
 const beforeEnvironment = { ...process.env }, beforeFetch = globalThis.fetch;
 const cookieKey = Symbol.for('fabelpad.birth.api.cookies'), beforeCookies = globalThis[cookieKey];
 const A = '11111111-1111-4111-8111-111111111111', B = '22222222-2222-4222-8222-222222222222';
 let actor = A, jar = new Map(), requests = [], rejection;
 const documents = new Map();
-const active = { state: 'active', termsVersion: '2026-11-22', privacyVersion: '2026-11-22.1', acceptedTermsVersion: '2026-11-22', shownPrivacyVersion: '2026-11-22.1', lastActivityAt: '2026-11-22T12:00:00Z', deletionDeadline: null, consents: [] };
+const active = { state: 'active', termsVersion: TERMS_VERSION, privacyVersion: PRIVACY_VERSION, acceptedTermsVersion: TERMS_VERSION, shownPrivacyVersion: PRIVACY_VERSION, lastActivityAt: '2026-11-22T12:00:00Z', deletionDeadline: null, consents: [] };
 const expiry = Math.floor(Date.now() / 1000) + 3600;
 const user = () => ({ id: actor, email: `${actor}@example.test`, email_confirmed_at: '2026-11-22T12:00:00Z', aud: 'authenticated', role: 'authenticated', is_anonymous: false, user_metadata: {} });
 const token = () => `${Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url')}.${Buffer.from(JSON.stringify({ sub: actor, exp: expiry, aud: 'authenticated', role: 'authenticated' })).toString('base64url')}.synthetic-signature`;
@@ -29,7 +30,7 @@ try {
   await writeFile(fakeHeaders, 'export async function cookies() { return globalThis[Symbol.for("fabelpad.birth.api.cookies")]; }\n');
   const apiURL = await compileSource(new URL('app/api/family/route.ts', root), temporary);
   const serverURL = await compileSource(new URL('lib/supabase/server.ts', root), temporary);
-  await writeFile(new URL(serverURL), (await readFile(new URL(serverURL), 'utf8')).replace("'next/headers'", JSON.stringify(fakeHeaders.href)).replace("'@supabase/ssr'", JSON.stringify(import.meta.resolve('@supabase/ssr'))));
+  await writeFile(new URL(serverURL), (await readFile(new URL(serverURL), 'utf8')).replace("'next/headers'", JSON.stringify(fakeHeaders.href)).replace("'@supabase/ssr'", JSON.stringify(import.meta.resolve('@supabase/ssr'))).replace("'@supabase/supabase-js'", JSON.stringify(import.meta.resolve('@supabase/supabase-js'))));
   const api = await import(apiURL);
   const { createSupabaseServerClient } = await import(serverURL);
   globalThis.fetch = async (input, init) => {
@@ -56,7 +57,7 @@ try {
   const call = async (method, body, headers = {}, suffix = '') => {
     const incoming = new Request(`https://fabelpad.example.test/api/family${suffix}`, { method, headers: { 'X-Fabelpad-Parent': actor, ...(method === 'GET' ? {} : { origin: 'https://fabelpad.example.test', 'content-type': 'application/json' }), ...headers }, ...(method === 'GET' ? {} : { body: JSON.stringify(body) }) });
     const response = await api[method](incoming), value = await response.json(); checks++;
-    assert.equal(response.headers.get('cache-control'), 'private, no-store'); assert.equal(response.headers.get('vary'), 'Cookie');
+    assert.equal(response.headers.get('cache-control'), 'private, no-store'); assert.equal(response.headers.get('vary'), 'Cookie, Authorization');
     assert.equal(JSON.stringify(value).includes('synthetic-refresh'), false);
     return { response, value };
   };

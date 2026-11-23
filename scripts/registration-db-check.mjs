@@ -1,3 +1,4 @@
+import { currentLegalVersions } from './legal-fixture.mjs';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { readFile, readdir } from 'node:fs/promises';
@@ -9,7 +10,7 @@ const A = '11111111-1111-4111-8111-111111111111', B = '22222222-2222-4222-8222-2
 const SID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const hash = value => createHash('sha256').update(value).digest('hex');
 let clock = '2026-11-22T12:00:00.000Z', count = 0;
-let currentPrivacyVersion;
+let currentPrivacyVersion,currentTermsVersion;
 const owner = () => db.exec('reset role');
 async function tick(value) { clock = value; await owner(); await db.exec(`create or replace function private.lifecycle_now() returns timestamptz language sql volatile set search_path='' as $$ select '${value}'::timestamptz $$`); }
 async function role(value = 'anon') { await owner(); await db.query("select set_config('request.jwt.claims','{}',false)"); await db.exec(`set role ${value}`); }
@@ -21,7 +22,7 @@ async function identity(actor, { method = 'otp', age = 0, session = true } = {})
   await db.exec('set role authenticated');
 }
 async function rpc(name, args = []) { return (await db.query(`select public.${name}(${args.map((_, i) => '$' + (i + 1)).join(',')}) as result`, args)).rows[0].result; }
-const begin = (nonce, channel = 'otp', email = 'parent-a@example.test', terms = '2026-11-22', privacy = currentPrivacyVersion, guardian = true, accepted = true) => rpc('begin_parent_registration', [hash(nonce), channel, channel === 'otp' ? hash(email) : null, terms, privacy, guardian, accepted]);
+const begin = (nonce, channel = 'otp', email = 'parent-a@example.test', terms = currentTermsVersion, privacy = currentPrivacyVersion, guardian = true, accepted = true) => rpc('begin_parent_registration', [hash(nonce), channel, channel === 'otp' ? hash(email) : null, terms, privacy, guardian, accepted]);
 const complete = (nonce, channel = 'otp') => rpc('complete_parent_registration', [hash(nonce), channel]);
 const state = async actor => { await owner(); return (await db.query('select * from private.account_lifecycle where parent_id=$1', [actor])).rows[0]; };
 const proof = async nonce => { await owner(); return (await db.query('select * from private.parent_registration_proofs where nonce_hash=$1', [hash(nonce)])).rows[0]; };
@@ -47,7 +48,7 @@ try {
     await db.exec(sql);
   }
   assert.ok(registrationApplied);
-  currentPrivacyVersion = (await db.query("select version from private.legal_document_versions where kind='privacy' order by version desc limit 1")).rows[0].version;
+  ({privacy:currentPrivacyVersion,terms:currentTermsVersion}=await currentLegalVersions(db));
   await tick(clock);
   await db.query("insert into auth.users(id,email,email_confirmed_at) values($1,' Parent-A@Example.Test ',now()),($2,'parent-b@example.test',now()),($3,'parent-c@example.test',now())", [A, B, C]);
   const expired = hash('expired-worker-proof');
@@ -64,7 +65,7 @@ try {
   await owner();
   for (const name of ['begin_parent_registration', 'complete_parent_registration']) assert.equal((await db.query("select prosecdef from pg_proc where oid=($1)::regprocedure", [name === 'begin_parent_registration' ? 'public.begin_parent_registration(text,text,text,text,text,boolean,boolean)' : 'public.complete_parent_registration(text,text)'])).rows[0].prosecdef, false);
   await role();
-  for (const [terms, privacy, guardian, accepted] of [['old', currentPrivacyVersion, true, true], ['2026-11-22', '2026-11-22', true, true], ['2026-11-22', '2026-11-22.1', true, true], ['2026-11-22', currentPrivacyVersion, false, true], ['2026-11-22', currentPrivacyVersion, true, false]]) { await assert.rejects(begin('bad-' + count++, 'otp', 'parent-a@example.test', terms, privacy, guardian, accepted), e => e.code === '22023'); }
+  for (const [terms, privacy, guardian, accepted] of [['old', currentPrivacyVersion, true, true], ['2026-11-22', '2026-11-22', true, true], ['2026-11-22', '2026-11-22.1', true, true], [currentTermsVersion, currentPrivacyVersion, false, true], [currentTermsVersion, currentPrivacyVersion, true, false]]) { await assert.rejects(begin('bad-' + count++, 'otp', 'parent-a@example.test', terms, privacy, guardian, accepted), e => e.code === '22023'); }
   await assert.rejects(complete('missing'), e => e.code === '42501'); count++;
   const issued = await begin('otp-proof'); const same = await begin('otp-proof'); assert.deepEqual(same, issued, 'Identical starts cannot extend proof lifetime'); count++;
   await identity(B); assert.equal((await complete('otp-proof')).completed, false); assert.equal((await state(B)).state, 'onboarding'); count++;

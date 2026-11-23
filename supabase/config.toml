@@ -18,3 +18,9 @@ enabled = true
 verify_jwt = false # Dedicated server-generated Vault token, verified on every invocation.
 entrypoint = "./functions/account-maintenance/index.ts"
 import_map = "./functions/account-maintenance/deno.json"
+
+[functions.billing]
+enabled = true
+verify_jwt = false # Mandatory current Auth/DB authorization; provider webhooks fetch authoritative status.
+entrypoint = "./functions/billing/index.ts"
+import_map = "./functions/billing/deno.json"

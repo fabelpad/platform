@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { ParentAccountStatus } from '../parentAccount';
-import { createSupabaseServerClient, getVerifiedParent } from '../supabase/server';
+import { createSupabaseRequestClient, getVerifiedParent } from '../supabase/server';
 import { checkMutationOrigin, handleApiError, object, privateJson, readJson, RequestError } from './http';
 
 const errors: Record<string, { status: number; message: string }> = {
@@ -38,7 +38,7 @@ export async function requireActiveParentAccount(client: SupabaseClient): Promis
 export async function parentRequest(request: Request, operation: 'status' | 'onboarding' | 'consent' | 'deletion' | 'restore' | 'activity'): Promise<Response> {
   try {
     if (request.method !== 'GET') checkMutationOrigin(request);
-    const client = await createSupabaseServerClient();
+    const client = await createSupabaseRequestClient(request);
     const parent = await getVerifiedParent(client);
     if (!parent) throw new RequestError(401, 'not_authenticated', 'Log in om je ouderaccount te beheren.');
     if (operation === 'status') return privateJson(await getParentAccountStatus(client));

@@ -114,6 +114,7 @@ test('family UI uses server metadata, isolates siblings and opens parent setting
     if (route.request().method() === 'PUT') { snapshot = route.request().postDataJSON().snapshot; revision++; }
     await route.fulfill({json:{parent,revision,snapshot}});
   });
+  await page.route('**/api/content/dream*',async route=>{const response=await route.fetch();const value=await response.json();await route.fulfill({json:{...value,configured:true,release:{...value.release,access:'full',offlineUntil:new Date(Date.now()+60_000).toISOString()}}});});
   await page.addInitScript(() => localStorage.setItem('fabelpad-prototype-editorial-v1', JSON.stringify({ schemaVersion:1,drafts:{},published:{dream:{metadata:{title:'Uitsluitend demoversie',description:'Lokale tekst',image:'/art/dream.webp'},chapters:{},updatedAt:new Date().toISOString(),publishedAt:new Date().toISOString(),version:1}} })));
   await page.goto('/gezin');
   await expect(page.locator('.world-card')).toHaveCount(13);

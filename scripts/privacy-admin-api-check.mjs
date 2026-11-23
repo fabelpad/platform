@@ -9,11 +9,12 @@ import { compileSource } from './source-test-loader.mjs';
 // Every outbound call is bound to this synthetic provider; no live cases or mail.
 const root = new URL('../', import.meta.url);
 const temporary = await mkdtemp(join(tmpdir(), 'fabelpad-privacy-admin-api-'));
+const { TERMS_VERSION, PRIVACY_VERSION } = await import(await compileSource(new URL('../lib/legal/documents.ts', import.meta.url), temporary));
 const beforeEnvironment = { ...process.env }, beforeFetch = globalThis.fetch;
 const cookieKey = Symbol.for('fabelpad.privacy.admin.api.cookies'), beforeCookies = globalThis[cookieKey];
 const actor = { id: '00000000-0000-4000-8000-000000000181', email: 'operator@example.test', email_confirmed_at: '2026-11-22T12:00:00Z', aud: 'authenticated', role: 'authenticated', is_anonymous: false, user_metadata: { admin: true, role: 'admin' } };
 const subject = '00000000-0000-4000-8000-000000000182', caseId = '00000000-0000-4000-8000-000000000183';
-const active = { state: 'active', termsVersion: '2026-11-22', privacyVersion: '2026-11-22.1', acceptedTermsVersion: '2026-11-22', shownPrivacyVersion: '2026-11-22.1', lastActivityAt: '2026-11-22T12:00:00Z', deletionDeadline: null, consents: [] };
+const active = { state: 'active', termsVersion: TERMS_VERSION, privacyVersion: PRIVACY_VERSION, acceptedTermsVersion: TERMS_VERSION, shownPrivacyVersion: PRIVACY_VERSION, lastActivityAt: '2026-11-22T12:00:00Z', deletionDeadline: null, consents: [] };
 const json = (body, status = 200) => Response.json(body, { status, headers: { 'X-Supabase-Api-Version': '2024-01-01' } });
 const expiry = Math.floor(Date.now() / 1000) + 3600;
 const jwt = `${Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url')}.${Buffer.from(JSON.stringify({ sub: actor.id, exp: expiry, aud: 'authenticated', role: 'authenticated' })).toString('base64url')}.synthetic-signature`;
@@ -29,7 +30,7 @@ try {
   const collectionURL = await compileSource(new URL('app/api/admin/privacy/route.ts', root), temporary);
   const itemURL = await compileSource(new URL('app/api/admin/privacy/[id]/route.ts', root), temporary);
   const serverURL = await compileSource(new URL('lib/supabase/server.ts', root), temporary);
-  await writeFile(new URL(serverURL), (await readFile(new URL(serverURL), 'utf8')).replace("'next/headers'", JSON.stringify(fakeHeaders.href)).replace("'@supabase/ssr'", JSON.stringify(import.meta.resolve('@supabase/ssr'))));
+  await writeFile(new URL(serverURL), (await readFile(new URL(serverURL), 'utf8')).replace("'next/headers'", JSON.stringify(fakeHeaders.href)).replace("'@supabase/ssr'", JSON.stringify(import.meta.resolve('@supabase/ssr'))).replace("'@supabase/supabase-js'", JSON.stringify(import.meta.resolve('@supabase/supabase-js'))));
   const collection = await import(collectionURL), item = await import(itemURL);
   const { createSupabaseServerClient } = await import(serverURL);
   const { PRIVACY_EXTENSION_REASONS } = await import(await compileSource(new URL('lib/privacyAdmin.ts', root), temporary));
@@ -56,7 +57,7 @@ try {
     const incoming = request(options);
     const response = options.method === 'PUT' ? await item.PUT(incoming, { params: Promise.resolve({ id: id ?? caseId }) }) : options.method === 'POST' ? await collection.POST(incoming) : await collection.GET(incoming);
     const value = await response.json(), encoded = JSON.stringify(value);
-    assert.equal(response.headers.get('cache-control'), 'private, no-store'); assert.equal(response.headers.get('vary'), 'Cookie'); assert.equal(response.headers.get('x-content-type-options'), 'nosniff');
+    assert.equal(response.headers.get('cache-control'), 'private, no-store'); assert.equal(response.headers.get('vary'), 'Cookie, Authorization'); assert.equal(response.headers.get('x-content-type-options'), 'nosniff');
     for (const secret of ['synthetic-private', 'access_token', 'synthetic-privacy-refresh']) assert.equal(encoded.includes(secret), false);
     checks++; return { response, value };
   };

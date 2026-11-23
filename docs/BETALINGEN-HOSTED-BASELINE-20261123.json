@@ -1,0 +1,368 @@
+{
+  "readOnly": true,
+  "existingMigrationsIdenticalAcrossProjects": true,
+  "existingMigrationFileHashesMatchLocal": true,
+  "existingMigrations": [
+    {
+      "name": "family_content_contract",
+      "version": "20261104095714",
+      "statementCount": 1,
+      "storedSqlSha256": "6ff5a5ca218c60edeb3bd5c046cd350b8300904a6ffdfcce97f5ebbc9e0f3cb0"
+    },
+    {
+      "name": "verified_bootstrap_admin",
+      "version": "20261122140451",
+      "statementCount": 1,
+      "storedSqlSha256": "26336b12af62fac8a78bb47b48d40cf91d455a8383586bce2393b95df1fe1725"
+    },
+    {
+      "name": "admin_email_settings",
+      "version": "20261122150754",
+      "statementCount": 1,
+      "storedSqlSha256": "6fe26fa91f58074511d2e1896898253a38a52e34a0096d9455bc713c5ce0c585"
+    },
+    {
+      "name": "parent_account_lifecycle",
+      "version": "20261122172905",
+      "statementCount": 1,
+      "storedSqlSha256": "0c27e9fb90df4a0910b6a988045918f6f01f0dd40b637dd82bfb249996409212"
+    },
+    {
+      "name": "lifecycle_worker_schedule",
+      "version": "20261122174433",
+      "statementCount": 1,
+      "storedSqlSha256": "d01081c5db091f7ec9443fb9ba99e6021a9e3a4b580cb746a0950bc524aa2fbb"
+    },
+    {
+      "name": "signed_lifecycle_worker_requests",
+      "version": "20261122175306",
+      "statementCount": 1,
+      "storedSqlSha256": "33e726bdb6c2d7058fa48521e0e951c3f9164dca76ccb12ca23073ca188a67a2"
+    },
+    {
+      "name": "private_pg_net_extension",
+      "version": "20261122175654",
+      "statementCount": 1,
+      "storedSqlSha256": "d39736441cc9efd59da1afc8c0214fc8cec466f3d6c73de3b16029cb01c7ffd9"
+    },
+    {
+      "name": "account_deletion_deadline_preview",
+      "version": "20261122182638",
+      "statementCount": 1,
+      "storedSqlSha256": "465155f8d009f0ddddd8eda0dfe356b903862c47739b1e7c08628d0c3a32b9cc"
+    },
+    {
+      "name": "backup_erasure_evidence_retention",
+      "version": "20261122190748",
+      "statementCount": 1,
+      "storedSqlSha256": "b436de9753f28f90b44605c7988c1992fdea410b3688c0d5b42e1fa5c9de0977"
+    },
+    {
+      "name": "privacy_backup_support_update",
+      "version": "20261122190924",
+      "statementCount": 1,
+      "storedSqlSha256": "d362f0b8bad9074fd910d4dfd64122635c68b2a5f7723aa1359d882bfc4232a6"
+    },
+    {
+      "name": "parent_registration_proof",
+      "version": "20261122210104",
+      "statementCount": 1,
+      "storedSqlSha256": "60621f836cf16c80b070f4daae69cc3f5de779c40566b69fe3d5caf4b52c79ba"
+    },
+    {
+      "name": "reading_levels_completed_routes",
+      "version": "20261122233351",
+      "statementCount": 1,
+      "storedSqlSha256": "d9ce497ef92498134daccff233ee0ce05a3ad9216577840fa15d2e29b95a9265"
+    },
+    {
+      "name": "child_birth_date_reading_profile",
+      "version": "20261123002951",
+      "statementCount": 1,
+      "storedSqlSha256": "15e665d9fd2d76c55d0bd91e8602624f8e43f949c39c765378dda78dd6107667"
+    },
+    {
+      "name": "child_birth_date_privacy_information",
+      "version": "20261123003259",
+      "statementCount": 1,
+      "storedSqlSha256": "10b58b060b19905eb1ae693530cc39bb333233ce92c3f020dcdba9f4977af65a"
+    }
+  ],
+  "expectedNewMigrations": [
+    {
+      "version": "20261123115349",
+      "name": "billing_entitlements_campaigns_coupons_provider_queue",
+      "sha256": "ab5a86867e737741cd3d679e9bd6d9b7cef6c340a33432a81452494da37a9c22"
+    },
+    {
+      "version": "20261123121009",
+      "name": "billing_legal_documents_v20261123_1",
+      "sha256": "b722f5b5f2ccb6e5e40f4dba0a8dfeaf05d4657985cbad5c545916584fd9b566"
+    },
+    {
+      "version": "20261123123231",
+      "name": "billing_play_sandbox_readiness_proof",
+      "sha256": "9efde7e9be163e74c1441c6f16c37e3dd50f4d530cbbdf71e7248ff0f512ca47"
+    }
+  ],
+  "projects": [
+    {
+      "environment": "staging",
+      "projectRef": "tlwfpivafcokcjyjwgmq",
+      "status": "ACTIVE_HEALTHY",
+      "content": {
+        "releases": 26,
+        "storyIds": 13,
+        "versionsPerStory": {
+          "toy": 2,
+          "snow": 2,
+          "clock": 2,
+          "dream": 2,
+          "ocean": 2,
+          "stars": 2,
+          "forest": 2,
+          "garden": 2,
+          "balloon": 2,
+          "library": 2,
+          "station": 2,
+          "weather": 2,
+          "moonbakery": 2
+        }
+      },
+      "datasets": {
+        "content_admins": {
+          "rows": 1,
+          "sha256": "03dd1f71800db37fa87c7295d0f0c361409a6853861a8aa5633456ef84bfb1ab"
+        },
+        "content_drafts": {
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "content_releases": {
+          "rows": 26,
+          "sha256": "5fe71a81740b283a98d74c69fa79874f9940918f27baa65d7bd099997d355280"
+        },
+        "family_documents": {
+          "rows": 1,
+          "sha256": "b7e1f0ae587a576d7f84770c91445be07986fe393900d01bfafa7a595abfb493"
+        },
+        "family_snapshots": {
+          "rows": 1,
+          "sha256": "261356fe310ddaf62f80c37e3851a8bbf07dd9a3b5326cf2869e94447207d3fe"
+        },
+        "account_lifecycle": {
+          "rows": 1,
+          "sha256": "c0a26079266df0bec6aca67c2e48e4a4c0e2fe371513752bedf2ab7c7b5ec2b7"
+        },
+        "parent_acceptances": {
+          "rows": 1,
+          "sha256": "315795aba771acff26c0e5541a07cf914d21d84f3280497ceaf5e379d9bdafda"
+        },
+        "child_profile_consents": {
+          "rows": 1,
+          "sha256": "7cb6763198605963858bb641aeb0bcaaac5f7a33a272edb5789db2f05804df95"
+        },
+        "legal_documents_historical": {
+          "rows": 4,
+          "sha256": "483ea3796f66f861466306e0db24b3a996612cc23d9550810be6ac0d767f0644"
+        },
+        "lifecycle_immutable_acceptance": {
+          "rows": 1,
+          "sha256": "281e4afb82bf9a2d86982d94b60d3d0218762e49e72ba3fa9356f15fbc7b4a8d"
+        }
+      },
+      "authUsers": 1,
+      "capturedAt": "2026-11-23T12:40:22.832347+00:00",
+      "familyCount": 1,
+      "childProfiles": 1,
+      "legalVersions": [
+        {
+          "kind": "privacy",
+          "sha256": "97673d3103443115097def26e20e6c677650dcb760d095de900ae3c5c5961cb7",
+          "version": "2026-11-22"
+        },
+        {
+          "kind": "privacy",
+          "sha256": "c3f6186be703dda5320b70227070fea79e395eac225dbbbde0420913c57727e4",
+          "version": "2026-11-22.1"
+        },
+        {
+          "kind": "privacy",
+          "sha256": "f108fc40b0aa5fc3d99c754eb71abacd234c05b4611c383c40a8a0b3505539e3",
+          "version": "2026-11-23"
+        },
+        {
+          "kind": "terms",
+          "sha256": "8da71baa717f1e98b393320532670b4ebbddacbd390a14dba3c4cc144b394840",
+          "version": "2026-11-22"
+        }
+      ],
+      "postgresVersion": "17.12",
+      "billingTablesPresent": false,
+      "contentPayloadFingerprint": "077ecc76d7091efffece21cbf8caad9461715ca300bf7ec1595ef9ebf3e255fe",
+      "edge": [
+        {
+          "slug": "email-admin",
+          "status": "ACTIVE",
+          "version": 3,
+          "updatedAt": 1795371270105,
+          "sha256": "94ab39e981413504194105e4b4e3faeab2f9f3b2be2abff5142bf637263a87ac"
+        },
+        {
+          "slug": "auth-email",
+          "status": "ACTIVE",
+          "version": 3,
+          "updatedAt": 1795371270981,
+          "sha256": "3d4b4b5cc506987fa2f2e3815f76232cb15e3b040f5f9f5b53cab34234f32a74"
+        },
+        {
+          "slug": "account-maintenance",
+          "status": "ACTIVE",
+          "version": 2,
+          "updatedAt": 1795370320430,
+          "sha256": "c3b4541e567e481ed3d3b07106c49b014b31c1087cf1aca6ff5b48fba3524eb1"
+        }
+      ],
+      "existingAdvisors": [
+        {
+          "name": "rls_enabled_no_policy",
+          "level": "INFO",
+          "count": 15,
+          "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy"
+        },
+        {
+          "name": "auth_leaked_password_protection",
+          "level": "WARN",
+          "count": 1,
+          "remediation": "https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection"
+        }
+      ]
+    },
+    {
+      "environment": "production",
+      "projectRef": "aptprpkosqctwrzeetgs",
+      "status": "ACTIVE_HEALTHY",
+      "content": {
+        "releases": 26,
+        "storyIds": 13,
+        "versionsPerStory": {
+          "toy": 2,
+          "snow": 2,
+          "clock": 2,
+          "dream": 2,
+          "ocean": 2,
+          "stars": 2,
+          "forest": 2,
+          "garden": 2,
+          "balloon": 2,
+          "library": 2,
+          "station": 2,
+          "weather": 2,
+          "moonbakery": 2
+        }
+      },
+      "datasets": {
+        "content_admins": {
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "content_drafts": {
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "content_releases": {
+          "rows": 26,
+          "sha256": "345db6295c77a2fdea20c05479118c1a228a2e499b710e9a39dad2dde663bc3c"
+        },
+        "family_documents": {
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "family_snapshots": {
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "account_lifecycle": {
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "parent_acceptances": {
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "child_profile_consents": {
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "legal_documents_historical": {
+          "rows": 4,
+          "sha256": "483ea3796f66f861466306e0db24b3a996612cc23d9550810be6ac0d767f0644"
+        },
+        "lifecycle_immutable_acceptance": {
+          "rows": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      },
+      "authUsers": 0,
+      "capturedAt": "2026-11-23T12:40:23.399224+00:00",
+      "familyCount": 0,
+      "childProfiles": 0,
+      "legalVersions": [
+        {
+          "kind": "privacy",
+          "sha256": "97673d3103443115097def26e20e6c677650dcb760d095de900ae3c5c5961cb7",
+          "version": "2026-11-22"
+        },
+        {
+          "kind": "privacy",
+          "sha256": "c3f6186be703dda5320b70227070fea79e395eac225dbbbde0420913c57727e4",
+          "version": "2026-11-22.1"
+        },
+        {
+          "kind": "privacy",
+          "sha256": "f108fc40b0aa5fc3d99c754eb71abacd234c05b4611c383c40a8a0b3505539e3",
+          "version": "2026-11-23"
+        },
+        {
+          "kind": "terms",
+          "sha256": "8da71baa717f1e98b393320532670b4ebbddacbd390a14dba3c4cc144b394840",
+          "version": "2026-11-22"
+        }
+      ],
+      "postgresVersion": "17.12",
+      "billingTablesPresent": false,
+      "contentPayloadFingerprint": "077ecc76d7091efffece21cbf8caad9461715ca300bf7ec1595ef9ebf3e255fe",
+      "edge": [
+        {
+          "slug": "email-admin",
+          "status": "ACTIVE",
+          "version": 3,
+          "updatedAt": 1795371271842,
+          "sha256": "6edec15c2045bc03226e94d4f958b0602dadaa4dd9c9a3bc772502689f04ccc5"
+        },
+        {
+          "slug": "auth-email",
+          "status": "ACTIVE",
+          "version": 3,
+          "updatedAt": 1795371272984,
+          "sha256": "39e7f1091838d1b14eac49949e5dc07ba84776a5b5ed34b22f15595a835e1f68"
+        },
+        {
+          "slug": "account-maintenance",
+          "status": "ACTIVE",
+          "version": 2,
+          "updatedAt": 1795370343837,
+          "sha256": "9d9187c8d5ee98493efd6a1884c23eefba0631c8f09bbc68a024f78182068e54"
+        }
+      ],
+      "existingAdvisors": [
+        {
+          "name": "rls_enabled_no_policy",
+          "level": "INFO",
+          "count": 15,
+          "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy"
+        }
+      ]
+    }
+  ]
+}
