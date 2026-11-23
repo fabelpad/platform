@@ -25,10 +25,13 @@ Downloads pauzeren en hervatten op gecontroleerde fragmentgrenzen. Een volledige
 - `node --test scripts/billing/native-connected.test.mjs`: 9 bestaande regressieproeven geslaagd, waaronder versleutelde offline voortgang, accountwissel, wisvolgorde en intrekking tijdens een late schrijfactie.
 - Gerichte Kotlin-syntax-/Android-API-compilatie met bestaande JDK/Kotlin en Android-jar: geslaagd. De kleine Expo-DSL-typestubs bewijzen geen volledige Expo- of Gradlecompilatie.
 - Een lokale JVM-harnasproef voert de huidige Kotlin-pakketcontrolefuncties rechtstreeks uit met echte JSON- en SHA-controles: 16 gevallen geslaagd, waaronder ontbrekende/corrupte ongekozen cue, gelijke bestandslengte met verkeerde hash, ontbrekende/corrupte metadata, afwijkende lease, verkeerde bundelbinding, oude complete-verwijzing en verlopen pakket. Dit bewijst de controlefuncties; Android-bestandsopslag en afspelen vereisen de kandidaatgebonden emulatorproef.
+- De actuele native verlooptijdhelpers slagen lokaal voor 10 gerichte proeven op zowel het API-35- als API-24-parsepad: ontbrekend/JSON-null publiek, geldige ISO-tijd, ongeldige of letterlijk `"null"`-tijd, verlopen/buiten-24-uur-tijd en ontbrekende/null privélease. De CI-fixture herhaalt deze guards op de echte Android JSON-klassen voordat de eerste download start. `JSONObject.NULL` wordt daarbij vóór stringconversie herkend.
 
 ## Verplichte CI- en toestelproeven
 
 De normale workflow bouwt de lokale en gekoppelde stagingvariant. `FABELPAD_NARRATION_FIXTURE=true` is alleen toegestaan als zowel `FABELPAD_UNSIGNED_CHECK=true` als `CI=1`; een gewone of gesigneerde build weigert die instelling. Alleen zo verschijnt achter de ouderpoort het paneel **CI-audiofixture**. De synthetische toon is expliciet geen Nederlandse providerstem.
+
+Een downloadfout in uitsluitend deze fixture meldt een vaste fasecode en exceptiontype, zonder bericht, bestandspad, account of payload. Gewone builds houden de generieke foutmelding.
 
 `scripts/native-ux-smoke.py --narration-fixture` voert in de echte kandidaatapp controles uit voor WAV-decoding, meerdere fragmenten, pauze/hervatten, keuze/einde, downloadpauze tussen verhaal- en cuebytes, herstel, opzettelijke checksumcorruptie, ontbrekende ongekozen cue en metadata, verlopen pakket en verhaal- plus cueafspelen na koude herstart zonder wifi, mobiele data, losse publieke cuebytes of losse bundelmetadata. Uitkomst en beelden horen bij de exacte CI-run en kandidaat-SHA. Ze zijn pas bewezen nadat die run slaagt.
 

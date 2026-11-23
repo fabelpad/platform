@@ -88,6 +88,26 @@ class FabelpadNarrationModule : Module() {
     }
   ).also { require(it > System.currentTimeMillis() && it <= System.currentTimeMillis() + 24 * 60 * 60_000L + 60_000) }
   private fun unexpired(value: JSONObject): Boolean = value.optLong("expiresAt", Long.MAX_VALUE) > System.currentTimeMillis()
+  private fun accessExpiry(value: JSONObject, owner: String): Long {
+    // Android's optString coerces JSONObject.NULL to the literal "null".
+    // Missing/JSON-null is public unlimited access; a string "null" is invalid.
+    val raw = if (!value.has("offlineUntil") || value.isNull("offlineUntil")) "" else value.get("offlineUntil")
+    require(raw is String)
+    val expires = validUntil(raw); require(owner == "public" || expires != Long.MAX_VALUE)
+    return expires
+  }
+  private fun fixtureExpiryChecks() {
+    val now = System.currentTimeMillis(); val iso = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.ROOT).apply { timeZone = TimeZone.getTimeZone("UTC") }
+    val valid = JSONObject().put("offlineUntil", iso.format(java.util.Date(now + 60_000)))
+    check(accessExpiry(JSONObject(), "public") == Long.MAX_VALUE)
+    check(accessExpiry(JSONObject().put("offlineUntil", JSONObject.NULL), "public") == Long.MAX_VALUE)
+    check(accessExpiry(valid, "public") == now + 60_000 && accessExpiry(valid, "protected") == now + 60_000)
+    for (invalid in listOf<Any>("null", "invalid", 42, iso.format(java.util.Date(now - 1)), iso.format(java.util.Date(now + 25 * 60 * 60_000L)))) {
+      check(runCatching { accessExpiry(JSONObject().put("offlineUntil", invalid), "public") }.isFailure)
+    }
+    check(runCatching { accessExpiry(JSONObject(), "protected") }.isFailure)
+    check(runCatching { accessExpiry(JSONObject().put("offlineUntil", JSONObject.NULL), "protected") }.isFailure)
+  }
   private fun atomic(file: File, bytes: ByteArray) {
     file.parentFile?.mkdirs()
     val temporary = File(file.parentFile, file.name + ".part")
@@ -204,10 +224,11 @@ class FabelpadNarrationModule : Module() {
     Constant("fixtureEnabled") { metadata("nl.fabelpad.audioFixtureEnabled") == "enabled" }
     AsyncFunction("fixtureAsset") {
       require(metadata("nl.fabelpad.audioFixtureEnabled") == "enabled")
+      fixtureExpiryChecks()
       val sampleCount = 24_000 * 20; val bytes = ByteBuffer.allocate(44 + sampleCount * 2).order(ByteOrder.LITTLE_ENDIAN)
       bytes.put("RIFF".toByteArray()).putInt(36 + sampleCount * 2).put("WAVEfmt ".toByteArray()).putInt(16).putShort(1).putShort(1).putInt(24_000).putInt(48_000).putShort(2).putShort(16).put("data".toByteArray()).putInt(sampleCount * 2)
       for (index in 0 until sampleCount) bytes.putShort((kotlin.math.sin(index * 2.0 * Math.PI * 440.0 / 24_000) * 1000).toInt().toShort())
-      val wav = bytes.array(); JSONObject().put("id", "ci-audio-tone").put("sha256", digest(wav)).put("byteLength", wav.size).put("durationMs", 20000).put("base64", Base64.encodeToString(wav, Base64.NO_WRAP)).toString()
+      val wav = bytes.array(); JSONObject().put("id", "ci-audio-tone").put("sha256", digest(wav)).put("byteLength", wav.size).put("durationMs", 20000).put("base64", Base64.encodeToString(wav, Base64.NO_WRAP)).put("offlineLeaseGuardsVerified", true).toString()
     }
     AsyncFunction("fixtureCorrupt") { owner: String, key: String ->
       require(metadata("nl.fabelpad.audioFixtureEnabled") == "enabled")
@@ -248,7 +269,7 @@ class FabelpadNarrationModule : Module() {
     AsyncFunction("prepareAssets") { request: String, authorization: String ->
       val value = JSONObject(request); val owner = scope(value.getString("scope")); val epoch = storageEpoch.get()
       if (owner != "public") require(value.getLong("storageGeneration") == epoch)
-      val expires = validUntil(value.optString("offlineUntil")); require(owner == "public" || expires != Long.MAX_VALUE)
+      val expires = accessExpiry(value, owner)
       val assets = value.getJSONArray("assets"); require(assets.length() in 1..1000)
       for (index in 0 until assets.length()) storeAsset(cacheFolder(owner), owner, assets.getJSONObject(index), authorization, epoch, null, expires)
       true
@@ -260,19 +281,23 @@ class FabelpadNarrationModule : Module() {
       paused.remove(downloadKey)
       val epoch = storageEpoch.get()
       worker.execute {
+        var phase = "request"
         try {
           val owner = scope(value.getString("scope")); val folder = packFolder(owner, identifier(downloadKey)).apply { mkdirs() }
           if (owner != "public" || value.has("storageGeneration")) require(value.getLong("storageGeneration") == epoch && storageEpoch.get() == epoch)
-          val expires = validUntil(value.optString("offlineUntil")); require(owner == "public" || expires != Long.MAX_VALUE)
+          phase = "expiry"
+          val expires = accessExpiry(value, owner)
           val assets = value.getJSONArray("assets"); require(assets.length() in 1..15_000)
           val total = (0 until assets.length()).sumOf { assets.getJSONObject(it).getLong("byteLength") }
           require(total in 1..2_000_000_000L)
           require(root.usableSpace >= minOf(total + 16_000_000, 100_000_000)) { "Er is te weinig opslagruimte. Verwijder een audiopakket en probeer opnieuw." }
           val checks = JSONArray(); for (index in 0 until assets.length()) checks.put(assetMetadata(assets.getJSONObject(index)))
           val envelope = JSONObject().put("key", downloadKey).put("scope", owner).put("manifest", value.getJSONObject("manifest")).put("cuePack", value.getJSONObject("cuePack")).put("expiresAt", expires).put("byteLength", total).put("assetChecks", checks)
+          phase = "binding"
           require(boundCuePack(envelope))
           synchronized(storageLock) { check(storageEpoch.get() == epoch); writeRecord(File(folder, "pending.json"), envelope, owner) }
           var done = 0L
+          phase = "asset"
           for (index in 0 until assets.length()) {
             check(storageEpoch.get() == epoch && !paused.contains(downloadKey)) { "paused" }
             done += storeAsset(folder, owner, assets.getJSONObject(index), authorization, epoch, downloadKey, expires)
@@ -281,6 +306,7 @@ class FabelpadNarrationModule : Module() {
           }
           check(storageEpoch.get() == epoch && !paused.contains(downloadKey)) { "paused" }
           // Only this final atomic pointer makes the complete set visible after a cold start.
+          phase = "finalization"
           synchronized(storageLock) {
             check(storageEpoch.get() == epoch && !paused.contains(downloadKey)) { "paused" }
             require(intactPackage(folder, owner, envelope))
@@ -292,8 +318,9 @@ class FabelpadNarrationModule : Module() {
           promise.resolve(envelope.toString())
         } catch (error: Throwable) {
           val isPaused = paused.contains(downloadKey) || storageEpoch.get() != epoch
+          val diagnostic = if (runCatching { metadata("nl.fabelpad.audioFixtureEnabled") == "enabled" }.getOrDefault(false)) " [fixture:$phase:${error.javaClass.simpleName.replace(Regex("[^A-Za-z0-9_]"), "").take(64)}]" else ""
           emit("onDownload", mapOf("key" to downloadKey, "status" to if (isPaused) "paused" else "error"))
-          promise.reject(if (isPaused) "ERR_AUDIO_PAUSED" else "ERR_AUDIO_DOWNLOAD", if (isPaused) "Download gepauzeerd. Gecontroleerde fragmenten blijven bewaard." else "De download kon niet worden voltooid. Controleer toegang, verbinding en opslagruimte. Je eerdere pakket blijft beschikbaar.", null)
+          promise.reject(if (isPaused) "ERR_AUDIO_PAUSED" else "ERR_AUDIO_DOWNLOAD", (if (isPaused) "Download gepauzeerd. Gecontroleerde fragmenten blijven bewaard." else "De download kon niet worden voltooid. Controleer toegang, verbinding en opslagruimte. Je eerdere pakket blijft beschikbaar.") + diagnostic, null)
         } finally { running.remove(downloadKey) }
       }
     }
