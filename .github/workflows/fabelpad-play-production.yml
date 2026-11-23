@@ -6,9 +6,9 @@ on:
   workflow_dispatch:
     inputs:
       action:
-        description: Alleen-lezen verbindingscontrole of actie voor een bestaande gefaseerde uitrol
+        description: Verbindingscontrole, status via tijdelijke edit of actie voor een bestaande gefaseerde uitrol
         type: choice
-        options: [verify, complete, halt]
+        options: [verify, status, complete, halt]
         required: true
       version_code:
         description: Exacte Google Play-versionCode van die uitrol
@@ -86,9 +86,49 @@ jobs:
           retention-days: 30
           if-no-files-found: error
 
+  status:
+    name: Lees Play-tracks en bundels via een tijdelijke edit zonder publicatie
+    needs: play_config
+    if: github.event_name == 'workflow_dispatch' && inputs.action == 'status' && github.ref == 'refs/heads/main' && github.repository == 'fabelpad/platform' && needs.play_config.outputs.connection_check_enabled == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment: fabelpad-play-production
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Autoriseer tijdelijk voor het opvragen van de Play-status
+        id: play-auth
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
+        with:
+          workload_identity_provider: ${{ secrets.PLAY_WIF_PROVIDER }}
+          service_account: ${{ secrets.PLAY_SERVICE_ACCOUNT }}
+          token_format: access_token
+          access_token_scopes: https://www.googleapis.com/auth/androidpublisher
+          create_credentials_file: false
+          export_environment_variables: false
+      - name: Open tijdelijke edit, lees status en verwijder de edit
+        env:
+          PLAY_ACCESS_TOKEN: ${{ steps.play-auth.outputs.access_token }}
+          PLAY_SERVICE_ACCOUNT: ${{ secrets.PLAY_SERVICE_ACCOUNT }}
+          PLAY_STATUS_ACTION: ${{ inputs.action }}
+        run: |
+          python3 -B scripts/play/inspect_status.py \
+            --service-account "$PLAY_SERVICE_ACCOUNT" \
+            --output "$RUNNER_TEMP/fabelpad-play-status.json"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: fabelpad-play-production-status
+          path: ${{ runner.temp }}/fabelpad-play-status.json
+          retention-days: 30
+          if-no-files-found: error
+
   release:
     needs: play_config
-    if: needs.play_config.outputs.play_enabled == 'true' && (github.event_name == 'push' || (github.ref == 'refs/heads/main' && inputs.action != 'verify'))
+    if: needs.play_config.outputs.play_enabled == 'true' && (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && (inputs.action == 'complete' || inputs.action == 'halt')))
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     environment: fabelpad-play-production
