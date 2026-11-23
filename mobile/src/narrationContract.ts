@@ -1,4 +1,4 @@
-import { referencedNarrationAssets, type NarrationAsset, type NarrationManifest, type NarrationReadingLevel, type VoiceSlot } from '../../lib/narration/contracts';
+import { referencedNarrationAssets, type NarrationAsset, type NarrationCuePack, type NarrationManifest, type NarrationReadingLevel, type VoiceSlot } from '../../lib/narration/contracts';
 
 export type NativeAudioIdentity = { storyId: string; contentVersion: string; readingLevel: NarrationReadingLevel; voiceSlot: VoiceSlot };
 export function narrationQuery(identity: NativeAudioIdentity): string {
@@ -22,6 +22,18 @@ export function completeNarrationManifest(manifest: NarrationManifest, identity:
 }
 export function validNarrationAsset(asset?: NarrationAsset): asset is NarrationAsset {
   return !!asset && /^[a-zA-Z0-9_-]{1,160}$/u.test(asset.id) && /^[a-f0-9]{64}$/u.test(asset.sha256) && Number.isSafeInteger(asset.byteLength) && asset.byteLength > 0 && asset.byteLength <= 50_000_000 && Number.isFinite(asset.durationMs) && asset.durationMs > 0;
+}
+/** Whole editorial catalogue, independent of the profile's selected name. */
+export function completeNarrationCuePack(pack: NarrationCuePack, manifest: NarrationManifest): boolean {
+  try {
+    if (pack.schemaVersion !== 1 || pack.locale !== 'nl-NL' || pack.packId !== manifest.cuePack.packId || pack.packVersion !== manifest.cuePack.packVersion
+      || pack.voiceSlot !== manifest.voice.slotId || pack.presetVersion !== manifest.voice.presetVersion || pack.presetVersion !== manifest.cuePack.voicePresetVersion
+      || pack.fallbackNameId !== 'avonturier' || !pack.catalogue.length || !pack.cues.length || !Object.keys(pack.assets).length
+      || !pack.catalogue.some(name => name.id === pack.fallbackNameId) || Object.values(pack.assets).some(asset => !validNarrationAsset(asset))) return false;
+    if (pack.cues.some(cue => pack.catalogue.some(name => !name.pronunciations.length || name.pronunciations.some(pronunciation => !pack.assets[pack.variants[cue.id]?.[name.id]?.[pronunciation.id]])))) return false;
+    const segments = [...Object.values(manifest.scenes).flatMap(scene => [...scene.segments, ...scene.choices.flatMap(choice => choice.segments)]), ...Object.values(manifest.endings).flatMap(ending => ending.segments)];
+    return segments.every(segment => segment.kind !== 'nameCue' || pack.cues.some(cue => cue.id === segment.cueId));
+  } catch { return false; }
 }
 export function packageAssetRequests(manifest: NarrationManifest, origin: string): NarrationAsset[] {
   const query = narrationQuery({ storyId: manifest.storyId, contentVersion: manifest.contentVersion, readingLevel: manifest.readingLevel, voiceSlot: manifest.voice.slotId });

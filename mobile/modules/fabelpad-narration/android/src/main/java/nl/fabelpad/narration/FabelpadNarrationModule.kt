@@ -118,6 +118,49 @@ class FabelpadNarrationModule : Module() {
     return bytes
   }
   private fun assetName(asset: JSONObject): String = identifier(asset.getString("id")) + "-" + asset.getString("sha256").also { require(Regex("[a-f0-9]{64}").matches(it)) }
+  private fun sameAsset(left: JSONObject, right: JSONObject): Boolean = left.getString("id") == right.getString("id") && left.getString("sha256") == right.getString("sha256") && left.getLong("byteLength") == right.getLong("byteLength")
+  private fun assetMetadata(asset: JSONObject): JSONObject = JSONObject(asset.toString()).apply { remove("url"); remove("base64"); remove("fromPublicCache") }
+  private fun boundCuePack(envelope: JSONObject): Boolean = runCatching {
+    val manifest = envelope.getJSONObject("manifest"); val expected = manifest.getJSONObject("cuePack"); val voice = manifest.getJSONObject("voice"); val pack = envelope.getJSONObject("cuePack")
+    require(pack.getInt("schemaVersion") == 1 && pack.getString("locale") == "nl-NL" && pack.getString("locale") == manifest.getString("locale"))
+    require(pack.getString("packId") == expected.getString("packId") && pack.getInt("packVersion") == expected.getInt("packVersion"))
+    require(pack.getString("voiceSlot") == voice.getString("slotId") && pack.getInt("presetVersion") == voice.getInt("presetVersion") && pack.getInt("presetVersion") == expected.getInt("voicePresetVersion"))
+    require(pack.getString("fallbackNameId") == "avonturier" && manifest.getJSONObject("access").getString("scope") == "full")
+    val assets = pack.getJSONObject("assets"); val checks = envelope.getJSONArray("assetChecks"); val catalogue = pack.getJSONArray("catalogue"); val cues = pack.getJSONArray("cues"); val variants = pack.getJSONObject("variants")
+    require(assets.length() in 1..1000 && catalogue.length() > 0 && cues.length() > 0)
+    require((0 until catalogue.length()).any { catalogue.getJSONObject(it).getString("id") == "avonturier" })
+    fun contains(asset: JSONObject): Boolean = (0 until checks.length()).any { sameAsset(asset, checks.getJSONObject(it)) }
+    assets.keys().forEach { id -> require(contains(assets.getJSONObject(id))) }
+    val cueIds = (0 until cues.length()).map { cues.getJSONObject(it).getString("id") }.toSet()
+    for (cue in cueIds) for (index in 0 until catalogue.length()) {
+      val name = catalogue.getJSONObject(index); val pronunciations = name.getJSONArray("pronunciations"); require(pronunciations.length() > 0)
+      for (pronunciation in 0 until pronunciations.length()) require(assets.has(variants.getJSONObject(cue).getJSONObject(name.getString("id")).getString(pronunciations.getJSONObject(pronunciation).getString("id"))))
+    }
+    fun segments(values: JSONArray) {
+      for (index in 0 until values.length()) {
+        val segment = values.getJSONObject(index); val isCue = segment.getString("kind") == "nameCue"
+        if (isCue) require(cueIds.contains(segment.getString("cueId")))
+        require(contains(manifest.getJSONObject("assets").getJSONObject(segment.getString(if (isCue) "fallbackAsset" else "asset"))))
+      }
+    }
+    val scenes = manifest.getJSONObject("scenes"); scenes.keys().forEach { route ->
+      val scene = scenes.getJSONObject(route); segments(scene.getJSONArray("segments")); val choices = scene.getJSONArray("choices")
+      for (index in 0 until choices.length()) segments(choices.getJSONObject(index).getJSONArray("segments"))
+    }
+    val endings = manifest.getJSONObject("endings"); endings.keys().forEach { segments(endings.getJSONObject(it).getJSONArray("segments")) }
+    true
+  }.getOrDefault(false)
+  private fun intactPackage(folder: File, owner: String, envelope: JSONObject): Boolean = runCatching {
+    require(unexpired(envelope) && boundCuePack(envelope))
+    val checks = envelope.getJSONArray("assetChecks")
+    for (index in 0 until checks.length()) {
+      val asset = checks.getJSONObject(index); val file = safeFile(folder, assetName(asset)); val info = readRecord(File(folder, file.name + ".json"), owner)
+      require(unexpired(info) && info.getLong("expiresAt") == envelope.getLong("expiresAt") && sameAsset(asset, info.getJSONObject("asset")))
+      checked(decode(file.readBytes(), owner), asset)
+    }
+    require(unexpired(envelope))
+    true
+  }.getOrDefault(false)
   private fun fetch(asset: JSONObject, authorization: String, epoch: Long, downloadKey: String?): ByteArray {
     val url = URL(asset.getString("url"))
     require(url.protocol == "https" && url.userInfo == null && url.port == -1 && "https://${url.host}" == origin() && url.path.startsWith("/api/voorlezen/"))
@@ -143,11 +186,14 @@ class FabelpadNarrationModule : Module() {
   private fun storeAsset(folder: File, owner: String, asset: JSONObject, authorization: String, epoch: Long, downloadKey: String?, expires: Long): Long {
     val file = safeFile(folder, assetName(asset))
     val reusable = runCatching { checked(decode(file.readBytes(), owner), asset); true }.getOrDefault(false)
-    val data = if (reusable) null else if (asset.has("base64")) checked(Base64.decode(asset.getString("base64"), Base64.DEFAULT), asset) else fetch(asset, authorization, epoch, downloadKey)
+    val data = if (reusable) null else if (asset.has("base64")) checked(Base64.decode(asset.getString("base64"), Base64.DEFAULT), asset) else if (asset.optBoolean("fromPublicCache")) {
+      val cached = safeFile(cacheFolder("public"), assetName(asset)); require(unexpired(readRecord(File(cached.parentFile, cached.name + ".json"), "public")))
+      checked(cached.readBytes(), asset)
+    } else fetch(asset, authorization, epoch, downloadKey)
     synchronized(storageLock) {
       check(storageEpoch.get() == epoch && (downloadKey == null || !paused.contains(downloadKey))) { "paused" }
       if (data != null) atomic(file, encode(data, owner))
-      writeRecord(File(folder, file.name + ".json"), JSONObject().put("asset", asset.let { JSONObject(it.toString()).apply { remove("url"); remove("base64") } }).put("expiresAt", expires), owner)
+      writeRecord(File(folder, file.name + ".json"), JSONObject().put("asset", assetMetadata(asset)).put("expiresAt", expires), owner)
     }
     return asset.getLong("byteLength")
   }
@@ -173,6 +219,26 @@ class FabelpadNarrationModule : Module() {
       val folder = packFolder(scope(owner), identifier(key)); val file = File(folder, "complete.json")
       synchronized(storageLock) { val value = readRecord(file, owner); writeRecord(file, value.put("expiresAt", System.currentTimeMillis() - 1), owner) }; true
     }
+    AsyncFunction("fixtureCueDamage") { request: String ->
+      require(metadata("nl.fabelpad.audioFixtureEnabled") == "enabled")
+      val value = JSONObject(request); val owner = scope(value.getString("scope")); val folder = packFolder(owner, identifier(value.getString("key"))); val envelope = readRecord(File(folder, "complete.json"), owner)
+      val pack = envelope.getJSONObject("cuePack"); val cues = pack.getJSONObject("assets")
+      val unselected = pack.getJSONObject("variants").getJSONObject("kom-mee").getJSONObject("synthetic-catalogue").getString("nl")
+      val cue = cues.getJSONObject(unselected); val file = safeFile(folder, assetName(cue))
+      synchronized(storageLock) {
+        if (value.optBoolean("sidecar")) File(folder, file.name + ".json").delete()
+        else if (value.optBoolean("missing")) file.delete()
+        else { val bytes = decode(file.readBytes(), owner); bytes[bytes.lastIndex] = (bytes.last().toInt() xor 1).toByte(); atomic(file, encode(bytes, owner)) }
+      }
+      // The regression damages only a cue, including an unselected variant;
+      // every story asset remains checksum-valid.
+      val storyAssets = envelope.getJSONObject("manifest").getJSONObject("assets")
+      storyAssets.keys().forEach { id -> val asset = storyAssets.getJSONObject(id); checked(decode(safeFile(folder, assetName(asset)).readBytes(), owner), asset) }; true
+    }
+    AsyncFunction("fixtureClearSharedCache") {
+      require(metadata("nl.fabelpad.audioFixtureEnabled") == "enabled")
+      synchronized(storageLock) { val folder = cacheFolder("public"); folder.deleteRecursively(); check(!folder.exists()) }; true
+    }
     AsyncFunction("hash") { value: String -> digest(value.toByteArray()) }
     AsyncFunction("storageGeneration") { storageEpoch.get().toDouble() }
     AsyncFunction("hasAssets") { owner: String, request: String ->
@@ -196,14 +262,15 @@ class FabelpadNarrationModule : Module() {
       worker.execute {
         try {
           val owner = scope(value.getString("scope")); val folder = packFolder(owner, identifier(downloadKey)).apply { mkdirs() }
-          if (owner != "public") require(value.getLong("storageGeneration") == epoch && storageEpoch.get() == epoch)
+          if (owner != "public" || value.has("storageGeneration")) require(value.getLong("storageGeneration") == epoch && storageEpoch.get() == epoch)
           val expires = validUntil(value.optString("offlineUntil")); require(owner == "public" || expires != Long.MAX_VALUE)
           val assets = value.getJSONArray("assets"); require(assets.length() in 1..15_000)
           val total = (0 until assets.length()).sumOf { assets.getJSONObject(it).getLong("byteLength") }
           require(total in 1..2_000_000_000L)
           require(root.usableSpace >= minOf(total + 16_000_000, 100_000_000)) { "Er is te weinig opslagruimte. Verwijder een audiopakket en probeer opnieuw." }
-          val checks = JSONArray(); for (index in 0 until assets.length()) checks.put(JSONObject(assets.getJSONObject(index).toString()).apply { remove("url"); remove("base64") })
-          val envelope = JSONObject().put("key", downloadKey).put("scope", owner).put("manifest", value.getJSONObject("manifest")).put("expiresAt", expires).put("byteLength", total).put("assetChecks", checks)
+          val checks = JSONArray(); for (index in 0 until assets.length()) checks.put(assetMetadata(assets.getJSONObject(index)))
+          val envelope = JSONObject().put("key", downloadKey).put("scope", owner).put("manifest", value.getJSONObject("manifest")).put("cuePack", value.getJSONObject("cuePack")).put("expiresAt", expires).put("byteLength", total).put("assetChecks", checks)
+          require(boundCuePack(envelope))
           synchronized(storageLock) { check(storageEpoch.get() == epoch); writeRecord(File(folder, "pending.json"), envelope, owner) }
           var done = 0L
           for (index in 0 until assets.length()) {
@@ -215,6 +282,8 @@ class FabelpadNarrationModule : Module() {
           check(storageEpoch.get() == epoch && !paused.contains(downloadKey)) { "paused" }
           // Only this final atomic pointer makes the complete set visible after a cold start.
           synchronized(storageLock) {
+            check(storageEpoch.get() == epoch && !paused.contains(downloadKey)) { "paused" }
+            require(intactPackage(folder, owner, envelope))
             check(storageEpoch.get() == epoch && !paused.contains(downloadKey)) { "paused" }
             writeRecord(File(folder, "complete.json"), envelope, owner)
             File(folder, "pending.json").delete()
@@ -230,6 +299,7 @@ class FabelpadNarrationModule : Module() {
     }
     AsyncFunction("pauseDownload") { key: String -> paused.add(identifier(key)); true }
     AsyncFunction("downloads") { owner: String ->
+      val epoch = storageEpoch.get()
       val folder = safeFile(File(root, "packages").apply { mkdirs() }, scope(owner))
       JSONArray().apply {
         folder.listFiles().orEmpty().filter { it.isDirectory }.forEach { pack ->
@@ -239,15 +309,13 @@ class FabelpadNarrationModule : Module() {
             val value = readRecord(file, owner)
             if (unexpired(value)) {
               if (complete.exists()) {
-                val checks = value.getJSONArray("assetChecks")
-                val intact = (0 until checks.length()).all { index -> runCatching { val asset = checks.getJSONObject(index); checked(decode(safeFile(pack, assetName(asset)).readBytes(), owner), asset); true }.getOrDefault(false) }
-                if (!intact) synchronized(storageLock) { writeRecord(pending, value, owner); complete.delete() }
+                if (!intactPackage(pack, owner, value)) synchronized(storageLock) { check(storageEpoch.get() == epoch); writeRecord(pending, value, owner); complete.delete() }
               }
               put(value.put("complete", complete.exists()))
-            } else synchronized(storageLock) { pack.deleteRecursively() }
+            } else synchronized(storageLock) { check(storageEpoch.get() == epoch); pack.deleteRecursively() }
           }
         }
-      }.toString()
+      }.also { check(storageEpoch.get() == epoch) }.toString()
     }
     AsyncFunction("removeDownload") { owner: String, key: String ->
       paused.add(identifier(key)); main.post { stopPlayback("stopped") }
@@ -344,14 +412,23 @@ class FabelpadNarrationModule : Module() {
     releaseFocus(); runCatching { File(root, "playback").deleteRecursively() }; event(status)
   }
   private fun playable(item: JSONObject, index: Int = playbackIndex): File {
+    if (item.has("offlineUntil")) armExpiry(playbackGeneration, validUntil(item.getString("offlineUntil")))
     if (item.getString("kind") == "recording") {
+      if (item.has("key")) {
+        val packageOwner = scope(item.getString("packageScope")); val envelope = readRecord(File(packFolder(packageOwner, identifier(item.getString("key"))), "complete.json"), packageOwner)
+        require(unexpired(envelope) && boundCuePack(envelope)); armExpiry(playbackGeneration, envelope.getLong("expiresAt"))
+      }
       val folder = recordingFolder(scope(item.getString("scope")))
       val file = if (item.optBoolean("pending")) recordingFile?.takeIf { it.parentFile?.canonicalFile == folder.canonicalFile } else safeFile(folder, identifier(item.getString("cueId")) + ".m4a")
       require(file != null && file.exists()); return file
     }
     val owner = scope(item.getString("scope")); val asset = item.getJSONObject("asset")
     val folder = if (item.has("key")) packFolder(owner, item.getString("key")) else cacheFolder(owner)
-    if (item.has("key")) { val envelope = readRecord(File(folder, "complete.json"), owner); require(unexpired(envelope)); armExpiry(playbackGeneration, envelope.optLong("expiresAt", Long.MAX_VALUE)) }
+    if (item.has("key")) {
+      val envelope = readRecord(File(folder, "complete.json"), owner); require(unexpired(envelope) && boundCuePack(envelope))
+      val checks = envelope.getJSONArray("assetChecks"); require((0 until checks.length()).any { sameAsset(asset, checks.getJSONObject(it)) })
+      armExpiry(playbackGeneration, envelope.optLong("expiresAt", Long.MAX_VALUE))
+    }
     val file = safeFile(folder, assetName(asset)); val info = readRecord(File(folder, file.name + ".json"), owner); require(unexpired(info))
     armExpiry(playbackGeneration, info.optLong("expiresAt", Long.MAX_VALUE))
     val bytes = checked(decode(file.readBytes(), owner), asset)

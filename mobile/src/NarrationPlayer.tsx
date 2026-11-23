@@ -43,9 +43,9 @@ export function NarrationPlayer({ scope, profileId, storyId, contentVersion, rea
       const owner = await audioScope(current.scope), personalOwner = await profileAudioScope(current.scope, current.profileId);
       const items: NativePlayable[] = [], prepareIds = new Set<string>();
       for (const segment of selected) {
-        if (segment.kind === 'nameCue' && name.mode === 'recording' && recordings.includes(segment.cueId)) { items.push({ kind: 'recording', scope: personalOwner, cueId: segment.cueId }); continue; }
+        if (segment.kind === 'nameCue' && name.mode === 'recording' && recordings.includes(segment.cueId)) { items.push({ kind: 'recording', scope: personalOwner, cueId: segment.cueId, ...(current.download ? { packageScope: owner, key: current.download.key } : {}), ...(current.manifest.access.offlineUntil ? { offlineUntil: current.manifest.access.offlineUntil } : {}) }); continue; }
         const cueId = segment.kind === 'nameCue' && current.pack ? cueAssetForChoice(current.pack, segment.cueId, name) : null;
-        if (cueId && current.pack?.assets[cueId]) { items.push({ kind: 'asset', scope: 'public', asset: current.pack.assets[cueId] }); continue; }
+        if (cueId && current.pack?.assets[cueId]) { items.push({ kind: 'asset', scope: current.download ? owner : 'public', asset: current.pack.assets[cueId], ...(current.download ? { key: current.download.key } : {}) }); continue; }
         const asset = current.manifest.assets[segment.kind === 'asset' ? segment.asset : segment.fallbackAsset];
         if (!asset) throw new Error('Een opname ontbreekt. Je kunt wel verder lezen.');
         items.push({ kind: 'asset', scope: owner, asset, ...(current.download ? { key: current.download.key } : {}) });
@@ -53,7 +53,10 @@ export function NarrationPlayer({ scope, profileId, storyId, contentVersion, rea
       }
       if (prepareIds.size) await prepareNarrationAssets(current.manifest, [...prepareIds], current.scope);
       if (generation.current !== token) return;
-      const result = await playNarration(items);
+      // Apply the family lease even when the first/only clip is a public shared
+      // name cue or a device-only parent recording, including while paused.
+      const offlineUntil = current.manifest.access.offlineUntil, leasedItems = offlineUntil ? items.map(item => ({ ...item, offlineUntil })) : items;
+      const result = await playNarration(leasedItems);
       if (generation.current === token) {
         setStatus(result === 'done' ? 'done' : 'idle');
         if (result === 'error') setNotice('Deze audio kon niet worden afgespeeld. Kies de lokale apparaatstem of lees verder.');
@@ -70,7 +73,7 @@ export function NarrationPlayer({ scope, profileId, storyId, contentVersion, rea
     void Promise.allSettled([stopNarration(), stopSpeech()]);
     if (!muted) void loadNarrationManifest({ storyId, contentVersion, readingLevel, voiceSlot: slot }, scope).then(async result => {
       if (generation.current !== token) return;
-      const names = result.manifest ? await loadCuePack(slot, result.manifest.voice.presetVersion, result.manifest.cuePack) : null;
+      const names = result.download?.cuePack ?? (result.manifest ? await loadCuePack(slot, result.manifest.voice.presetVersion, result.manifest.cuePack) : null);
       if (generation.current !== token) return;
       setManifest(result.manifest); setDownload(result.download); setPack(names); setNotice(result.reason ?? '');
       latest.current = { ...latest.current, manifest: result.manifest, download: result.download, pack: names };

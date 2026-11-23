@@ -31,6 +31,10 @@ const identity = { storyId: 'synthetic-story', contentVersion: 'immutable-v1', r
 function manifest() {
   return { schemaVersion: 1, ...identity, audioRevision: 1, sourceFingerprint: 'a'.repeat(64), locale: 'nl-NL', access: { scope: 'full', offlineUntil: null }, voice: { slotId: 'stem-2', presetVersion: 1, label: 'Synthetic' }, format: shared.NARRATION_FORMAT, cuePack: { packId: 'editorial-pack', packVersion: 2, voicePresetVersion: 1, lookup: 'device' }, assets: { generic: { ...asset } }, scenes: { '': { segments: [{ kind: 'asset', asset: 'generic' }], choices: [{ choiceIndex: 0, segments: [{ kind: 'asset', asset: 'generic' }] }, { choiceIndex: 1, segments: [{ kind: 'asset', asset: 'generic' }] }] } }, endings: { '0': { segments: [{ kind: 'asset', asset: 'generic' }] }, '1': { segments: [{ kind: 'asset', asset: 'generic' }] } } };
 }
+function cuePack(value = manifest()) {
+  const first = { ...asset, id: 'public-generic-cue', base64: 'synthetic-whole-pack-bytes' }, other = { ...asset, id: 'public-unselected-cue', base64: 'synthetic-whole-pack-bytes' };
+  return { schemaVersion: 1, packId: value.cuePack.packId, packVersion: value.cuePack.packVersion, locale: 'nl-NL', voiceSlot: value.voice.slotId, presetVersion: value.voice.presetVersion, fallbackNameId: 'avonturier', catalogue: [{ id: 'avonturier', kind: 'fallback', displayName: 'Avonturier', pronunciations: [{ id: 'nl', spokenSpelling: 'Avonturier' }] }, { id: 'editorial-other', kind: 'firstName', displayName: 'Publieke naam', pronunciations: [{ id: 'nl', spokenSpelling: 'Publieke naam' }] }], cues: [{ id: 'kom-mee', template: 'Kom mee, {{naam}}.' }], variants: { 'kom-mee': { avonturier: { nl: first.id }, 'editorial-other': { nl: other.id } } }, assets: { [first.id]: first, [other.id]: other } };
+}
 const source = { scenes: { '': { choices: ['left', 'right'] } }, endings: { '0': {}, '1': {} } };
 test('download contract refuses previews, omitted original choices/endings, mismatched releases/levels/slots, invalid checksums and expired access', () => {
   assert.equal(contract.completeNarrationManifest(manifest(), identity, source), true);
@@ -49,6 +53,13 @@ test('all current bundled source graphs can be bound to complete per-level/per-s
     sceneTracks += Object.keys(reading.scenes).length; choiceTracks += Object.values(reading.scenes).reduce((sum, scene) => sum + scene.choices.length, 0); endingTracks += Object.keys(reading.endings).length;
   }
   assert.equal(sceneTracks, 6045); assert.equal(choiceTracks, 12090); assert.equal(endingTracks, 6240);
+});
+test('offline cue metadata binds the exact immutable whole catalogue and refuses a missing unselected variant, dangling reference, wrong binding or legacy package', () => {
+  const value = manifest(), pack = cuePack(value); assert.equal(contract.completeNarrationCuePack(pack, value), true);
+  for (const mutate of [p => { delete p.assets['public-unselected-cue']; }, p => { p.variants['kom-mee']['editorial-other'].nl = 'missing'; }, p => { delete p.variants['kom-mee']['editorial-other']; }, p => { p.packId = 'different-pack'; }, p => { p.packVersion++; }, p => { p.voiceSlot = 'stem-5'; }, p => { p.presetVersion++; }, p => { p.locale = 'en-US'; }, p => { p.catalogue[1].pronunciations.push({ id: 'other', spokenSpelling: 'Other' }); }]) {
+    const candidate = structuredClone(pack); mutate(candidate); assert.equal(contract.completeNarrationCuePack(candidate, value), false);
+  }
+  assert.equal(contract.completeNarrationCuePack(undefined, value), false);
 });
 test('only the stable voice slot enters an explicit family import; device name modes and recording locations are excluded', () => {
   const profile = { id: 'synthetic-child', name: 'Synthetic Private Name', avatar: 0, birthDate: '2019-01-01', picks: {}, favorites: [], calm: false, largeText: false, voiceSlot: 'stem-4', nameMode: 'recording', recordingURI: 'private://opaque-file', catalogueId: 'private-selection' };
@@ -69,6 +80,7 @@ async function fixture() {
   const calls = [], storage = new Map();
   const native = { audioOrigin: 'https://staging.fabelpad.nl', fixtureEnabled: false, hash: async value => createHash('sha256').update(value).digest('hex'), storageGeneration: async () => 17,
     prepareAssets: async (request, auth) => { calls.push({ type: 'prepare', request: JSON.parse(request), auth }); return true; },
+    download: async (request, auth) => { const value = JSON.parse(request); calls.push({ type: 'download', request: value, auth }); return JSON.stringify({ ...value, complete: true }); },
     downloads: async () => '[]', hasAssets: async () => true, registerConnectedProfile: async () => true, startRecording: async () => { calls.push({ type: 'record' }); return true; }, clearAll: async () => true };
   globalThis.__fabelpadNarrationFixture = { native, storage, permission: async () => 'granted', session: { parentId: 'synthetic-parent', accessToken: 'synthetic-token' }, connectedRequest: async () => ({ manifest: null, reason: 'awaiting_configuration' }) };
   return { calls, storage, state: globalThis.__fabelpadNarrationFixture, api: await import(`${narrationURL}?fixture=${++instance}`) };
@@ -82,6 +94,27 @@ test('a complete shared cue pack is fetched without a selected personal name and
   assert.equal(requests.length, 1); assert(!requests[0].includes('noor')); assert(!requests[0].includes('private-profile')); assert.equal(calls[0].request.assets.length, 1); assert.equal(calls[0].request.assets[0].base64, 'synthetic-entire-pack');
   globalThis.fetch = async () => { throw new Error('offline'); };
   const restarted = await import(`${narrationURL}?fixture=${++instance}`); assert.equal((await restarted.loadCuePack('stem-2', 1, { packId: pack.packId, packVersion: 3 })).packVersion, 3); assert.equal(await restarted.loadCuePack('stem-2', 1, { packId: pack.packId, packVersion: 4 }), null);
+});
+test('a family download carries every cue into its own owner/key, and cold offline loading needs no public cache or name metadata', async () => {
+  const { api, calls, state, storage } = await fixture(), value = manifest(), pack = cuePack(value), requests = [];
+  value.access.offlineUntil = new Date(Date.now() + 60_000).toISOString();
+  await api.saveLocalNameSettings({ kind: 'family', parentId: 'synthetic-parent' }, 'synthetic-child', { mode: 'name', catalogueId: 'editorial-other', pronunciationId: 'nl' });
+  globalThis.fetch = async url => { requests.push(String(url)); return Response.json({ pack }); };
+  const download = await api.downloadNarration(value, { kind: 'family', parentId: 'synthetic-parent' }), submitted = calls.find(call => call.type === 'download');
+  assert.equal(submitted.auth, 'Bearer synthetic-token'); assert.equal(submitted.request.storageGeneration, 17); assert.equal(submitted.request.offlineUntil, value.access.offlineUntil);
+  assert.notEqual(submitted.request.scope, 'public'); assert.equal(submitted.request.cuePack.packId, value.cuePack.packId); assert.equal(submitted.request.cuePack.packVersion, value.cuePack.packVersion);
+  const copied = submitted.request.assets.filter(asset => asset.fromPublicCache); assert.deepEqual(copied.map(asset => asset.id).sort(), Object.values(pack.assets).map(asset => asset.id).sort());
+  assert(copied.every(asset => !asset.base64 && !asset.url)); assert.equal(submitted.request.assets.length, 3);
+  assert.equal(requests.length, 1); for (const personal of ['synthetic-child', 'synthetic-parent', 'editorial-other']) assert(!requests[0].includes(personal));
+  assert(!JSON.stringify(submitted.request).includes('catalogueId')); assert(!JSON.stringify(submitted.request).includes('pronunciationId'));
+  // Simulate a new JS instance with all shared metadata/bytes unavailable. The
+  // only complete package returned by native owns its cue metadata and files.
+  storage.clear(); state.native.hasAssets = async () => false; state.native.downloads = async () => JSON.stringify([{ ...download, complete: true }]);
+  globalThis.fetch = async () => { throw new Error('offline'); }; state.connectedRequest = async () => { throw new Error('offline'); };
+  const restarted = await import(`${narrationURL}?fixture=${++instance}`), loaded = await restarted.loadNarrationManifest(identity, { kind: 'family', parentId: 'synthetic-parent' });
+  assert.equal(loaded.download.complete, true); assert.deepEqual(Object.keys(loaded.download.cuePack.assets).sort(), Object.keys(pack.assets).sort());
+  const legacy = { ...download, complete: true }; delete legacy.cuePack; state.native.downloads = async () => JSON.stringify([legacy]);
+  assert.equal((await restarted.downloadedNarration({ kind: 'family', parentId: 'synthetic-parent' }))[0].complete, false);
 });
 test('parent permission denial and a permission result arriving after the gate closes never start the recorder', async () => {
   const { api, calls, state } = await fixture(); state.permission = async () => 'denied';

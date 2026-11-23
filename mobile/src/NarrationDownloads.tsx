@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { normalizeVoiceSlot, type NarrationManifest, type VoiceSlot } from '../../lib/narration/contracts';
 import { Control } from './NarrationPlayer';
-import { downloadedNarration, downloadNarration, loadCuePack, loadNarrationManifest, loadNarrationVoices, narrationEvents, pauseNarrationDownload, removeNarrationDownload, type AudioScope, type NativeDownload } from './narration';
+import { downloadedNarration, downloadNarration, loadNarrationManifest, loadNarrationVoices, narrationEvents, pauseNarrationDownload, removeNarrationDownload, type AudioScope, type NativeDownload } from './narration';
 import { completeNarrationManifest } from './narrationContract';
 import { effectiveReadingLevel, readingContent, readingLevels, withCompatibleReading } from './readingLevels';
 import type { Profile, Story } from './types';
@@ -16,8 +16,6 @@ export function NarrationDownloads({ scope, profile, stories, currentVersion, re
   useEffect(() => { live.current = true; void refresh(); void loadNarrationVoices().then(value => { if (live.current) setDefaultSlot(value.defaultVoiceSlot); }); const event = narrationEvents('onDownload', value => { if (live.current) setProgress(value); }); return () => { live.current = false; event.remove(); }; }, [owner]);
   async function run(action: () => Promise<void>) { setBusy(true); setMessage(''); try { await action(); } catch (error) { if (live.current) setMessage(error instanceof Error ? error.message : 'Dit audiopakket kon niet worden opgehaald.'); } finally { if (live.current) { setBusy(false); await refresh(); } } }
   async function fetchPackage(manifest: NarrationManifest) {
-    const names = await loadCuePack(manifest.voice.slotId, manifest.voice.presetVersion, manifest.cuePack);
-    if (!names || names.packId !== manifest.cuePack.packId || names.packVersion !== manifest.cuePack.packVersion) throw new Error('Het complete gedeelde namenpakket is nog niet gepubliceerd voor deze stemversie.');
     await downloadNarration(manifest, scope); setPlanned(null); setMessage('Alle scènes, keuzen, eindes en de gedeelde naamzinnen zijn gecontroleerd en offline beschikbaar.');
   }
   return <View style={s.card}>
