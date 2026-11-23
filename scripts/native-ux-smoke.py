@@ -223,6 +223,7 @@ class Smoke:
         self.reach('Fixturepakket voorbereiden · offline beschikbaar', scroll=14)
         self.tap('Speel fixture naamzin', contains=True, scroll=14)
         self.wait('Speel fixture naamzin · playing')
+        self.top()  # The two-fragment control is above the name-cue control.
         self.tap('Speel twee fixturefragmenten', contains=True, scroll=14)
         self.wait('Speel twee fixturefragmenten · playing · 1')
         self.tap('Stop fixtureaudio', scroll=14)
