@@ -2,6 +2,7 @@ import { STORY_IDS, MEMORY_ENCOUNTERS, MEMORY_ITEMS, MEMORY_THREADS, MEMORY_EVEN
 import { isReadingLevel } from '../src/readingLevel';
 import type { ReadingLevel } from '../src/readingLevel';
 import { isValidBirthDate } from '../src/profileReading';
+import { isVoiceSlot } from './narration/contracts';
 
 export const MAX_FAMILY_BYTES = 256 * 1024;
 export const MAX_CHILDREN = 5;
@@ -74,8 +75,8 @@ function worldList(value: unknown): boolean {
 function childField(field: string, value: unknown): boolean {
   if (field === 'favorites' || field === 'started') return worldList(value);
   if (field === 'completed') return object(value) && Object.entries(value).every(([id, entry]) => world(id) && object(entry) && keys(entry, ['ending', 'date']) && text(entry.ending, 160) && isoDate(entry.date));
-  if (field === 'prefs') return object(value) && keys(value, ['muted', 'calm', 'textSize', 'readingLevel'], ['muted', 'calm']) && typeof value.muted === 'boolean' && typeof value.calm === 'boolean' && (value.textSize === undefined || value.textSize === 'normal' || value.textSize === 'large') &&
-    (!Object.hasOwn(value, 'readingLevel') || isReadingLevel(value.readingLevel));
+  if (field === 'prefs') return object(value) && keys(value, ['muted', 'calm', 'textSize', 'readingLevel', 'voiceSlot'], ['muted', 'calm']) && typeof value.muted === 'boolean' && typeof value.calm === 'boolean' && (value.textSize === undefined || value.textSize === 'normal' || value.textSize === 'large') &&
+    (!Object.hasOwn(value, 'readingLevel') || isReadingLevel(value.readingLevel)) && (!Object.hasOwn(value, 'voiceSlot') || isVoiceSlot(value.voiceSlot));
   if (field.startsWith('story-')) return object(value) && keys(value, ['picks', 'updatedAt', 'contentVersion', 'storyId', 'revision', 'lastCompletedPicks', 'lastCompletedContentVersion'], ['picks', 'updatedAt']) && Array.isArray(value.picks) && value.picks.length <= 5 && value.picks.every(pick => pick === 0 || pick === 1) && integer(value.updatedAt, 0, Number.MAX_SAFE_INTEGER) &&
     (value.contentVersion === undefined || (typeof value.contentVersion === 'string' && /^[a-f0-9]{16,64}$/.test(value.contentVersion))) &&
     (value.storyId === undefined || value.storyId === field.slice(6)) &&

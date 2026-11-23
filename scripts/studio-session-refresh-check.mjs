@@ -76,7 +76,7 @@ try {
   }
   const notCached = response => { assert.match(response.headers.get('cache-control'), /private/); assert.match(response.headers.get('cache-control'), /no-store/); assert.equal(response.headers.get('pragma'), 'no-cache'); assert.equal(response.headers.get('expires'), '0'); };
 
-  for (const path of ['/studio', '/studio/overzicht', '/studio/email/templates', '/studio/betalingen', '/studio/privacy', '/studio/premium']) { assert.equal(doesProxyMatch({ config, nextConfig: {}, url: `${app}${path}` }), true); checks++; }
+  for (const path of ['/studio', '/studio/overzicht', '/studio/email/templates', '/studio/betalingen', '/studio/privacy', '/studio/premium', '/studio/voorlezen']) { assert.equal(doesProxyMatch({ config, nextConfig: {}, url: `${app}${path}` }), true); checks++; }
   for (const path of ['/api/auth/session', '/api/admin/email', '/api/billing/offer', '/gezin', '/profiel/account', '/studio-other', '/_next/static/chunk.js', '/art/station.webp']) { assert.equal(doesProxyMatch({ config, nextConfig: {}, url: `${app}${path}` }), false); checks++; }
 
   await seed({ large: true });

@@ -36,7 +36,7 @@ export async function compileSource(sourceURL, temporaryDir) {
       const imports = [...code.matchAll(/(?:from\s*|import\s*)['"]([^'"]+)['"]/g)].map(match => match[1]).filter(specifier => specifier.startsWith('.'));
       for (const specifier of new Set(imports)) {
         const dependencyURL = new URL(specifier, input);
-        if(dependencyURL.pathname.endsWith('.json')) { const data=JSON.parse(await readFile(dependencyURL,'utf8'));const jsonPath=path.join(directory,createHash('sha256').update(dependencyURL.href).digest('hex').slice(0,16)+'.mjs');await mkdir(directory,{recursive:true});await writeFile(jsonPath,'export default '+JSON.stringify(data)+';\n');code=code.replaceAll(`'${specifier}'`,JSON.stringify(pathToFileURL(jsonPath).href)).replaceAll(`"${specifier}"`,JSON.stringify(pathToFileURL(jsonPath).href));continue;}
+        if(dependencyURL.pathname.endsWith('.json')) { const data=JSON.parse(await readFile(dependencyURL,'utf8'));const jsonPath=path.join(directory,createHash('sha256').update(dependencyURL.href).digest('hex').slice(0,16)+'.mjs');await mkdir(directory,{recursive:true});await writeFile(jsonPath,'export default '+JSON.stringify(data)+';\n');code=code.replaceAll(`'${specifier}'`,JSON.stringify(pathToFileURL(jsonPath).href)).replaceAll(`"${specifier}"`,JSON.stringify(pathToFileURL(jsonPath).href));code=code.replace(/(from\s+["']file:\/\/[^"']+\.mjs["'])\s+with\s*\{\s*type:\s*["']json["']\s*\}/gu,'$1');continue;}
         if (!/\.(?:[cm]?tsx?|jsx?)$/.test(dependencyURL.pathname)) dependencyURL.pathname += '.ts';
         const compiled = pathToFileURL(await build(dependencyURL, lineage));
         compiled.search = dependencyURL.search;

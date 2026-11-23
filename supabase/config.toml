@@ -24,3 +24,15 @@ enabled = true
 verify_jwt = false # Mandatory current Auth/DB authorization; provider webhooks fetch authoritative status.
 entrypoint = "./functions/billing/index.ts"
 import_map = "./functions/billing/deno.json"
+
+[functions.voorlezen-admin]
+enabled = true
+verify_jwt = false # Current Auth identity and private RPC authorization on each request.
+entrypoint = "./functions/voorlezen-admin/index.ts"
+import_map = "./functions/voorlezen-admin/deno.json"
+
+[functions.voorlezen-worker]
+enabled = true
+verify_jwt = false # Dedicated staging HMAC, short validity and a one-use nonce.
+entrypoint = "./functions/voorlezen-worker/index.ts"
+import_map = "./functions/voorlezen-worker/deno.json"

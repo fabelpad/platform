@@ -1,6 +1,10 @@
 import { STORY_IDS, isOnlineStoryId } from './storyCatalog';
 import { isReadingLevel, type ReadingLevel } from './readingLevel';
 import { isValidBirthDate } from './profileReading';
+import { isVoiceSlot } from '../lib/narration/contracts';
+// Account/privacy pages must register cleanup before a reader is opened. This
+// store reads the profile scope only when an operation runs, after module init.
+import './narrationLocal';
 
 export type ChildProfile = { id: string; name: string; avatar: number; birthDate?: string; readingLevelOverride?: ReadingLevel };
 export type Family = { version: 1; children: ChildProfile[]; activeId: string };
@@ -30,6 +34,12 @@ let scope = '';
 let scopeEpoch = 0;
 let notificationEpoch: number | null = null;
 let silent = 0;
+
+/** Device-only settings use the same account boundary, outside family snapshots. */
+export function currentStorageIdentity(): string { return scope || 'device'; }
+export function notifyProfileDataCleared(profileId: string): void {
+  if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') window.dispatchEvent(new CustomEvent('fabelpad-profile-data-cleared', { detail: { scope: currentStorageIdentity(), profileId } }));
+}
 
 function physical(key: string) { return scope ? `${scope}::${key}` : key; }
 function getPhysical(key: string): string | null {
@@ -85,6 +95,7 @@ export function setStorageScope(next: string): void {
   scope = next ? `fabelpad-scope-${encodeURIComponent(next)}` : '';
   scopeEpoch += 1;
   notificationEpoch = null;
+  if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') window.dispatchEvent(new Event('fabelpad-storage-scope-change'));
 }
 export function childKey(childId: string, field: string) { return `fabelpad-child-${childId}-${field}`; }
 export function readChild<T>(childId: string, field: string, fallback: T): T {
@@ -97,6 +108,9 @@ export function readChild<T>(childId: string, field: string, fallback: T): T {
 }
 export function saveChild(childId: string, field: string, value: unknown): boolean {
   if (!validChildField(field)) return false;
+  // An old or unknown slot follows the configured default. Normalize it on
+  // the next local preference mutation, while preserving other reading data.
+  if (field === 'prefs' && record(value) && Object.hasOwn(value, 'voiceSlot') && !isVoiceSlot(value.voiceSlot)) { value = { ...value }; delete (value as Record<string, unknown>).voiceSlot; }
   try { setRaw(childKey(childId, field), JSON.stringify(value)); return !volatileKeys.has(physical(childKey(childId, field))); } catch { return false; }
 }
 export function createChild(name: string, avatar: number, birthDate?: string): ChildProfile {
@@ -104,7 +118,13 @@ export function createChild(name: string, avatar: number, birthDate?: string): C
   const id = typeof globalThis.crypto?.randomUUID === 'function' ? globalThis.crypto.randomUUID() : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 13)}`;
   return { id: `child-${id}`, name: cleanName(name), avatar: cleanAvatar(avatar), ...(birthDate ? { birthDate } : {}) };
 }
-export function saveFamily(family: Family): void { const normalized = normalizeFamily(family); if (normalized) setRaw(FAMILY_KEY, JSON.stringify(normalized)); }
+export function saveFamily(family: Family): void {
+  const normalized = normalizeFamily(family);
+  if (!normalized) return;
+  const previous = normalizeFamily(parse(FAMILY_KEY));
+  for (const child of previous?.children ?? []) if (!normalized.children.some(item => item.id === child.id)) notifyProfileDataCleared(child.id);
+  setRaw(FAMILY_KEY, JSON.stringify(normalized));
+}
 function copyLegacyField(firstId: string, field: string, legacyKey: string, valid: (value: unknown) => boolean): void {
   if (getRaw(childKey(firstId, field)) !== null) return;
   const value = parse(legacyKey); if (valid(value)) saveChild(firstId, field, value);
@@ -153,6 +173,9 @@ export function hydrateSnapshot(snapshot: FamilySnapshot): void {
       const key = physical(childKey(child.id, field)); memory.delete(key); volatileKeys.delete(key);
       try { window.localStorage.removeItem(key); } catch { memory.set(key, 'null'); volatileKeys.add(key); }
     }
+    // saveFamily observes removals from a nonempty family. The explicit empty
+    // snapshot has no normalized local family, so notify its removals here.
+    if (!snapshot.family.children.length) for (const child of current?.children ?? []) notifyProfileDataCleared(child.id);
     const activeId = current && snapshot.family.children.some(child => child.id === current.activeId) ? current.activeId : snapshot.family.activeId;
     saveFamily({ ...snapshot.family, activeId });
     for (const child of snapshot.family.children) for (const field of new Set([...childFields(child.id),...Object.keys(snapshot.data[child.id]??{})])) {

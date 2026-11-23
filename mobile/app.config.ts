@@ -3,6 +3,14 @@ const variant = process.env.FABELPAD_VARIANT || 'demo';
 if (!['demo', 'production', 'connected'].includes(variant)) throw new Error('FABELPAD_VARIANT moet demo, production of connected zijn.');
 const connected = variant === 'connected';
 const production = variant === 'production' || connected;
+// Public story audio is an explicit build capability. A local release without
+// these staging pins keeps its existing account-free/offline network boundary.
+const audioEnvironment = connected ? process.env.FABELPAD_CONNECTED_ENVIRONMENT || '' : process.env.FABELPAD_AUDIO_ENVIRONMENT || '';
+const audioOrigin = connected ? process.env.FABELPAD_CONNECTED_ORIGIN || '' : process.env.FABELPAD_AUDIO_ORIGIN || '';
+if (!connected && (audioEnvironment || audioOrigin) && (audioEnvironment !== 'staging' || audioOrigin !== 'https://staging.fabelpad.nl')) throw new Error('Lokale audiopakketten vereisen de expliciete stagingomgeving en vaste HTTPS-origin.');
+const publicAudio = !connected && audioEnvironment === 'staging';
+const narrationFixture = process.env.FABELPAD_NARRATION_FIXTURE === 'true';
+if (narrationFixture && (process.env.FABELPAD_UNSIGNED_CHECK !== 'true' || process.env.CI !== '1')) throw new Error('De audiofixture is uitsluitend toegestaan in de expliciete ongesigneerde CI-build.');
 const environment = process.env.FABELPAD_CONNECTED_ENVIRONMENT || '';
 const backendOrigin = process.env.FABELPAD_CONNECTED_ORIGIN || '';
 const supabaseUrl = process.env.FABELPAD_CONNECTED_SUPABASE_URL || '';
@@ -40,8 +48,9 @@ export default {
     scheme: production ? 'fabelpad' : 'fabelpaddemo',
     android: {
       package: packageId, versionCode, softwareKeyboardLayoutMode: 'resize',
+      permissions: ['android.permission.RECORD_AUDIO', ...(publicAudio ? ['android.permission.INTERNET'] : [])],
       ...(production ? { allowBackup: false, blockedPermissions: [
-        ...(!connected ? ['android.permission.INTERNET', 'com.android.vending.BILLING'] : []), 'android.permission.SYSTEM_ALERT_WINDOW',
+        ...(!connected ? [...(!publicAudio ? ['android.permission.INTERNET'] : []), 'com.android.vending.BILLING'] : []), 'android.permission.SYSTEM_ALERT_WINDOW',
         'android.permission.READ_EXTERNAL_STORAGE', 'android.permission.WRITE_EXTERNAL_STORAGE',
         'android.permission.USE_BIOMETRIC', 'android.permission.USE_FINGERPRINT',
         'com.google.android.gms.permission.AD_ID',
@@ -49,7 +58,7 @@ export default {
     },
     ios: { bundleIdentifier: packageId, supportsTablet: true },
     plugins: ['expo-secure-store', './plugins/withFabelpadProduction.cjs'],
-    extra: { prototype: !production, variant, backendConnected: connected, privacyUrl, supportUrl,
+    extra: { prototype: !production, variant, backendConnected: connected, privacyUrl, supportUrl, audioEnvironment, audioOrigin, localRecording: 'enabled', narrationFixture,
       ...(connected ? { environment, backendOrigin, supabaseUrl, supabaseKey, deleteAccountUrl: `${backendOrigin}/account-verwijderen` } : {}) },
   },
 };

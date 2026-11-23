@@ -7,7 +7,7 @@ import type { ReadingLevel } from './readingLevel';
 import IllustratedChoiceScene from './IllustratedChoiceScene';
 import { storyPlayArt } from './storyPlayArt';
 import { readingLevelsForRelease } from './contentReadingLevels';
-import { readChild, saveChild } from './profileStorage';
+import { currentStorageIdentity, readChild, saveChild } from './profileStorage';
 import { backfillStoryMemory, continuityGreeting, getStoryMemory, openStoryThread, recordStoryProgress } from './storyMemory';
 import { isStoryId, isOnlineStoryId, STORY_PARTS } from './storyCatalog';
 import { worlds } from './worlds';
@@ -16,12 +16,16 @@ import type { ContentRelease } from '../lib/server/content';
 import StationPlayScene from './StationPlayScene';
 import { lockBodyScroll } from './modalScroll';
 import { privateSpeechText, selectLocalDutchVoice } from './offlineSpeech';
+import { normalizeVoiceSlot, segmentsForRoute, type NarrationManifest, type NarrationVoices, type VoiceSlot } from '../lib/narration/contracts';
+import { fetchNarrationManifest, fetchNarrationVoices, unavailableVoices, WebNarrationPlayer, type WebNarrationState } from './narrationClient';
+import { claimNarrationAudio } from './narrationAudioSession';
+import './narration.css';
 import { reportConsciousReading } from './parentActivity';
 import './reader.css';
 import './memory.css';
 import './reader-extended.css';
 
-type Props = { profileId: string; worldId: string; childName: string; muted: boolean; reducedMotion: boolean; textSize?: 'normal' | 'large'; readingLevel?: ReadingLevel; cloudContent?: boolean; previewLimit?: number; onRequestParents?: () => void; onClose: () => void; onComplete: (worldId: string, endingTitle: string) => void };
+type Props = { profileId: string; worldId: string; childName: string; muted: boolean; reducedMotion: boolean; textSize?: 'normal' | 'large'; readingLevel?: ReadingLevel; voiceSlot?: VoiceSlot; cloudContent?: boolean; previewLimit?: number; onRequestParents?: () => void; onClose: () => void; onComplete: (worldId: string, endingTitle: string) => void };
 type Saved = { picks: number[]; updatedAt: number; contentVersion?: string; revision?: number; storyId?: string; lastCompletedPicks?: number[]; lastCompletedContentVersion?: string };
 const iconMap = { heart: Heart, sparkles: Sparkles, music: Music2, moon: Moon, leaf: Leaf, compass: Compass };
 const TOTAL = STORY_PARTS;
@@ -33,7 +37,7 @@ function loadPicks(profileId: string, world: string): number[] {
   } catch { return []; }
 }
 
-export default function StoryReader({ profileId, worldId, childName, muted, reducedMotion, textSize, readingLevel, cloudContent = false, previewLimit, onRequestParents, onClose, onComplete }: Props) {
+export default function StoryReader({ profileId, worldId, childName, muted, reducedMotion, textSize, readingLevel, voiceSlot: preferredVoiceSlot, cloudContent = false, previewLimit, onRequestParents, onClose, onComplete }: Props) {
   const systemReducedMotion = useReducedMotion();
   const calmMotion = reducedMotion || systemReducedMotion === true;
   const world = (cloudContent ? isOnlineStoryId(worldId) : isStoryId(worldId)) ? worldId : 'station';
@@ -59,7 +63,17 @@ export default function StoryReader({ profileId, worldId, childName, muted, redu
   });
   const lastCompletedVersion = useRef(saved?.lastCompletedContentVersion ?? (picks.length === TOTAL ? saved?.contentVersion : undefined));
   const [replayRoute, setReplayRoute] = useState<number[] | null>(null);
-  const [voiceState, setVoiceState] = useState<'idle' | 'speaking' | 'paused'>('idle');
+  const [voiceState, setVoiceState] = useState<WebNarrationState>('idle');
+  const [narrationVoices, setNarrationVoices] = useState<NarrationVoices>(unavailableVoices);
+  const [narrationManifest, setNarrationManifest] = useState<NarrationManifest | null>(null);
+  const [narrationMessage, setNarrationMessage] = useState('');
+  const [continuousNarration, setContinuousNarration] = useState(false);
+  const generatedPlayer = useRef<WebNarrationPlayer | null>(null);
+  const localAudioRelease = useRef<(() => void) | null>(null);
+  const continueRequested = useRef(false);
+  const speechOrigin = useRef<'local' | 'generated'>('local');
+  const narrationScope = currentStorageIdentity();
+  const narrationSlot = normalizeVoiceSlot(preferredVoiceSlot, narrationVoices.defaultVoiceSlot);
   const [playEnabled, setPlayEnabled] = useState(true);
   const [modePageMinHeight, setModePageMinHeight] = useState(0);
   const [closing, setClosing] = useState(false);
@@ -104,6 +118,23 @@ export default function StoryReader({ profileId, worldId, childName, muted, redu
   }, []);
   const activeText = accessLocked ? 'Dit avontuur gaat verder in het gezinspakket. Vraag een grote avonturier om samen te kijken.' : complete ? `${ending.title}. ${ending.text}` : `${picks.length === 0 && visibleGreeting ? `${visibleGreeting} ` : ''}${scene.title}. ${scene.text}`;
 
+  useEffect(() => { const controller = new AbortController(); void fetchNarrationVoices(controller.signal).then(setNarrationVoices).catch(() => {}); return () => controller.abort(); }, []);
+  useEffect(() => {
+    const controller = new AbortController(); setNarrationManifest(null); generatedPlayer.current?.stop();
+    if (release && !accessLocked && narrationVoices.active) void fetchNarrationManifest(world, release.contentVersion, band, narrationSlot, controller.signal).then(value => { if (!controller.signal.aborted) setNarrationManifest(value); }).catch(() => {});
+    return () => controller.abort();
+  }, [release, world, band, narrationSlot, narrationVoices.active, narrationScope, accessLocked]);
+  useEffect(() => {
+    generatedPlayer.current?.stop(); localAudioRelease.current?.(); localAudioRelease.current = null;
+    if (continueRequested.current && narrationManifest && !muted && !accessLocked) { continueRequested.current = false; void readGenerated(); }
+  }, [picks.join(''), narrationManifest, profileId, band, narrationSlot, narrationScope, muted, accessLocked]);
+  useEffect(() => {
+    const stop = () => { continueRequested.current = false; generatedPlayer.current?.stop(); localAudioRelease.current?.(); localAudioRelease.current = null; voiceToken.current++; if ('speechSynthesis' in window) window.speechSynthesis.cancel(); setVoiceState('idle'); };
+    window.addEventListener('fabelpad-storage-scope-change', stop); window.addEventListener('fabelpad-parent-data-cleared', stop); window.addEventListener('fabelpad-profile-data-cleared', stop);
+    return () => { stop(); window.removeEventListener('fabelpad-storage-scope-change', stop); window.removeEventListener('fabelpad-parent-data-cleared', stop); window.removeEventListener('fabelpad-profile-data-cleared', stop); };
+  }, []);
+
+
   useLayoutEffect(() => {
     if (!release || !focusNextScene.current) return;
     // The new scene, ending or access gate is already mounted. Never let an
@@ -147,6 +178,7 @@ export default function StoryReader({ profileId, worldId, childName, muted, redu
       cancelAnimationFrame(frame);
       document.removeEventListener('keydown', handleKey);
       unlockScroll();
+      generatedPlayer.current?.stop();
       voiceToken.current += 1;
       if ('speechSynthesis' in window) window.speechSynthesis.cancel();
       previouslyFocused?.focus();
@@ -155,23 +187,25 @@ export default function StoryReader({ profileId, worldId, childName, muted, redu
 
   useEffect(() => {
     if (release && !replayRoute) setDurable(saveChild(profileId, `story-${world}`, { picks: currentPicks.current, ...(lastCompletedPicks ? { lastCompletedPicks, lastCompletedContentVersion: lastCompletedVersion.current ?? release.contentVersion } : {}), updatedAt: saved?.updatedAt || Date.now(), storyId: world, contentVersion: release.contentVersion, revision: revision.current }));
+    generatedPlayer.current?.stop();
     voiceToken.current += 1;
     if (speechAvailable) window.speechSynthesis.cancel();
     setVoiceState('idle');
   }, [release, profileId, world, speechAvailable]);
 
   useEffect(() => {
+    generatedPlayer.current?.stop();
     voiceToken.current += 1;
     if (speechAvailable) window.speechSynthesis.cancel();
     setVoiceState('idle');
   }, [band, speechAvailable]);
 
   useEffect(() => {
-    if (muted && speechAvailable) { voiceToken.current += 1; window.speechSynthesis.cancel(); setVoiceState('idle'); }
+    if (muted) { continueRequested.current = false; generatedPlayer.current?.stop(); voiceToken.current += 1; if ('speechSynthesis' in window) window.speechSynthesis.cancel(); setVoiceState('idle'); }
   }, [muted, speechAvailable]);
 
   useEffect(() => {
-    const stop = (event: Event) => { if (event.type === 'pagehide' || document.visibilityState === 'hidden') { voiceToken.current += 1; if (speechAvailable) window.speechSynthesis.cancel(); setVoiceState('idle'); } };
+    const stop = (event: Event) => { if (event.type === 'pagehide' || document.visibilityState === 'hidden') { continueRequested.current = false; generatedPlayer.current?.stop(); voiceToken.current += 1; if (speechAvailable) window.speechSynthesis.cancel(); setVoiceState('idle'); } };
     document.addEventListener('visibilitychange', stop); window.addEventListener('pagehide', stop);
     return () => { document.removeEventListener('visibilitychange', stop); window.removeEventListener('pagehide', stop); };
   }, [speechAvailable]);
@@ -180,6 +214,7 @@ export default function StoryReader({ profileId, worldId, childName, muted, redu
     if (closeRequested.current) return;
     closeRequested.current = true;
     setClosing(true);
+    generatedPlayer.current?.stop();
     voiceToken.current += 1;
     if (speechAvailable) window.speechSynthesis.cancel();
     onClose();
@@ -187,6 +222,7 @@ export default function StoryReader({ profileId, worldId, childName, muted, redu
 
   function choose(index: number) {
     if (!release || accessLocked || closeRequested.current || (index !== 0 && index !== 1) || picks.length >= TOTAL || currentPicks.current.length !== picks.length) return;
+    continueRequested.current = continuousNarration && speechOrigin.current === 'generated' && ['speaking', 'loading'].includes(voiceState);
     const next = [...picks, index];
     currentPicks.current = next;
     if (!replayRoute) {
@@ -197,6 +233,7 @@ export default function StoryReader({ profileId, worldId, childName, muted, redu
       setDurable(saveChild(profileId, `story-${world}`, { picks: next, ...(completedRoute ? { lastCompletedPicks: completedRoute, lastCompletedContentVersion: lastCompletedVersion.current ?? release.contentVersion } : {}), updatedAt: Date.now(), storyId: world, contentVersion: release.contentVersion, revision: revision.current }));
       if(isStoryId(world))recordStoryProgress(profileId, world, next, childName);
     }
+    generatedPlayer.current?.stop();
     voiceToken.current += 1; if (speechAvailable) window.speechSynthesis.cancel(); setVoiceState('idle');
     setModePageMinHeight(0);
     focusNextScene.current = true;
@@ -208,6 +245,7 @@ export default function StoryReader({ profileId, worldId, childName, muted, redu
     if (!release || closeRequested.current || currentPicks.current.length !== TOTAL) return;
     focusNextScene.current = true;
     setModePageMinHeight(0);
+    continueRequested.current = false;
     setReplayRoute(route ?? null);
     setGreeting(route ? null : (isStoryId(world)?continuityGreeting(getStoryMemory(profileId), world, childName):null));
     currentPicks.current = [];
@@ -216,6 +254,7 @@ export default function StoryReader({ profileId, worldId, childName, muted, redu
       revision.current += 1;
       setDurable(saveChild(profileId, `story-${world}`, { picks: [], ...(lastCompletedPicks ? { lastCompletedPicks, lastCompletedContentVersion: lastCompletedVersion.current ?? release.contentVersion } : {}), updatedAt: Date.now(), storyId: world, contentVersion: release.contentVersion, revision: revision.current }));
     }
+    generatedPlayer.current?.stop();
     voiceToken.current += 1;
     if (speechAvailable) window.speechSynthesis.cancel();
     setVoiceState('idle');
@@ -238,6 +277,8 @@ export default function StoryReader({ profileId, worldId, childName, muted, redu
 
   function readText(text: string) {
     if (!speechAvailable || muted) return;
+    generatedPlayer.current?.stop(); speechOrigin.current = 'local';
+    localAudioRelease.current?.(); localAudioRelease.current = claimNarrationAudio(() => { voiceToken.current++; window.speechSynthesis.cancel(); setVoiceState('idle'); });
     const synth = window.speechSynthesis;
     const token = ++voiceToken.current;
     synth.cancel();
@@ -247,20 +288,38 @@ export default function StoryReader({ profileId, worldId, childName, muted, redu
     utterance.lang = 'nl-NL';
     utterance.rate = 0.88;
     utterance.voice = voice;
-    const idle = () => { if (voiceToken.current === token) setVoiceState('idle'); };
+    const idle = () => { if (voiceToken.current === token) { setVoiceState('idle'); localAudioRelease.current?.(); localAudioRelease.current = null; } };
     utterance.onend = idle;
     utterance.onerror = idle;
     synth.speak(utterance);
     setVoiceState('speaking');
   }
 
-  function toggleSpeech() {
-    if (!speechAvailable || muted) return;
-    const synth = window.speechSynthesis;
-    if (voiceState === 'speaking') { synth.pause(); setVoiceState('paused'); return; }
-    if (voiceState === 'paused') { synth.resume(); setVoiceState('speaking'); return; }
-    readText(activeText);
+  async function readGenerated(choiceIndex?: number) {
+    if (!narrationManifest || muted || accessLocked || closeRequested.current) return;
+    if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+    voiceToken.current++; localAudioRelease.current?.(); localAudioRelease.current = null;
+    speechOrigin.current = 'generated'; setNarrationMessage('');
+    if (!generatedPlayer.current) generatedPlayer.current = new WebNarrationPlayer((state, message) => { setVoiceState(state); if (message) setNarrationMessage(message); });
+    const route = complete ? picks.join('') : picks.slice(0, sceneStep).join('');
+    const segments = segmentsForRoute(narrationManifest, route, choiceIndex !== undefined ? 'choice' : complete ? 'ending' : 'scene', choiceIndex);
+    await generatedPlayer.current.play(narrationManifest, segments, profileId, () => {
+      continueRequested.current = false;
+      setNarrationMessage('De AI-audio is nu niet beschikbaar. Je kunt met de lokale apparaatstem of samen verder lezen.');
+      if (speechAvailable && !muted && !closeRequested.current) readText(choiceIndex === undefined ? activeText : `${scene.choices[choiceIndex]?.label ?? ''}. ${scene.choices[choiceIndex]?.hint ?? ''}`);
+    });
   }
+  function toggleSpeech() {
+    if (muted) return;
+    if (speechOrigin.current === 'generated' && generatedPlayer.current && ['speaking', 'paused', 'loading'].includes(voiceState)) {
+      if (voiceState === 'paused') generatedPlayer.current.resume(); else generatedPlayer.current.pause(); return;
+    }
+    if (voiceState === 'speaking' && speechAvailable) { window.speechSynthesis.pause(); setVoiceState('paused'); return; }
+    if (voiceState === 'paused' && speechAvailable) { window.speechSynthesis.resume(); setVoiceState('speaking'); return; }
+    if (narrationManifest && !accessLocked) void readGenerated(); else readText(activeText);
+  }
+  function repeatSpeech() { generatedPlayer.current?.stop(); if ('speechSynthesis' in window) window.speechSynthesis.cancel(); setVoiceState('idle'); if (narrationManifest && !accessLocked) void readGenerated(); else readText(activeText); }
+
 
   if (!release || releaseError) return <div className="reader-backdrop"><div className="modal" role="dialog" aria-modal="true" aria-label="Verhaal openen"><h2>{releaseError ? 'Een klein omweggetje.' : 'We leggen je verhaal klaar…'}</h2><p role="status">{releaseError || 'De tekst en de bewaarde verhaalversie worden opgehaald.'}</p><button className="account-primary" onClick={requestClose}>Terug naar de verhalen</button></div></div>;
 
@@ -293,11 +352,15 @@ export default function StoryReader({ profileId, worldId, childName, muted, redu
                 <div className="reader-ending-actions"><button className="reader-primary" onClick={requestClose}>Terug naar de wereld <ArrowRight size={18} /></button>{lastCompletedPicks && <button className="reader-restart" onClick={() => restart(lastCompletedPicks)}><BookOpen size={17} />Lees je route opnieuw</button>}<button className="reader-restart" onClick={() => restart()}><RotateCcw size={17} />Een ander pad ontdekken</button></div>
               </> : replayRoute ? <div className="reader-choice-section reader-replay"><p>Je leest de keuzes van je laatst voltooide route.</p><button className="reader-primary" onClick={() => choose(replayRoute[sceneStep])}>{scene.choices[replayRoute[sceneStep]].label}<ArrowRight size={18} /></button></div> : <section className="reader-choice-section" aria-labelledby="reader-choice-title">
                 <div className="reader-choice-heading"><h3 id="reader-choice-title">Wat kies jij?</h3>{canPlay && <button ref={modeButtonRef} className="reader-mode" onClick={event => togglePlay(event.currentTarget)} aria-pressed={playEnabled} aria-controls="reader-choice-content">{playEnabled ? 'Naar leesmodus' : 'Naar speelmodus'}</button>}</div>
+                <div className="reader-choice-listen" role="group" aria-label="Keuzezinnen beluisteren">{scene.choices.map((choice, index) => <button type="button" key={index} disabled={muted || !narrationManifest && !speechAvailable} onClick={() => narrationManifest ? void readGenerated(index) : readText(`${choice.label}. ${choice.hint}`)}><Play size={13} aria-hidden="true" />Keuze {index + 1} beluisteren</button>)}</div>
                 <div id="reader-choice-content">{showPlay && specialPlay ? <div className="reader-play-panel"><StationPlayScene key={`${world}-${picks.length}`} step={picks.length as 0 | 1} previousChoice={picks[0]} childName={childName} muted={muted} reducedMotion={calmMotion} onChoose={choose} onReadInstruction={readText} /></div> : showPlay ? <IllustratedChoiceScene {...playArt} choices={scene.choices} reducedMotion={calmMotion} onChoose={choose} /> : <div className="reader-choices">{scene.choices.map((choice, i) => { const Icon = iconMap[choice.icon]; return <motion.button key={choice.label} className="reader-choice" onClick={() => choose(i)} whileHover={calmMotion ? undefined : { y: -3 }} whileTap={calmMotion ? undefined : { scale: .98 }}><span className="reader-choice-icon"><Icon size={23} /></span><span><strong>{choice.label}</strong><small>{choice.hint}</small></span><ArrowRight className="reader-choice-arrow" size={20} /></motion.button>; })}</div>}</div>
               </section>}
             </motion.div>
           }
-          <footer className="reader-controls"><button className={`reader-speech ${voiceState !== 'idle' ? 'is-speaking' : ''}`} disabled={!speechAvailable || muted} onClick={toggleSpeech} title={!speechAvailable ? 'Er is geen offline Nederlandse stem beschikbaar. Lees samen verder of installeer een offline stem in je apparaatinstellingen.' : muted ? 'Zet het geluid aan in het ouderhoekje om te luisteren' : undefined}>{muted ? <VolumeX size={17} /> : voiceState === 'speaking' ? <Pause size={17} /> : <Play size={17} fill="currentColor" />}<span>{!speechAvailable ? 'Lees gezellig samen' : muted ? 'Geluid staat uit' : voiceState === 'speaking' ? 'Even pauzeren' : voiceState === 'paused' ? 'Verder luisteren' : 'Lees voor'}</span></button><span className="reader-saved" role="status"><Check size={13} />{replayRoute ? 'Je leest jouw vorige route' : durable ? 'Je plek staat op dit apparaat' : 'Bewaren lukt niet · houd dit venster open'}</span></footer>{!speechAvailable && <p className="reader-speech-note">Voorlezen kan met een geïnstalleerde offline Nederlandse stem. Lees ondertussen gezellig samen.</p>}
+          <footer className="reader-controls"><button className={`reader-speech ${['speaking', 'paused', 'loading'].includes(voiceState) ? 'is-speaking' : ''}`} disabled={(!speechAvailable && !narrationManifest) || muted} onClick={toggleSpeech} title={!speechAvailable && !narrationManifest ? 'Er is geen vrijgegeven audio of offline Nederlandse stem beschikbaar. Lees samen verder of installeer een offline stem in je apparaatinstellingen.' : muted ? 'Zet het geluid aan in het ouderhoekje om te luisteren' : undefined}>{muted ? <VolumeX size={17} /> : voiceState === 'speaking' || voiceState === 'loading' ? <Pause size={17} /> : <Play size={17} fill="currentColor" />}<span>{muted ? 'Geluid staat uit' : voiceState === 'loading' ? 'Audio laden…' : voiceState === 'speaking' ? 'Even pauzeren' : voiceState === 'paused' ? 'Verder luisteren' : !speechAvailable && !narrationManifest ? 'Lees gezellig samen' : 'Lees voor'}</span></button><span className="reader-saved" role="status"><Check size={13} />{replayRoute ? 'Je leest jouw vorige route' : durable ? 'Je plek staat op dit apparaat' : 'Bewaren lukt niet · houd dit venster open'}</span></footer>
+          <div className="reader-narration-extra"><span>{narrationManifest ? `AI-voorleesstem · ${narrationManifest.voice.label}` : speechAvailable ? 'Lokale Nederlandse apparaatstem' : 'Lees samen verder'}</span>{(speechAvailable || narrationManifest) && <button type="button" disabled={muted} onClick={repeatSpeech}><RotateCcw size={14} aria-hidden="true" />Opnieuw luisteren</button>}{narrationManifest && <label><input type="checkbox" checked={continuousNarration} onChange={event => setContinuousNarration(event.target.checked)} />Na mijn keuze verder voorlezen</label>}</div>
+          {narrationMessage && <p className="reader-speech-note" role="status">{narrationMessage}</p>}{!speechAvailable && !narrationManifest && <p className="reader-speech-note">De nieuwe voorleesstemmen zijn voor deze versie nog niet beschikbaar. Voorlezen kan ook met een geïnstalleerde offline Nederlandse stem. Lees ondertussen gezellig samen.</p>}
+
         </div>
       </div>
     </div>

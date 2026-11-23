@@ -1,5 +1,6 @@
 import type { Store } from './types';
 import type { FamilySnapshot } from '../../lib/familyValidation';
+import { isVoiceSlot } from '../../lib/narration/contracts';
 
 export class ConnectedError extends Error { constructor(readonly code: string, message: string, readonly status = 0) { super(message); } }
 
@@ -16,7 +17,7 @@ export function nativeFamilyImport(store: Store, existing: FamilySnapshot | null
   const next = cloneConnectedFamily(previous);
   for (const profile of selected) {
     next.family.children.push({ id: profile.id, name: profile.name, avatar: profile.avatar, birthDate: profile.birthDate, ...(profile.readingLevelOverride ? { readingLevelOverride: profile.readingLevelOverride } : {}) });
-    next.data[profile.id] = { favorites: profile.favorites, started: Object.keys(profile.picks), prefs: { muted: false, calm: profile.calm, textSize: profile.largeText ? 'large' : 'normal', readingLevel: profile.readingLevel ?? '6to8' } };
+    next.data[profile.id] = { favorites: profile.favorites, started: Object.keys(profile.picks), prefs: { muted: false, calm: profile.calm, textSize: profile.largeText ? 'large' : 'normal', readingLevel: profile.readingLevel ?? '6to8', ...(isVoiceSlot(profile.voiceSlot) ? { voiceSlot: profile.voiceSlot } : {}) } };
     for (const [id, picks] of Object.entries(profile.picks)) next.data[profile.id][`story-${id}`] = { picks, updatedAt: Date.now(), storyId: id, contentVersion: profile.storyVersions?.[id] ?? store.contentVersion,
       ...(profile.lastCompletedPicks?.[id] ? { lastCompletedPicks: profile.lastCompletedPicks[id], lastCompletedContentVersion: profile.lastCompletedStoryVersions?.[id] ?? store.contentVersion } : {}) };
   }

@@ -9,6 +9,7 @@ import { accountRequest, PageShell, readAccountSession, type AccountSession } fr
 import { parentNeedsOnboarding, type ParentAccountStatus } from '../lib/parentAccount';
 import { reportConsciousParentAction } from './parentActivity';
 import ProfileReadingFields from './ProfileReadingFields';
+import NarrationProfileSettings from './NarrationProfileSettings';
 import { amsterdamDate, isValidBirthDate } from './profileReading';
 import { useAmsterdamDate } from './useAmsterdamDate';
 import type { ReadingLevel, ReadingPrefs } from './readingLevel';
@@ -58,7 +59,7 @@ function FamilySettings({ onBack, parentId }: { onBack: () => void; parentId: st
       const child = editing ? null : { ...createChild(name, avatar, birthDate), readingLevelOverride };
       if (child) await accountRequest('/api/parent/consent', { profileId: child.id, consent: true, guardianDeclaration: true }, parentId);
       const children = editing ? family.children.map(c => c.id === editing ? { ...c, avatar, name: name.trim().slice(0,20), ...(birthDate ? { birthDate } : {}), readingLevelOverride } : c) : [...family.children, child!];
-      if (editing) saveChild(editing, 'prefs', readingPrefs);
+      saveChild(editing ?? child!.id, 'prefs', readingPrefs);
       const next = { ...family, children }; saveFamily(next); setFamily(next); setFormOpen(false); setEditing(null); setNotice('Profiel bijgewerkt. De opslagstatus toont of het ook is gesynchroniseerd.');
       reportConsciousParentAction(parentId); void refreshStatus();
     } catch (error) { setNotice((error as Error).message); } finally { setBusy(false); }
@@ -75,7 +76,7 @@ function FamilySettings({ onBack, parentId }: { onBack: () => void; parentId: st
     } catch (error) { setNotice((error as Error).message); } finally { setBusy(false); }
   }
   async function retryWithdrawal() { if (!client || !sync.consentReloadRequired || busy) return; setBusy(true); try { await client.reloadAfterConsentWithdrawal(sync.consentReloadRequired); setNotice('De bevestigde gezinsgegevens zijn opgehaald.'); } catch { setNotice('Ophalen lukt nog niet. De ingetrokken toestemming blijft van kracht en synchronisatie blijft gepauzeerd.'); } finally { setBusy(false); } }
-  function updatePreferences(value: ReadingPrefs) { if (!editing || paused) return; setReadingPrefs(value); }
+  function updatePreferences(value: ReadingPrefs) { if (paused) return; setReadingPrefs(value); }
   return <ParentShell active="family" onStories={onBack}>
     <div className="fp-parent-hero fp-parent-family-hero"><div><h1>Ons gezin</h1><p>Beheer de leesprofielen van je kinderen.</p></div><span className="fp-parent-hero-art" aria-hidden="true"><BookOpen size={43} /></span></div>
     <div className="fp-parent-family-layout">
@@ -96,6 +97,7 @@ function FamilySettings({ onBack, parentId }: { onBack: () => void; parentId: st
           <ProfileReadingFields id="family-profile" birthDate={birthDate} onBirthDateChange={setBirthDate} required={!editing || !!edited?.birthDate} today={today} readingLevelOverride={readingLevelOverride} onOverrideChange={setReadingLevelOverride} legacyLevel={editing ? readChild<ReadingPrefs>(editing, 'prefs', { muted: false, calm: false }).readingLevel : undefined} />
           {!editing && <><label className="account-check"><input type="checkbox" required checked={consent} onChange={e => setConsent(e.target.checked)} /><span>Ik ben ouder met gezag of voogd en geef toestemming om de bijnaam, geboortedatum, avatar en leesgegevens van mijn kind te bewaren voor het kinderprofiel en om verder te lezen waar mijn kind is gebleven.</span></label><p className="account-legal-note">Deze keuze geldt alleen voor dit profiel. Je trekt toestemming hier even eenvoudig in. Het profiel blijft bewaard zolang de toestemming en het actieve gezinsaccount bestaan. <a href="/privacyverklaring">Meer over bewaren en verwijderen</a>.</p></>}
           {editing && prefs && <details className="fp-parent-guide"><summary>Leesinstellingen voor {edited?.name}</summary>{[{ key: 'muted', label: 'Geluid uit' }, { key: 'calm', label: 'Minder beweging' }].map(item => <label className="account-check" key={item.key}><input type="checkbox" checked={!!prefs[item.key as 'muted' | 'calm']} onChange={e => updatePreferences({ ...prefs, [item.key]: e.target.checked })} /><span>{item.label}</span></label>)}<label>Tekstgrootte<select value={prefs.textSize ?? 'normal'} onChange={e => updatePreferences({ ...prefs, textSize: e.target.value === 'large' ? 'large' : 'normal' })}><option value="normal">Normaal</option><option value="large">Groter</option></select></label></details>}
+          <NarrationProfileSettings key={editing ?? 'new'} profileId={editing ?? undefined} profileName={name} voiceSlot={readingPrefs.voiceSlot} onVoiceChange={voiceSlot => updatePreferences({ ...readingPrefs, voiceSlot })} disabled={busy || paused} />
           <div className="fp-parent-dialog-actions"><button className="fp-parent-button" type="button" disabled={busy} onClick={closeProfile}>Annuleren</button><button className="fp-parent-button fp-parent-button-primary" disabled={busy || paused || !editing && (family.children.length >= MAX_CHILDREN || !consent)}>{busy ? 'Bewaren…' : editing ? 'Wijziging bewaren' : 'Online kindprofiel toevoegen'}</button></div>
         </form>
         {editing && <section className="fp-parent-consent-section"><h3>Toestemming voor dit profiel</h3><p>Je kunt de toestemming voor dit online profiel intrekken. Het profiel en de leesgegevens worden dan verwijderd.</p><button className="fp-parent-button fp-parent-danger" type="button" disabled={busy || paused} onClick={() => setDeleting(true)}>Toestemming intrekken</button></section>}

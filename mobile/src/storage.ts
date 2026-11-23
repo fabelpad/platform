@@ -3,6 +3,7 @@ import type { Store } from './types';
 import { createStorageQueue } from './storageQueue';
 import { normalizeStoryVersions } from './storyReleases';
 import { normalizeReadingHistory } from './readingLevels';
+import { isVoiceSlot } from '../../lib/narration/contracts';
 
 const KEY = 'fabelpad-native-prototype-v1';
 const queue = createStorageQueue(AsyncStorage, KEY);
@@ -26,6 +27,7 @@ export async function loadStore(contentVersion: string, storyIds: string[], avai
     }
     p.storyVersions = normalizeStoryVersions(p, value.contentVersion);
     normalizeReadingHistory(p);
+    if (!isVoiceSlot(p.voiceSlot)) delete p.voiceSlot;
     p.calm = !!p.calm; p.largeText = !!p.largeText;
   }
   if (!ids.has(value.activeId)) value.activeId = value.profiles[0].id;

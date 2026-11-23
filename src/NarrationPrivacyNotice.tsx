@@ -1,0 +1,9 @@
+export default function NarrationPrivacyNotice() {
+  return <section id="voorlezen-staging" aria-labelledby="voorlezen-staging-title" className="child-privacy-card">
+    <h2 id="voorlezen-staging-title">Aanvulling voor de voorleesproef op staging</h2>
+    <p>Voor de stagingvoorleesproef geldt deze aanvulling op de onderdelen 11 en 12 hieronder. Je kunt vooraf gemaakte AI-voorleesstemmen kiezen. Fabelpad laat daarvoor redactionele verhaaltekst en een vaste openbare bibliotheek met aanspreekzinnen verwerken door OpenAI. Profielnamen, geboortedata, persoonlijke opnamen en de keuzes van een kind gaan niet mee naar die dienst. De reader speelt de gemaakte geluidsbestanden af.</p>
+    <p>Je stemkeuze kan met het gezin worden bewaard. De keuze voor Avonturier, een bibliotheeknaam, een avonturiersnaam of een eigen opname blijft op dit apparaat. Het apparaat haalt alle varianten van de passende bibliotheek samen op en kiest de aanspreekzin lokaal. Netwerkverzoeken voor die bibliotheek bevatten geen gekozen persoonsnaam. Bij het ophalen van verhaalgeluid verwerkt Fabelpad de benodigde verhaalversie, leeslaag, stem en bestaande toegangsgegevens.</p>
+    <p>Een ouder kan in de ouderinstellingen zelf een volledige aanspreekzin opnemen. Pas na die actie vraagt de browser of Android om microfoontoestemming. Je kunt de opname beluisteren, vervangen en verwijderen. Deze persoonlijke opnamen worden uitsluitend op het apparaat bewaard en worden niet geüpload of met het gezin gesynchroniseerd. De gewone voorleesknop gebruikt geen microfoon of spraakherkenning.</p>
+    <p>Verwijderen van het betreffende profiel of wissen van de bijbehorende lokale accountgegevens verwijdert ook deze instellingen en opnamen. Gedownloade gezinsaudio blijft onder de geldende toegangsduur vallen. Op een ander apparaat maak je een eigen lokale naamkeuze of opname. De echte AI-stemmen worden beschikbaar na inrichting en luistercontrole door de beheerder.</p>
+  </section>;
+}

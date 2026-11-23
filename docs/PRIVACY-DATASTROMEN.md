@@ -1,5 +1,13 @@
 # Fabelpad — gegevensstromen en publicatievoorwaarden
 
+## Aanvulling voor Voorlezen op staging, 23 november 2026
+
+De hieronder vastgelegde eerdere productiestatus blijft een historische controle. De nieuwe stagingkandidaat voegt vooraf gegenereerde audio toe. OpenAI ontvangt uitsluitend bevroren redactionele verhaaltekst en een zelfstandig beheerde openbare naamzinnenbibliotheek. Profielen, geboortedata, lokale naamselecties, leesgedrag en persoonlijke opnamen worden niet naar de provider gestuurd. De providersleutel staat write-only in het eigen staging-Vault; de Next-reader krijgt geen sleutel, providertranscript of providerverbruik.
+
+Alleen `prefs.voiceSlot` synchroniseert met het gezin. Web bewaart persoonlijke naammodus en ouderopnamen per profiel/account in IndexedDB. Android gebruikt private `noBackupFilesDir`, scopegebonden versleuteling en de bestaande gegevensopschoning. Beide halen het hele redactionele naamzinnenpakket op en selecteren lokaal. Een ouder kan na een expliciete actie en microfoontoestemming een volledige zin opnemen; deze opname wordt nooit geüpload. De gewone reader opent geen microfoon. Op de stagingprivacyroute staat een zichtbare aanvulling bij de bestaande gedateerde verklaring; onveranderlijke eerdere downloads blijven behouden. De huidige Play-uitgave wijzigt niet door deze stagingrelease.
+
+Audio volgt de tekstautoriteit, exacte versie, previewgrenzen en gezinstoegangsduur. De eigen HMAC-worker heeft een afzonderlijke wachtrij en smalle serverrechten. Er wordt zonder sleutel geen providerrequest uitgevoerd. Zie [Voorlezen-staging](VOORLEZEN-STAGING.md) en [Android-validatie](../mobile/VOORLEZEN-VALIDATIE.md) voor implementatie, tests en de afzonderlijke provider-/catalogus-/toestelfasen.
+
 Controle: 22 november 2026. Scope: web, staging en production, en de afzonderlijke lokale Android-uitgave `nl.fabelpad.app`. Geen betaalroute is aangesloten. Een roadmap, dependency of aangeleverde tekst is geen bewijs van productiegedrag.
 
 ## Nieuwe eigenaarbevestiging en bereik

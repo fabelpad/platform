@@ -125,7 +125,7 @@ class Smoke:
 
     def top(self):
         root = self.tree()
-        for _ in range(4):
+        for _ in range(12):
             if not self.swipe_scroll_view(root, towards_top=True):
                 break
 
@@ -146,11 +146,11 @@ class Smoke:
         self.wait('Ontdek')
 
     def unlock(self):
-        self.reach('Geboortejaar van de ouder', scroll=6)
+        self.reach('Geboortejaar van de ouder', scroll=14)
         self.input('Geboortejaar van de ouder', '1985')
         self.back()  # IME closes before the screen can navigate.
-        self.tap('Open het ouderhoekje', scroll=6)
-        self.reach('Kindprofielen', scroll=6)
+        self.tap('Open het ouderhoekje', scroll=14)
+        self.reach('Kindprofielen', scroll=14)
 
     def parent_after_configuration(self):
         # Android may recreate the Activity after font/rotation settings. Enter
@@ -160,7 +160,7 @@ class Smoke:
         if self.find(self.tree(), 'Alleen voor ouders en verzorgers'):
             self.unlock()
         else:
-            self.reach('Kindprofielen', scroll=6)
+            self.reach('Kindprofielen', scroll=14)
 
     def assert_targets(self, labels):
         density_text = self.adb('shell', 'wm', 'density')
@@ -175,6 +175,48 @@ class Smoke:
                                'heightDp': round((bottom-top)/density, 1)}
             assert right-left >= 47.5*density and bottom-top >= 47.5*density, f'Target smaller than 48dp: {label}: {measured[label]}'
         self.passed('48dp bounds on native appbar and four tabs', targets=measured)
+
+    def audio_fixture(self):
+        self.tap('Fixturepakket voorbereiden', contains=True, scroll=14)
+        self.wait('Fixturepakket voorbereiden · offline beschikbaar')
+        self.tap('Fixturedownload pauzeren en hervatten', contains=True, scroll=14)
+        self.wait('Fixturedownload pauzeren en hervatten · gecontroleerd')
+        self.capture('audio-01-complete-resumed-download')
+        self.passed('real Android fixture download pauses, preserves verified fragments and resumes to an atomic complete package', providerAudio=False)
+        self.tap('Speel twee fixturefragmenten', contains=True, scroll=14)
+        self.wait('Speel twee fixturefragmenten · playing · 1')
+        self.tap('Pauzeer fixtureaudio', contains=True, scroll=14)
+        self.wait('Pauzeer fixtureaudio · paused')
+        time.sleep(1)
+        self.wait('Pauzeer fixtureaudio · paused')
+        self.tap('Hervat fixtureaudio', contains=True, scroll=14)
+        self.wait('Hervat fixtureaudio · playing')
+        self.wait('Speel twee fixturefragmenten · playing · 2', seconds=35)
+        self.capture('audio-02-second-real-decoded-segment')
+        self.passed('real WAV decoder starts two sequential fragments, pauses without restarting and resumes to the next fragment', format='PCM16 mono 24000 Hz', acousticQualityTested=False)
+        self.tap('Luister fixturekeuze 1', contains=True, scroll=14)
+        self.wait('Luister fixturekeuze 1 · playing')
+        self.tap('Luister fixture-einde 2', contains=True, scroll=14)
+        self.wait('Luister fixture-einde 2 · playing')
+        self.tap('Stop fixtureaudio', scroll=14)
+        self.capture('audio-03-choice-and-ending')
+        self.passed('choice and ending audio replace the previous native playback chain')
+        self.tap('Controleer beschadigd fixturepakket', contains=True, scroll=14)
+        self.wait('Controleer beschadigd fixturepakket · gecontroleerd')
+        self.tap('Controleer verlopen fixturepakket', contains=True, scroll=14)
+        self.wait('Controleer verlopen fixturepakket · gecontroleerd')
+        self.capture('audio-04-integrity-expiry-repair')
+        self.passed('corrupted bytes lose complete status and are repaired; an expired package is refused without extending its lease')
+        self.launch()
+        self.tap('Ouders')
+        self.unlock()
+        self.reach('Fixturepakket voorbereiden · offline beschikbaar', scroll=14)
+        self.tap('Speel twee fixturefragmenten', contains=True, scroll=14)
+        self.wait('Speel twee fixturefragmenten · playing · 1')
+        self.tap('Stop fixtureaudio', scroll=14)
+        self.capture('audio-05-cold-start-offline-playback')
+        self.passed('verified package plays after an actual cold restart with Wi-Fi and mobile data still disabled')
+        self.top()
 
     def run(self):
         assert self.args.reset_test_data, 'Explicit --reset-test-data is required'
@@ -244,8 +286,8 @@ class Smoke:
         self.back()
         self.wait('Wijzigingen niet bewaren?')
         self.back()
-        self.reach('Opslaan', scroll=5)
-        self.tap('Opslaan', scroll=5)
+        self.reach('Opslaan', scroll=14)
+        self.tap('Opslaan', scroll=14)
         self.wait('UXKind')
         self.capture('05-profile-saved')
         self.passed('native date dialog Back and confirmation, nickname and manual reading level saved')
@@ -268,6 +310,8 @@ class Smoke:
         self.back()
         self.wait('Kindprofielen')
         self.passed('cold restart retains local profile and Back returns to parent overview')
+        if self.args.narration_fixture:
+            self.audio_fixture()
         self.adb('shell', 'input', 'keyevent', 'KEYCODE_HOME')
         self.launch(cold=False)
         self.tap('Ouders')
@@ -293,7 +337,7 @@ class Smoke:
         self.parent_after_configuration()
         self.capture('09b-portrait-restored')
         self.passed('larger system text and landscape retain usable parent controls')
-        self.tap('Ouderhoekje vergrendelen', scroll=6)
+        self.tap('Ouderhoekje vergrendelen', scroll=14)
         self.unlock()
         print('Waiting for the real five-minute parent session boundary', flush=True)
         deadline = time.monotonic() + 302
@@ -303,7 +347,7 @@ class Smoke:
         self.capture('10-expired-parent-gate')
         self.passed('open parent screen relocks after the real five-minute session')
         self.unlock()
-        self.tap('Alle gegevens op dit apparaat wissen', scroll=6)
+        self.tap('Alle gegevens op dit apparaat wissen', scroll=14)
         self.wait('Alle lokale gegevens wissen?')
         self.wait('android:id/button1')
         self.back()
@@ -313,7 +357,7 @@ class Smoke:
         self.tap('Ouders')
         self.wait('Kindprofielen')
         self.passed('Back dismisses local wipe confirmation without deleting the profile')
-        self.tap('Alle gegevens op dit apparaat wissen', scroll=6)
+        self.tap('Alle gegevens op dit apparaat wissen', scroll=14)
         self.wait('Alle lokale gegevens wissen?')
         self.tap('android:id/button1')
         self.wait('Waar gaan we', contains=True)
@@ -346,6 +390,7 @@ def main():
     parser.add_argument('--package', default='nl.fabelpad.app', choices=['nl.fabelpad.app'])
     parser.add_argument('--max-seconds', type=int, default=1050)
     parser.add_argument('--reset-test-data', action='store_true')
+    parser.add_argument('--narration-fixture', action='store_true', help='Require CI-only real native WAV/package acceptance controls')
     args = parser.parse_args()
     smoke = Smoke(args)
     try:
