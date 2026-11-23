@@ -12,8 +12,8 @@ test('mail BFF verifies real Auth/DB grants and never exposes provider secrets',
   const context = Symbol.for('fabelpad.email.api.cookies'), previous = globalThis[context];
   const origin = 'https://staging.fabelpad.nl'; let jar = new Map(), calls = [], admin = true, remoteError = null, override = null;
   const user = { id: '00000000-0000-4000-8000-000000000101', email: 'admin@example.test', aud: 'authenticated', role: 'authenticated', email_confirmed_at: '2026-01-01T00:00:00Z', is_anonymous: false, user_metadata: { admin: true, role: 'admin' } };
-  const jwt = `${Buffer.from('{"alg":"HS256","typ":"JWT"}').toString('base64url')}.${Buffer.from(JSON.stringify({ sub: user.id, exp: Math.floor(Date.now() / 1000) + 3600, role: 'authenticated', aud: 'authenticated' })).toString('base64url')}.synthetic-signature`;
-  const request = (path = '', body, headers = {}, method = body ? 'POST' : 'GET') => new Request(`${origin}/api/admin/email${path}`, { method, headers: { ...(body ? { 'Content-Type': 'application/json', origin } : {}), ...headers }, ...(body ? { body: JSON.stringify(body) } : {}) });
+  let jwt = `${Buffer.from('{"alg":"HS256","typ":"JWT"}').toString('base64url')}.${Buffer.from(JSON.stringify({ sub: user.id, exp: Math.floor(Date.now() / 1000) + 3600, role: 'authenticated', aud: 'authenticated' })).toString('base64url')}.synthetic-signature`;
+  const request = (path = '', body, headers = {}, method = body ? 'POST' : 'GET') => new Request(`${origin}/api/admin/email${path}`, { method, headers: { ...(body ? { 'Content-Type': 'application/json', origin, 'X-Fabelpad-Parent': user.id } : {}), ...headers }, ...(body ? { body: JSON.stringify(body) } : {}) });
   try {
     for (const name of Object.keys(process.env)) if (/^(NEXT_PUBLIC_|FABELPAD_|APP_URL$)/u.test(name)) delete process.env[name];
     Object.assign(process.env, { FABELPAD_DATA_MODE: 'supabase', FABELPAD_DEPLOY_ENV: 'staging', FABELPAD_APP_ORIGIN: origin, NEXT_PUBLIC_SUPABASE_URL: 'https://tlwfpivafcokcjyjwgmq.supabase.co', NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_synthetic_test_only', FABELPAD_AUTH_EMAIL_ENABLED: 'true' });
@@ -60,6 +60,20 @@ test('mail BFF verifies real Auth/DB grants and never exposes provider secrets',
     const publicBody = await response.json(); assert.equal(publicBody.source, 'vault');
     assert.equal(publicBody.apiKey, undefined); assert.equal(publicBody.testRecipient, undefined); assert.equal(publicBody.rawProviderError, undefined);
     const save = { baseRevision: 1, requestId: crypto.randomUUID(), apiKey: 're_synthetic-only-in-request', settings: DEFAULT_EMAIL_SETTINGS };
+    const originalActor = user.id, originalJwt = jwt;
+    user.id = '00000000-0000-4000-8000-000000000102';
+    jwt = `${Buffer.from('{"alg":"HS256","typ":"JWT"}').toString('base64url')}.${Buffer.from(JSON.stringify({ sub: user.id, exp: Math.floor(Date.now() / 1000) + 3600, role: 'authenticated', aud: 'authenticated' })).toString('base64url')}.synthetic-signature`;
+    await client.auth.setSession({ access_token: jwt, refresh_token: 'synthetic-other-refresh' }); calls = [];
+    assert.equal((await emailAdminRequest(request(), 'get')).status, 200, 'The second actor is independently an authorized admin');
+    for (const [path, body, action, method] of [['', save, 'save', 'PUT'], ['/test', { revision: 1, requestId: crypto.randomUUID() }, 'test', 'POST'], ['/preview', { templateAction: 'magiclink', settings: DEFAULT_EMAIL_SETTINGS }, 'preview', 'POST']]) {
+      calls = [];
+      const refused = await emailAdminRequest(request(path, body, { 'X-Fabelpad-Parent': originalActor }, method), action);
+      assert.equal(refused.status, 401); assert.equal((await refused.json()).error, 'account_changed');
+      assert.ok(!calls.includes('/functions/v1/email-admin'), 'An A-to-B session switch never forwards A settings or key to a provider operation as B');
+    }
+    calls = []; assert.equal((await emailAdminRequest(request('', save, { 'X-Fabelpad-Parent': '' }, 'PUT'), 'save')).status, 401); assert.ok(!calls.includes('/functions/v1/email-admin'));
+    user.id = originalActor; jwt = originalJwt; await client.auth.setSession({ access_token: jwt, refresh_token: 'synthetic-refresh' }); calls = [];
+
     calls = [];
     process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://aptprpkosqctwrzeetgs.supabase.co';
     assert.equal((await emailAdminRequest(request('', save, {}, 'PUT'), 'save')).status, 503);

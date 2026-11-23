@@ -40,7 +40,9 @@ test('saved settings expose no key and distinguish domain permissions from conne
   await expect(page.getByText(parent.email, { exact: true })).toBeVisible();
   await expect(page.getByLabel('Resend API-key')).toHaveValue('');
   await expect(page.getByText('Je API-key kan e-mail versturen, maar heeft geen rechten om domeingegevens op te vragen.', { exact: false })).toBeVisible();
-  await expect(page.getByRole('navigation', { name: 'Beheeronderdelen' }).getByRole('link', { name: 'E-mailtemplates', exact: true })).toHaveAttribute('href', '/studio/email/templates');
+  await page.getByRole('button', { name: 'Beheermenu openen' }).click();
+  await expect(page.getByRole('navigation', { name: 'Mobiele beheeronderdelen' }).getByRole('link', { name: 'E-mailtemplates', exact: true })).toHaveAttribute('href', '/studio/email/templates');
+  await page.keyboard.press('Escape');
   await expect(page.getByLabel('Onderwerp', { exact: true })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Testmail opnieuw versturen' })).toBeDisabled();
   await page.getByLabel('Open- en kliktracking staan uit in Resend').check();

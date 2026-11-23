@@ -5,10 +5,11 @@ import type { ParentIdentity } from './cloudSync';
 import { safeNext } from '../lib/authNavigation';
 import type { ParentAccountStatus } from '../lib/parentAccount';
 import { parentNeedsOnboarding } from '../lib/parentAccount';
-import LegalFooter from './LegalFooter';
 import FoundersOffer from './FoundersOffer';
 import { TERMS_VERSION, PRIVACY_VERSION } from '../lib/legal/documents';
 import { clearParentDeviceData } from './profileStorage';
+import ParentShell from './ParentShell';
+import AdminShell from './AdminShell';
 
 export type AccountSession = { configured: boolean; parent: ParentIdentity | null; admin: boolean; providers?: { email: boolean; google: boolean }; lifecycle?: ParentAccountStatus; registration?: { channel: 'otp' | 'google' } | null; message?: string };
 function clearDeletedParent(response: Response, value: { error?: unknown; cleanupParentId?: unknown }) {
@@ -22,7 +23,8 @@ export async function readAccountSession(response: Response): Promise<AccountSes
   return result;
 }
 export function PageShell({ children, adminNavigation = false }: { children: ReactNode; adminNavigation?: boolean }) {
-  return <div className="simple-page"><header><a href="/" aria-label="Fabelpad startpagina"><img src="/brand/logo.webp" alt="Fabelpad" /></a><nav aria-label="Hoofdnavigatie"><a href="/lezen">Probeer de verhalen</a><a href="/gezin">Mijn gezin</a><a href="/profiel/account">Profiel → Account</a><a href="/profiel/abonnement">Abonnement</a><a href="/support">Hulp</a>{adminNavigation && <><a href="/studio">Beheer</a><a href="/studio/premium">Online verhalen</a><a href="/studio/privacy">Privacyverzoeken</a><a href="/studio/betalingen">Abonnementen &amp; betalingen</a></>}</nav></header><main>{children}</main><LegalFooter /></div>;
+  if (adminNavigation) return <AdminShell>{children}</AdminShell>;
+  return <ParentShell storiesHref="/lezen">{children}</ParentShell>;
 }
 export async function accountRequest(path: string, body: unknown = {}, parentId?: string) {
   const response = await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json', ...(parentId ? { 'X-Fabelpad-Parent': parentId } : {}) }, body: JSON.stringify(body) });

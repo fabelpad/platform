@@ -23,6 +23,7 @@ const INITIAL: SyncState = { phase: 'loading', revision: 0, snapshot: null, dirt
 type CloudContextValue = { parent: ParentIdentity | null; state: SyncState; client: FamilySyncClient | null; guest: boolean };
 const CloudContext = createContext<CloudContextValue>({ parent: null, state: INITIAL, client: null, guest: true });
 const LocalContext = createContext(false);
+export function useCloudFamily() { return useContext(CloudContext); }
 
 /** Local reading opens independently of any authenticated parent. */
 export function DemoBoundary({ children }: { children: ReactNode }) {
@@ -44,7 +45,7 @@ function pendingImportKey(id: string) { return `fabelpad-import-pending-${encode
 function markImportPending(id: string, pending: boolean) { try { if (pending) localStorage.setItem(pendingImportKey(id), '1'); else localStorage.removeItem(pendingImportKey(id)); } catch { /* Session import remains explicit. */ } }
 function importPending(id: string) { try { return localStorage.getItem(pendingImportKey(id)) === '1'; } catch { return false; } }
 
-export default function CloudBoundary({ parent, children }: { parent: ParentIdentity | null; children: ReactNode }) {
+export default function CloudBoundary({ parent, children, accountOnly = false }: { parent: ParentIdentity | null; children: ReactNode; accountOnly?: boolean }) {
   const today = useAmsterdamDate();
   const [newChildName, setNewChildName] = useState('');
   const [newChildBirthDate, setNewChildBirthDate] = useState('');
@@ -69,6 +70,7 @@ export default function CloudBoundary({ parent, children }: { parent: ParentIden
     const nextClient = new FamilySyncClient(parent.id, { canApplyRemote: () => !document.querySelector('[role="dialog"]'), onMerged(snapshot) { if (generation.current === token) hydrateSnapshot(snapshot); }, onRemote(snapshot) {
       if (generation.current !== token) return;
       if (snapshot && snapshot.family.children.length > 0) { hydrateSnapshot(snapshot); setEpoch(value => value + 1); setPhase('ready'); }
+      else if (accountOnly) { setLegacy(null); setPhase('ready'); }
       else { setLegacy(legacySnapshotForParent(parent!.id, true)); setPhase('onboarding'); }
     } });
     setClient(nextClient);
@@ -84,7 +86,8 @@ export default function CloudBoundary({ parent, children }: { parent: ParentIden
     const stopState = nextClient.subscribe(next => {
       if (generation.current !== token) return;
       setState(next);
-      if (next.phase === 'signed-out' || (next.phase === 'error' && !next.snapshot)) setPhase('error');
+      if (next.consentReloadRequired) activity.discardProfile(next.consentReloadRequired);
+      if (next.phase === 'signed-out' || (next.phase === 'error' && !next.snapshot)) setPhase(accountOnly ? 'ready' : 'error');
       if (next.phase === 'saved' && !next.dirty && importPending(parent.id)) { markLegacyImported(parent.id); markImportPending(parent.id, false); }
     });
     const stopStorage = subscribeStorage(snapshot => { if (generation.current === token) nextClient.enqueue(snapshot); });
@@ -93,7 +96,7 @@ export default function CloudBoundary({ parent, children }: { parent: ParentIden
     window.addEventListener('online', online); window.addEventListener('focus', focus); document.addEventListener('visibilitychange', focus);
     void nextClient.load();
     return () => { generation.current += 1; activity.stop(); window.removeEventListener('fabelpad-parent-data-cleared', cleared); window.removeEventListener(READING_EVENT, reading); stopState(); stopStorage(); nextClient.dispose(); window.removeEventListener('online', online); window.removeEventListener('focus', focus); document.removeEventListener('visibilitychange', focus); };
-  }, [parent?.id]);
+  }, [parent?.id, accountOnly]);
 
   useEffect(() => {
     if (state.phase !== 'conflict') return;
@@ -133,6 +136,7 @@ export default function CloudBoundary({ parent, children }: { parent: ParentIden
   function enterGuest() { setStorageScope('guest'); setGuest(true); setPhase('ready'); setEpoch(value => value + 1); }
   const value: CloudContextValue = { parent: guest ? null : parent, state, client: guest ? null : client, guest };
 
+  if (phase === 'loading' && accountOnly) return <p role="status">Synchronisatie controleren…</p>;
   if (phase === 'loading') return <AccountShell><div className="account-loading" role="status"><LoaderCircle className="account-spin" size={25} /><span>We zoeken jullie verhalen erbij…</span></div></AccountShell>;
   if (phase === 'login') return <AccountShell><span className="account-eyebrow"><Sparkles size={16} /> IEDER KIND EEN EIGEN AVONTUUR</span><h1>Jullie verhalen.<br />Overal weer thuis.</h1><p>Log als ouder in. Daarna kiest ieder kind zijn eigen plaatje, vrienden en avonturen — ook op een andere telefoon of tablet.</p><a className="account-primary" href={SIGN_IN} target="_top"><LogIn size={19} />Inloggen als ouder<ArrowRight size={18} /></a><div className="account-login-note"><ShieldCheck size={17} /><span>Je logt als ouder in met een e-mailcode of Google. Kinderen hebben geen eigen e-mailadres nodig.</span></div><button className="account-guest" onClick={enterGuest}>Even rondkijken op dit apparaat <ArrowRight size={16} /></button></AccountShell>;
   if (phase === 'onboarding') return <AccountShell><span className="account-eyebrow"><Users size={16} /> EEN BEWUSTE KEUZE VOOR OUDERS</span><h1>Een online profiel<br />als jullie dat willen.</h1><p>Een online kinderprofiel is optioneel. We bewaren de bijnaam, geboortedatum, standaardavatar en leesgegevens om op een ander apparaat verder te lezen. Gebruik een bijnaam. De geboortedatum bepaalt automatisch het leesniveau; alleen jij beheert die in de profielinstellingen. Een identiteitsdocument is niet nodig.</p><p>Je kunt per profiel toestemming intrekken bij Ons gezin. Dan stopt synchronisatie en wissen we dat profiel. Bij accountverwijdering worden de online gezinsgegevens volgens de aangegeven termijn gewist. De <a href="/privacyverklaring">privacyverklaring</a> legt ook uit wat geldt bij langdurige inactiviteit. <a href="/privacy-voor-kinderen">Privacy voor kinderen</a>.</p>
@@ -154,7 +158,7 @@ export function SyncBadge() {
   useEffect(() => { setDurable(isLocalStorageDurable()); return subscribeStorage(() => setDurable(isLocalStorageDurable())); }, []);
   const { guest, state } = useContext(CloudContext);
   const local = useContext(LocalContext);
-  const text = local ? durable ? 'Op dit apparaat' : 'Alleen in dit venster · bewaren lukt niet' : guest ? 'Op dit apparaat' : state.phase === 'saved' && !state.dirty ? 'Avonturen bewaard' : state.phase === 'saving' || state.phase === 'pending' ? 'Even bewaren…' : state.phase === 'conflict' ? 'Versie kiezen' : state.phase === 'offline' ? state.localDurable === false && state.dirty ? 'Alleen in dit venster' : 'Op dit apparaat bewaard' : 'Nog niet gesynchroniseerd';
+  const text = local ? durable ? 'Op dit apparaat' : 'Alleen in dit venster · bewaren lukt niet' : guest ? 'Op dit apparaat' : state.phase === 'empty' ? 'Nog geen online kindprofielen' : state.phase === 'saved' && !state.dirty ? 'Avonturen bewaard' : state.phase === 'saving' || state.phase === 'pending' ? 'Even bewaren…' : state.phase === 'conflict' ? 'Versie kiezen' : state.phase === 'offline' ? state.localDurable === false && state.dirty ? 'Alleen in dit venster' : 'Op dit apparaat bewaard' : 'Nog niet gesynchroniseerd';
   const Icon = guest || state.phase === 'offline' ? CloudOff : state.phase === 'saving' || state.phase === 'pending' ? LoaderCircle : state.phase === 'saved' ? Check : TriangleAlert;
   return <span className={`sync-badge sync-${guest ? 'guest' : state.phase}`} role="status"><Icon size={13} className={state.phase === 'saving' ? 'account-spin' : undefined} /><span>{text}</span></span>;
 }

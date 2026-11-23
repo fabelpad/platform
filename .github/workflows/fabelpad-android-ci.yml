@@ -163,6 +163,100 @@ jobs:
           retention-days: 14
           if-no-files-found: error
 
+  parent_ux:
+    name: Android-ouderomgeving op emulator
+    needs: verify
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: fabelpad-android-check-${{ github.sha }}
+          path: ${{ runner.temp }}/fabelpad-parent-ux/aab
+      - name: Maak een uitsluitend voor de emulator gesigneerde APK uit dezelfde AAB
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$RUNNER_ENVIRONMENT" = github-hosted
+          sudo rm -rf -- /usr/share/dotnet /opt/ghc
+          task_root="$RUNNER_TEMP/fabelpad-parent-ux"
+          curl --fail --silent --show-error --location --retry 3 \
+            https://github.com/google/bundletool/releases/download/1.18.3/bundletool-all-1.18.3.jar \
+            --output "$task_root/bundletool.jar"
+          printf '%s  %s\n' a099cfa1543f55593bc2ed16a70a7c67fe54b1747bb7301f37fdfd6d91028e29 "$task_root/bundletool.jar" | sha256sum --check -
+          # This generated test identity has no relationship to Play upload signing.
+          keytool -genkeypair -noprompt -storetype PKCS12 -keystore "$task_root/emulator-only.p12" \
+            -alias fabelpad-emulator -storepass android -keypass android \
+            -dname 'CN=Fabelpad Emulator Test Only' -keyalg RSA -keysize 2048 -validity 2
+          java -jar "$task_root/bundletool.jar" build-apks \
+            --bundle="$task_root/aab/fabelpad-production-unsigned.aab" --output="$task_root/emulator.apks" \
+            --mode=universal --ks="$task_root/emulator-only.p12" --ks-key-alias=fabelpad-emulator \
+            --ks-pass=pass:android --key-pass=pass:android
+          unzip -p "$task_root/emulator.apks" universal.apk > "$task_root/emulator.apk"
+      - name: Installeer een geïsoleerde Android-emulator
+        shell: bash
+        run: |
+          set -euo pipefail
+          : "${ANDROID_HOME:?Android SDK ontbreekt op de GitHub-runner}"
+          sdk_manager="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          test -x "$sdk_manager"
+          "$sdk_manager" --licenses < <(printf 'y\n%.0s' {1..100}) > "$RUNNER_TEMP/fabelpad-parent-ux/licenses.log"
+          "$sdk_manager" 'emulator' 'platform-tools' 'system-images;android-35;google_apis;x86_64'
+          test -c /dev/kvm
+          sudo chmod a+rw /dev/kvm
+          "$ANDROID_HOME/emulator/emulator" -accel-check
+          export ANDROID_AVD_HOME="$RUNNER_TEMP/fabelpad-parent-ux/avd"
+          mkdir -p "$ANDROID_AVD_HOME"
+          printf 'no\n' | "$ANDROID_HOME/cmdline-tools/latest/bin/avdmanager" create avd \
+            --name fabelpad_parent_ux --package 'system-images;android-35;google_apis;x86_64' --device pixel_5
+          printf 'hw.lcd.width=1080\nhw.lcd.height=1920\nhw.lcd.density=480\nhw.keyboard=no\n' \
+            >> "$ANDROID_AVD_HOME/fabelpad_parent_ux.avd/config.ini"
+      - name: Controleer de echte ouderinterface, offline opslag en ouderpoort
+        timeout-minutes: 22
+        shell: bash
+        run: |
+          set -euo pipefail
+          task_root="$RUNNER_TEMP/fabelpad-parent-ux"
+          export ANDROID_AVD_HOME="$task_root/avd"
+          adb="$ANDROID_HOME/platform-tools/adb"
+          mkdir -p "$task_root/evidence"
+          "$ANDROID_HOME/emulator/emulator" -avd fabelpad_parent_ux -port 5554 \
+            -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader \
+            -memory 2048 -cores 2 -no-metrics > "$task_root/evidence/emulator.log" 2>&1 &
+          emulator_pid=$!
+          trap '"$adb" -s emulator-5554 emu kill >/dev/null 2>&1 || kill "$emulator_pid" 2>/dev/null || true' EXIT
+          booted=false
+          for attempt in {1..90}; do
+            if [[ "$("$adb" -s emulator-5554 shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = 1 ]]; then
+              booted=true
+              break
+            fi
+            kill -0 "$emulator_pid"
+            sleep 2
+          done
+          test "$booted" = true
+          "$adb" -s emulator-5554 shell input keyevent KEYCODE_WAKEUP
+          "$adb" -s emulator-5554 shell wm dismiss-keyguard
+          python3 -B scripts/native-ux-smoke.py --adb "$adb" --serial emulator-5554 \
+            --apk "$task_root/emulator.apk" --output "$task_root/evidence" --reset-test-data --max-seconds 1050
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        if: always()
+        with:
+          name: fabelpad-android-parent-ux-${{ github.sha }}
+          path: ${{ runner.temp }}/fabelpad-parent-ux/evidence
+          retention-days: 14
+          if-no-files-found: warn
+
   play_config:
     name: Controleer vastgelegde Play-configuratie
     runs-on: ubuntu-24.04

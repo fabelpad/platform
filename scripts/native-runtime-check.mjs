@@ -3,10 +3,20 @@ import { mkdtemp, rm, readFile, readdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
+import { createRequire } from 'node:module';
 import { compileSource } from './source-test-loader.mjs';
 
 const directory = await mkdtemp(path.join(tmpdir(), 'fabelpad-native-runtime-'));
 try {
+  const nativeRequire = createRequire(new URL('../mobile/package.json', import.meta.url));
+  const metro = nativeRequire('./metro.config.cjs');
+  for (const origin of ['../mobile/App.tsx', '../src/storyPersonalization.ts', '../mobile/node_modules/react-native/index.js']) {
+    for (const request of ['react', 'react/jsx-runtime', 'react/jsx-dev-runtime']) {
+      const resolved = metro.resolver.resolveRequest({ originModulePath: new URL(origin, import.meta.url).pathname, resolveRequest: (_context, target) => target }, request, 'android');
+      assert.equal(resolved, nativeRequire.resolve(request), 'Shared/native/renderer imports must use one mobile React dispatcher');
+    }
+  }
+  assert.equal(metro.resolver.resolveRequest({ resolveRequest: (_context, target) => target }, './readerProgress', 'android'), './readerProgress', 'Normal Metro module resolution remains delegated');
   const { createStationInteraction } = await import(await compileSource(new URL('../mobile/src/stationInteraction.ts', import.meta.url), directory));
   const { appendChoice } = await import(await compileSource(new URL('../mobile/src/readerProgress.ts', import.meta.url), directory));
   const { createStorageQueue } = await import(await compileSource(new URL('../mobile/src/storageQueue.ts', import.meta.url), directory));
@@ -14,6 +24,7 @@ try {
   const { normalizeReadingLevel, normalizeReadingHistory, readingContent, withCompatibleReading, completedRoute, completedVersion, completedCount, amsterdamDate, automaticReadingLevel, effectiveReadingLevel, isValidBirthDate, nextAmsterdamDayDelay, profileWithReadingSettings, profileReadingLevel } = await import(await compileSource(new URL('../mobile/src/readingLevels.ts', import.meta.url), directory));
   const { getReadingScene, getReadingEnding } = await import(await compileSource(new URL('../src/storyReadingLevels.ts', import.meta.url), directory));
   const { PARENT_SESSION_MS, parentSessionIsActive, parentYearAllowsAccess } = await import(await compileSource(new URL('../mobile/src/parentAccess.ts', import.meta.url), directory));
+  const { isParentScreen, nativeBackAction, nativeTabs, needsParentGate, selectedNativeTab } = await import(await compileSource(new URL('../mobile/src/parentNavigation.ts', import.meta.url), directory));
   const catalog = JSON.parse(await readFile(new URL('../mobile/src/content.json', import.meta.url), 'utf8'));
   assert.equal(catalog.stories.length, 13);
   assert.equal(catalog.stories.reduce((sum, story) => sum + Object.keys(story.scenes).length, 0), 403);
@@ -104,6 +115,31 @@ try {
   assert.equal(parentSessionIsActive(sessionStart + PARENT_SESSION_MS, sessionStart), true);
   assert.equal(parentSessionIsActive(sessionStart + PARENT_SESSION_MS, sessionStart + PARENT_SESSION_MS), false, 'Parent access ends at the session boundary');
   assert.equal(parentSessionIsActive(0, sessionStart + 1), false, 'Backgrounding invalidates a previously valid session');
+  assert.deepEqual(nativeTabs.map(tab => tab.label), ['Ontdek', 'Schatkist', 'Wie speelt?', 'Ouders']);
+  const unlockedUntil = sessionStart + PARENT_SESSION_MS;
+  for (const destination of ['parent', 'profile-settings']) {
+    assert.equal(isParentScreen(destination), true);
+    assert.equal(needsParentGate(destination, 0, sessionStart), true, `Cold/direct ${destination} access requires the parent gate`);
+    assert.equal(needsParentGate(destination, unlockedUntil, sessionStart), false);
+    assert.equal(selectedNativeTab(destination), 'parent', 'Editing and parent navigation keep the Ouders tab selected');
+    assert.equal(needsParentGate(destination, unlockedUntil, unlockedUntil), true, `An open ${destination} screen locks at the five-minute boundary`);
+    assert.equal(needsParentGate(destination, 0, sessionStart + 1), true, 'Returning from the background cannot restore parent access');
+  }
+  let parentDestination = 'profile-settings', menuOpen = true;
+  const firstBack = nativeBackAction(parentDestination, menuOpen);
+  assert.equal(firstBack, 'close-menu', 'Back closes the menu before leaving the unsaved profile form');
+  menuOpen = false;
+  parentDestination = nativeBackAction(parentDestination, menuOpen);
+  assert.equal(parentDestination, 'parent', 'The next Back returns to the parent overview');
+  assert.equal(needsParentGate(parentDestination, unlockedUntil, unlockedUntil), true, 'Back does not bypass an expired gate');
+  assert.equal(nativeBackAction(parentDestination, false), 'library');
+  assert.equal(nativeBackAction('parent-gate', false), 'library');
+  assert.equal(selectedNativeTab('parent-gate'), 'parent');
+  for (const destination of ['library', 'connected-library', 'reader', 'profiles', 'treasures']) {
+    assert.equal(needsParentGate(destination, 0, sessionStart), false, 'Existing child destinations remain available without unlocking parent settings');
+  }
+  assert.equal(selectedNativeTab('connected-library'), 'library');
+  assert.equal(nativeBackAction('library', false), null, 'Root Back remains the native system action');
   const birthday = { ...profile('birthday'), readingLevel: '9plus', picks: { station: [1, 0, 1] } };
   for (const invalid of ['', '2026-04-31', '2025-02-29', '2026-11-24']) {
     assert.equal(isValidBirthDate(invalid, '2026-11-23'), false);

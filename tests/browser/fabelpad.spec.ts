@@ -25,7 +25,7 @@ test('website, child library, family and admin routes stay distinct without simu
   await page.goto('/ouders');
   await page.locator('#local-parent-answer').fill('12');
   await page.getByRole('button', { name: 'Naar de ouderomgeving', exact: true }).click();
-  await expect(page.getByRole('heading', { level: 1 })).toContainText('Hun avonturen');
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('Ons gezin');
   await expect(page.locator('body')).not.toContainText(/demo|prototype|abonnement|founder/i);
   await expect(page.getByRole('link', { name: 'Inloggen als ouder' })).toHaveAttribute('href', '/inloggen');
   await page.goto('/support');
@@ -132,7 +132,8 @@ test('family UI uses server metadata, isolates siblings and opens parent setting
   await page.getByRole('button', { name:'Voor ouders',exact:true }).first().click();
   await page.locator('#parent-answer').fill('12');
   await page.getByRole('button', { name:'Naar het ouderhoekje' }).click();
-  await expect(page.getByRole('heading', { name:'Ons gezin.' })).toBeVisible();
+  await expect(page.getByRole('heading', { name:'Ons gezin', exact:true })).toBeVisible();
+  await page.getByRole('link', { name:'Ouderaccount openen', exact:true }).click();
   await expect(page.getByRole('button', { name:'Gezinsgegevens downloaden' })).toBeVisible();
 });
 

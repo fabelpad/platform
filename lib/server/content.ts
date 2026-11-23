@@ -69,17 +69,19 @@ export async function getContent(request: Request, storyId?: string) {
   return privateJson({configured:true,release:{...release,offlineUntil:leaseEnd,...(parent?{cacheOwnerId:parent.id}:{})}});
  }catch(error){return handleApiError(error);}
 }
-async function adminClient() {
+async function adminClient(request: Request) {
   const client = await createSupabaseServerClient();
   const parent = await getVerifiedParent(client);
   if (!parent) throw new RequestError(401, 'not_authenticated', 'Log als beheerder in.');
+  const expected = request.headers.get('x-fabelpad-parent');
+  if ((request.method !== 'GET' || expected !== null) && expected !== parent.id) throw new RequestError(401, 'account_changed', 'Het beheeraccount is gewijzigd. Laad de verhalenstudio opnieuw.');
   if (!await isContentAdmin(client, parent.id)) throw new RequestError(403, 'admin_required', 'Dit account heeft geen rechten voor de verhalenstudio.');
   return client;
 }
 export async function contentDraft(request: Request, storyId: string) {
   try {
     if (!isStoryId(storyId)) throw new RequestError(404, 'story_not_found');
-    const client = await adminClient();
+    const client = await adminClient(request);
     if (request.method === 'GET') {
       const { data, error } = await client.from('content_drafts').select('revision,draft').eq('story_id', storyId).maybeSingle();
       if (error) throw error;
@@ -98,7 +100,7 @@ export async function contentDraft(request: Request, storyId: string) {
 export async function publishContent(request: Request, storyId: string) {
   try {
     if (!isStoryId(storyId)) throw new RequestError(404, 'story_not_found');
-    const client = await adminClient();
+    const client = await adminClient(request);
     checkMutationOrigin(request);
     const body = await readJson(request);
     if (!object(body) || !Number.isSafeInteger(body.baseRevision) || (body.baseRevision as number) < 1) throw new RequestError(422, 'invalid_request');
