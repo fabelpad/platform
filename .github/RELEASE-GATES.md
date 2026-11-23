@@ -1,6 +1,6 @@
 # Fabelpad — releasegates voor dg-vps-08 staging en production
 
-Bijgewerkt: **22 november 2026**. De eigenaar heeft inrichting van beide Fabelpad-omgevingen en Supabase-projecten geautoriseerd. Een kandidaat bouwen en een app activeren blijven afzonderlijke routes. Er is nog geen appservice/current/publieke route geactiveerd; provider-/OTP-acceptatie en beperkte runnerregistratie ontbreken nog.
+Bijgewerkt: **23 november 2026**. Beide eigen webomgevingen draaien via HTTPS; zie het actuele deploymentbewijs. Een kandidaat bouwen, een webapp activeren en een Play-release indienen blijven afzonderlijke routes. Echte OTP-/Google-login, mailbezorging en native toestelacceptatie zijn geen gevolg van een geslaagde livenesscheck.
 
 1. **Bron en bestaande triggers:** repository is `fabelpad/platform`, toegestane integratiebranch `main`. Werk via een eigen `codex/`-reviewbranch. Controleer bestaande workflows én eventuele later gekoppelde Supabase-GitHubintegratie vóór push/merge. Geen merge/push naar een ref die bestaande omgevingen activeert.
 2. **Exacte commit:** een releaseargument is een volledige SHA van 40 kleine hextekens. Controleer repository-identiteit en main-afstamming, bouw exact deze SHA en leg bron-SHA, workflowrun/poging, configuratie-ID en artefacthash vast. Geen bewegende `HEAD`/`main` als buildidentiteit.
@@ -16,3 +16,13 @@ Bijgewerkt: **22 november 2026**. De eigenaar heeft inrichting van beide Fabelpa
 12. **Herstel:** herstel bij appfalen alleen de vorige gezonde eigen app/configuratie onder hetzelfde lock. Bij mislukte eerste installatie stop alleen de eigen appservice; gebruik geen andere omgeving. Onderbreking/hostuitval vereist inspectie vóór hervatten. Approllback voert geen database- of proxyrollback uit.
 
 Het concrete doelprofiel, de controles en opdrachten staan in [het tweedoelenrunbook](../docs/DG-VPS-08-TWEE-OMGEVINGEN.md) en de [actuele status](../docs/STAGING-PRODUCTION-STATUS.md). Een reviewbranch/PR activeert geen web- of Play-release. Main-integratie vereist bovendien controle van geërfde organisatieflags en externe appintegraties; ontbrekende zichtbaarheid is geen bewijs dat die uitstaan.
+
+## Afzonderlijke Android-/Play-route
+
+De Cloud-/GitHub-identiteit en instellingen staan in het [Play-runbook](../docs/GOOGLE-PLAY-RELEASE-RUNBOOK.md); resultaten in het [verbindingsbewijs](../docs/deploy-evidence/play-cloud-connection-2026-11-23.json). Gebruik uitsluitend de Play-environments `fabelpad-play-internal` en `fabelpad-play-production`. De vier webvariabelen blijven behouden; Play-poorten staan ter review in `scripts/play/config.json`.
+
+- Een alleen-lezen `verify` maakt geen Play-edit. Cloud-identiteit, app-leestoegang, releaserechten en echte beschikbaarheid zijn afzonderlijke resultaten.
+- Main-pushes mogen alleen na expliciete JSON-vrijgave een interne AAB uploaden. Detectie omvat alle gedeelde native buildinputs. De build vereist originele geslaagde web-CI; productie vereist originele geslaagde web- én native-CI op dezelfde SHA.
+- Signing/publicatie staan uit totdat de eerste Console-release, vrije versiecodereeks, tracks, Store-/beleidstaken en echte toestelacceptatie zijn bevestigd. De helper weigert een eerste productierelease.
+- Productie promoveert uitsluitend dezelfde intern geaccepteerde AAB met geldig SHA-/code-/hash-/track-/runbewijs. De ingebedde R8-mapping wordt tegen het buildrapport gecontroleerd; geen nieuwe bundel voor dezelfde code.
+- Gebruik beschermde `fabelpad-v*`-tags. Een tag mag niet worden verplaatst of verwijderd. Eén concurrencygroep serialiseert API-edits. `verify` kan nooit de releasejob starten, ook niet als publicatie later is vrijgegeven.
