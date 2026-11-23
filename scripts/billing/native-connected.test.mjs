@@ -12,6 +12,8 @@ const { nativeFamilyImport } = await import(await compileSource(new URL('../../m
 const { validateFamilySnapshot } = await import(await compileSource(new URL('../../lib/familyValidation.ts', import.meta.url), temporary));
 const { mergeConnectedProgress } = await import(await compileSource(new URL('../../mobile/src/connected-progress.ts', import.meta.url), temporary));
 const connectedURL=await compileSource(new URL('../../mobile/src/connected.ts',import.meta.url),temporary);
+const deviceDataURL=await compileSource(new URL('../../mobile/src/deviceData.ts',import.meta.url),temporary);
+const localStorageURL=await compileSource(new URL('../../mobile/src/storage.ts',import.meta.url),temporary);
 const expoStub=join(temporary,'fixture-expo.mjs'),storageStub=join(temporary,'fixture-storage.mjs'),secureStub=join(temporary,'fixture-secure.mjs');
 await writeFile(expoStub,'export function requireOptionalNativeModule(){return globalThis.__fabelpadConnectedFixture.native;}');
 await writeFile(storageStub,'export default {getItem:async k=>globalThis.__fabelpadConnectedFixture.storage.get(k)??null,setItem:async(k,v)=>{globalThis.__fabelpadConnectedFixture.storage.set(k,v);},removeItem:async k=>{globalThis.__fabelpadConnectedFixture.storage.delete(k);},getAllKeys:async()=>[...globalThis.__fabelpadConnectedFixture.storage.keys()],multiRemove:async keys=>{for(const k of keys)globalThis.__fabelpadConnectedFixture.storage.delete(k);}};');
@@ -52,10 +54,10 @@ async function connectedFixture(){
  const pending=draft(),key=randomBytes(32),storage=new Map(),secure=new Map(),ref='tlwfpivafcokcjyjwgmq';
  const seal=async text=>{const iv=randomBytes(12),cipher=createCipheriv('aes-256-gcm',key,iv);return Buffer.concat([iv,cipher.update(text,'utf8'),cipher.final(),cipher.getAuthTag()]).toString('base64');};
  const open=async text=>{const raw=Buffer.from(text,'base64'),decipher=createDecipheriv('aes-256-gcm',key,raw.subarray(0,12));decipher.setAuthTag(raw.subarray(-16));return Buffer.concat([decipher.update(raw.subarray(12,-16)),decipher.final()]).toString('utf8');};
- const fixture={storage,secure,online:false,revision:1,snapshot:pending.baseSnapshot,puts:0,native:{connected:true,backendOrigin:'https://staging.fabelpad.nl',environment:'staging',supabaseUrl:`https://${ref}.supabase.co`,supabaseKey:'sb_publishable_synthetic_fixture',sealProgress:seal,openProgress:open,clearProgressKey:async()=>{},clearContentKey:async()=>{}}};
+ const fixture={storage,secure,online:false,revision:1,snapshot:pending.baseSnapshot,puts:0,contentClears:0,progressClears:0,disconnects:0,native:{connected:true,backendOrigin:'https://staging.fabelpad.nl',environment:'staging',supabaseUrl:`https://${ref}.supabase.co`,supabaseKey:'sb_publishable_synthetic_fixture',sealContent:seal,openContent:open,sealProgress:seal,openProgress:open,clearProgressKey:async()=>{fixture.progressClears++;},clearContentKey:async()=>{fixture.contentClears++;},disconnect:async()=>{fixture.disconnects++;}}};
  for(const [name,value]of Object.entries({access:'synthetic-access',refresh:'synthetic-refresh',identity:JSON.stringify({parentId:pending.parentId,email:'synthetic-parent@example.test',expiresAt:Date.now()+3600000})}))secure.set(`fabelpad.auth.${ref}.${name}`,value);
  globalThis.__fabelpadConnectedFixture=fixture;
- globalThis.fetch=async(url,init)=>{assert.equal(String(url),'https://staging.fabelpad.nl/api/family');if(!fixture.online)throw new Error('synthetic offline');if(init.method==='PUT'){assert(storage.size>0,'Encrypted draft must exist before a network mutation');const body=JSON.parse(init.body);if(body.baseRevision!==fixture.revision)return Response.json({error:'revision_conflict'},{status:409});fixture.snapshot=body.snapshot;fixture.revision++;fixture.puts++;}return Response.json({snapshot:fixture.snapshot,revision:fixture.revision});};
+ globalThis.fetch=async(url,init)=>{if(String(url).endsWith('/auth/v1/logout?scope=local'))return new Response(null,{status:204});assert.equal(String(url),'https://staging.fabelpad.nl/api/family');if(!fixture.online)throw new Error('synthetic offline');if(init.method==='PUT'){assert(storage.size>0,'Encrypted draft must exist before a network mutation');const body=JSON.parse(init.body);if(body.baseRevision!==fixture.revision)return Response.json({error:'revision_conflict'},{status:409});fixture.snapshot=body.snapshot;fixture.revision++;fixture.puts++;}return Response.json({snapshot:fixture.snapshot,revision:fixture.revision});};
  const restart=()=>import(`${connectedURL}?native-instance=${++instance}`);
  return {fixture,pending,restart,api:await restart()};
 }
@@ -72,4 +74,41 @@ test('same-story CAS conflict keeps the durable draft through restart until an e
  fixture.online=true;fixture.snapshot=structuredClone(pending.baseSnapshot);fixture.snapshot.data['first-child']['story-station'].picks=[1,1];fixture.revision=2;
  const restarted=await restart(),conflict=await restarted.flushConnectedProgress();assert.equal(conflict.conflict,true);assert.equal(fixture.puts,0);assert.equal(fixture.storage.size,1);
  await restarted.resolveConnectedProgress(true);assert.deepEqual(fixture.snapshot.data['first-child']['story-station'].picks,[0,1,1]);assert.equal(fixture.storage.size,0);
+});
+test('whole-device wipe removes local profiles, both environment sessions, encrypted downloads and drafts, while free reset never opens a Play connection',async()=>{
+ const {fixture}=await connectedFixture(),api=await import(connectedURL),device=await import(deviceDataURL),local=await import(localStorageURL);
+ await api.familySession();await local.persistStore(store());
+ fixture.storage.set('fabelpad.connected.staging.synthetic','encrypted-download');fixture.storage.set('fabelpad.connected.production.synthetic','older-encrypted-download');fixture.storage.set('fabelpad.progress.staging.synthetic','encrypted-draft');fixture.storage.set('fabelpad.progress.production.synthetic','older-encrypted-draft');
+ fixture.secure.set('fabelpad.auth.aptprpkosqctwrzeetgs.access','older-production-session');
+ await device.clearDeviceData(true);assert.equal(fixture.storage.size,0);assert.equal(fixture.secure.size,0);assert.equal(await api.familySession(),null);assert.equal(fixture.disconnects,1);assert.equal(fixture.contentClears,1);assert.equal(fixture.progressClears,1);
+ await local.persistStore(store());await device.clearDeviceData(false);assert.equal(fixture.storage.size,0);assert.equal(fixture.disconnects,1,'Free variant does not connect to or disconnect Play');
+});
+test('a delayed Auth refresh cannot restore SecureStore or in-memory login after logout',async()=>{
+ const {fixture,api}=await connectedFixture(),identityKey='fabelpad.auth.tlwfpivafcokcjyjwgmq.identity';fixture.secure.set(identityKey,JSON.stringify({...JSON.parse(fixture.secure.get(identityKey)),expiresAt:Date.now()-1000}));
+ let resolveRefresh,started;const reached=new Promise(resolve=>{started=resolve;});
+ globalThis.fetch=async(url)=>{if(String(url).includes('/token?')){started();return new Promise(resolve=>{resolveRefresh=resolve;});}return new Response(null,{status:204});};
+ const refresh=api.familySession(),rejected=assert.rejects(refresh,error=>error.code==='session_changed');await reached;await api.disconnectFamily();
+ resolveRefresh(Response.json({access_token:'late-access',refresh_token:'late-refresh',expires_in:3600,user:{id:draft().parentId,email:'synthetic-parent@example.test',email_confirmed_at:new Date().toISOString()}}));
+ await rejected;assert.equal(fixture.secure.size,0);assert.equal(fixture.storage.size,0);assert.equal(await api.familySession(),null);
+});
+test('logout serializes key deletion after late encrypted cache and draft writes and rejects their old generation',async()=>{
+ for(const kind of ['content','progress']){
+  const {fixture,api,pending}=await connectedFixture();await api.familySession();
+  let complete,started;const reached=new Promise(resolve=>{started=resolve;});
+  const delayed=async()=>{started();return new Promise(resolve=>{complete=resolve;});};
+  if(kind==='content')fixture.native.sealContent=delayed;else fixture.native.sealProgress=delayed;
+  const writing=kind==='content'?api.cacheConnectedRelease('station',{release:{storyId:'station'},offlineUntil:new Date(Date.now()+60000).toISOString()}):api.saveConnectedProgress(1,pending.baseSnapshot,pending.snapshot);
+  const rejected=assert.rejects(writing,error=>error.code==='session_changed');await reached;const logout=api.disconnectFamily();complete('late-encrypted-data');await Promise.all([rejected,logout]);
+  assert.equal(fixture.storage.size,0);assert.equal(fixture.secure.size,0);assert.equal(await api.familySession(),null);assert.equal(fixture.contentClears,1);assert.equal(fixture.progressClears,1);
+ }
+});
+test('protected cache or profile revocation rejects an already-running encrypted write without closing the verified parent login',async()=>{
+ for(const kind of ['content','progress']){
+  const {fixture,api,pending}=await connectedFixture();await api.familySession();
+  let complete,started;const reached=new Promise(resolve=>{started=resolve;});const delayed=async()=>{started();return new Promise(resolve=>{complete=resolve;});};
+  if(kind==='content')fixture.native.sealContent=delayed;else fixture.native.sealProgress=delayed;
+  const writing=kind==='content'?api.cacheConnectedRelease('station',{release:{storyId:'station'},offlineUntil:new Date(Date.now()+60000).toISOString()}):api.saveConnectedProgress(1,pending.baseSnapshot,pending.snapshot);
+  const rejected=assert.rejects(writing,error=>error.code==='content_revoked');await reached;const clearing=kind==='content'?api.clearProtectedContent():api.clearConnectedProgress();complete('late-encrypted-data');await Promise.all([rejected,clearing]);
+  assert.equal(fixture.storage.size,0);assert.equal((await api.familySession()).parentId,pending.parentId);assert.equal(fixture.secure.size,3);assert.equal(fixture.disconnects,0);
+ }
 });

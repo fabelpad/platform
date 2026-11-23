@@ -6,12 +6,12 @@ Gecontroleerd op 23 november 2026 in de lokale ontwikkelcheckout. De nieuwe migr
 
 | Commando | Vastgesteld resultaat |
 | --- | --- |
-| `pnpm check:billing` | **131 tests + 67 migratiescenariogroepen + juridische versie-upgrade geslaagd**, inclusief aanvullende production Play-readinessproeven. |
+| `pnpm check:billing` | **135 tests + 67 migratiescenariogroepen + juridische versie-upgrade geslaagd**, inclusief aanvullende production Play-readinessproeven. |
 | `node scripts/billing/database-check.mjs` | **67 scenariogroepen geslaagd** op de definitieve SQL, met bestaande gezinsdata vóór de upgrade en een verse installatie. |
 | `node scripts/billing/concurrency-check.mjs` | **Geslaagd met echte PostgreSQL 17**, onafhankelijke gelijktijdige databasesessies, bestaande lokale containerimage. |
 | `node --test scripts/billing/domain.test.mjs` | **5 domeingroepen geslaagd** voor instellingen, kalenderlooptijden en kortingsberekeningen. |
 
-De volledige lokale browsertest slaagt: **83 van 83 scenario’s**. Deze controle omvat schoolcodes met beide bedragbases, volledige cadeaucodes zonder automatische incasso, de betaalontvangstpagina, openbare herroeping en versleutelde offlineopslag per gezin. De Next.js-productiebuild, beide TypeScript-projecten en de bestaande backend-, e-mail-, inhouds-, profiel-, native- en deploymentcontroles slagen. De gekoppelde Metro/Hermes-export en Kotlin-modulecompilatie slagen; volledige AAB- en toestelacceptatie zijn afzonderlijk bewijs.
+De volledige lokale browsertest slaagt: **86 van 86 scenario’s**. Deze controle omvat schoolcodes met beide bedragbases, volledige cadeaucodes zonder automatische incasso, de betaalontvangstpagina, openbare herroeping en versleutelde offlineopslag per gezin en intrekking tegenover vertraagde schrijfacties in andere browsertabbladen. De native regressies dekken ook volledig wissen en late Auth-refresh-/cache-/voortgangsantwoorden. De Next.js-productiebuild, beide TypeScript-projecten en de bestaande backend-, e-mail-, inhouds-, profiel-, native- en deploymentcontroles slagen. De gekoppelde Metro/Hermes-export en Kotlin-modulecompilatie slagen; volledige AAB- en toestelacceptatie zijn afzonderlijk bewijs.
 
 De standaard GitHub-controle voert `scripts/local-build.sh` uit, inclusief `pnpm check:billing`. De PostgreSQL-concurrencycontrole is apart reproduceerbaar met Docker en veroorzaakt geen hosted mutaties.
 

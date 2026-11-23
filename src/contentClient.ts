@@ -1,6 +1,5 @@
 import { isStoryId } from './storyCatalog';
-import { currentContentOwner } from './profileStorage';
-import { saveProtectedContent,readProtectedContent,clearProtectedContent } from './protectedContentCache';
+import { saveProtectedContent,readProtectedContent,clearProtectedContent,protectedContentContext,protectedContentContextIsCurrent } from './protectedContentCache';
 import { canonicalContentJson } from '../lib/contentHash';
 import { getScene, getEnding } from './storyData';
 import { worlds } from './worlds';
@@ -46,16 +45,20 @@ export async function localRelease(id: string, editorial = false, includeReading
 }
 export async function loadContentRelease(id: string, version: string | undefined, cloud: boolean): Promise<ContentRelease> {
  if(cloud){
+  const context=await protectedContentContext();
+  const current=async()=>{if(!await protectedContentContextIsCurrent(context))throw new Error('De gezinsaanmelding is gewijzigd. Open het verhaal opnieuw.');};
   let response:Response;
   try{response=await fetch(`/api/content/${encodeURIComponent(id)}${version?`?version=${encodeURIComponent(version)}`:''}`,{cache:'no-store',signal:AbortSignal.timeout(15_000)});}catch{
-   const stored=await readProtectedContent(id,version);if(stored)return stored;
+   await current();
+   const stored=await readProtectedContent(id,version);if(stored){await current();return stored;}
    throw new Error('Maak verbinding om jullie toegang en deze verhaalversie te controleren. Je voortgang blijft bewaard.');
   }
   const data=await response.json();
-  if(!response.ok){if([401,403,410].includes(response.status)){const owner=currentContentOwner();if(owner)await clearProtectedContent(owner);}throw new Error(data.message||'Deze verhaalversie kan niet worden geopend. Je keuzes blijven bewaard.');}
+  await current();
+  if(!response.ok){if([401,403,410].includes(response.status)&&context.owner)await clearProtectedContent(context.owner);throw new Error(data.message||'Deze verhaalversie kan niet worden geopend. Je keuzes blijven bewaard.');}
   const release=data.release as ContentRelease;
   if(release?.storyId!==id||(version&&release.contentVersion!==version)||!['full','preview'].includes(release.access??''))throw new Error('De verhaalversie komt niet overeen. Je avontuur is niet veranderd.');
-  await saveProtectedContent(release);return release;
+  await saveProtectedContent(release,context);await current();return release;
  }
  if(!isStoryId(id))throw new Error('Dit online verhaal is niet meegeleverd op dit apparaat.');
  if(version){const stored=cached(id,version);if(stored&&!stored.access)return stored;}

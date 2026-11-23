@@ -28,7 +28,12 @@ export const connectedConfig = {
   deleteAccountUrl: native?.deleteAccountUrl ?? '',
 };
 type Session = { accessToken: string; refreshToken: string; expiresAt: number; parentId: string; email: string };
-let session: Session | null = null, loaded = false;
+let session: Session | null = null, loaded = false, sessionGeneration = 0, contentGeneration = 0, progressGeneration = 0;
+let protectedWrites: Promise<unknown> = Promise.resolve();
+function sameSession(generation: number): void { if (generation !== sessionGeneration) throw new ConnectedError('session_changed', 'De ouderaanmelding is afgesloten. Log opnieuw in.', 401); }
+function sameProtectedGeneration(generation: number, current: number): void { if (generation !== current) throw new ConnectedError('content_revoked', 'Deze afgeschermde gegevens zijn intussen ingetrokken.', 403); }
+function protectWrite<T>(action: () => Promise<T>): Promise<T> { const next = protectedWrites.then(action, action); protectedWrites = next.catch(() => {}); return next; }
+function writeForSession<T>(generation: number, action: () => Promise<T>): Promise<T> { return protectWrite(async () => { sameSession(generation); const result = await action(); sameSession(generation); return result; }); }
 const ref = native?.supabaseUrl.match(/^https:\/\/([a-z0-9]{20})\.supabase\.co$/u)?.[1];
 const secure = ref ? createSecureSessionStorage(ref) : null;
 const CACHE_PREFIX = `fabelpad.connected.${connectedConfig.environment}.`;
@@ -50,40 +55,50 @@ async function responseJson(response: Response): Promise<Record<string, unknown>
   if (!response.ok) throw new ConnectedError(typeof value.error === 'string' ? value.error : 'unavailable', typeof value.message === 'string' ? value.message.slice(0, 500) : 'Dit verzoek kon niet worden verwerkt.', response.status);
   return value;
 }
-export async function clearProtectedContent(): Promise<void> {
-  const keys = (await AsyncStorage.getAllKeys()).filter(key => key.startsWith(CACHE_PREFIX));
+async function eraseProtectedContent(): Promise<void> {
+  const keys = (await AsyncStorage.getAllKeys()).filter(key => key.startsWith('fabelpad.connected.'));
   await AsyncStorage.multiRemove(keys); await native?.clearContentKey();
 }
-export async function clearConnectedProgress(): Promise<void> {
-  const keys = (await AsyncStorage.getAllKeys()).filter(key => key.startsWith(DRAFT_PREFIX));
+async function eraseConnectedProgress(): Promise<void> {
+  const keys = (await AsyncStorage.getAllKeys()).filter(key => key.startsWith('fabelpad.progress.'));
   await AsyncStorage.multiRemove(keys); await native?.clearProgressKey();
 }
+export function clearProtectedContent(): Promise<void> { contentGeneration++; return protectWrite(eraseProtectedContent); }
+export function clearConnectedProgress(): Promise<void> { progressGeneration++; return protectWrite(eraseConnectedProgress); }
 export async function disconnectFamily(): Promise<void> {
-  const old = session; session = null; loaded = true;
-  await Promise.all(['access', 'refresh', 'identity'].map(name => secure?.removeItem(name)));
-  await clearProtectedContent(); await clearConnectedProgress(); await native?.disconnect();
+  const old = session; sessionGeneration++; contentGeneration++; progressGeneration++; session = null; loaded = true;
+  await protectWrite(async () => {
+    const stores = ['tlwfpivafcokcjyjwgmq', 'aptprpkosqctwrzeetgs'].map(createSecureSessionStorage);
+    const results = await Promise.allSettled([...stores.flatMap(storage => ['access', 'refresh', 'identity'].map(name => storage.removeItem(name))), eraseProtectedContent(), eraseConnectedProgress(), native?.disconnect()]);
+    const failed = results.find(result => result.status === 'rejected'); if (failed?.status === 'rejected') throw failed.reason;
+  });
   if (old && native) await fetchWithTimeout(`${native.supabaseUrl}/auth/v1/logout?scope=local`, { method: 'POST', headers: { apikey: native.supabaseKey, Authorization: `Bearer ${old.accessToken}` } }).catch(() => {});
 }
-async function persistSession(value: Record<string, unknown>): Promise<Session> {
+async function persistSession(value: Record<string, unknown>, generation: number): Promise<Session> {
   const user = value.user;
   if (!object(user) || typeof user.id !== 'string' || typeof user.email !== 'string' || user.is_anonymous === true || !user.email_confirmed_at
     || typeof value.access_token !== 'string' || typeof value.refresh_token !== 'string' || typeof value.expires_in !== 'number') throw new ConnectedError('invalid_session', 'De ouderaanmelding kon niet worden bevestigd.');
-  session = { accessToken: value.access_token, refreshToken: value.refresh_token, expiresAt: Date.now() + value.expires_in * 1000, parentId: user.id, email: user.email };
-  await Promise.all([secure!.setItem('access', session.accessToken), secure!.setItem('refresh', session.refreshToken), secure!.setItem('identity', JSON.stringify({ parentId: session.parentId, email: session.email, expiresAt: session.expiresAt }))]);
-  loaded = true; return session;
+  const next: Session = { accessToken: value.access_token, refreshToken: value.refresh_token, expiresAt: Date.now() + value.expires_in * 1000, parentId: user.id, email: user.email };
+  return writeForSession(generation, async () => {
+    await Promise.all([secure!.setItem('access', next.accessToken), secure!.setItem('refresh', next.refreshToken), secure!.setItem('identity', JSON.stringify({ parentId: next.parentId, email: next.email, expiresAt: next.expiresAt }))]);
+    sameSession(generation); session = next; loaded = true; return next;
+  });
 }
 export async function familySession(): Promise<Session | null> {
-  configured();
+  configured(); const generation = sessionGeneration;
   if (!loaded) {
     const [accessToken, refreshToken, raw] = await Promise.all(['access', 'refresh', 'identity'].map(name => secure!.getItem(name)));
+    sameSession(generation);
     if (accessToken && refreshToken && raw) { try { const identity = JSON.parse(raw); if (typeof identity.parentId === 'string' && typeof identity.email === 'string' && Number.isFinite(identity.expiresAt)) session = { ...identity, accessToken, refreshToken }; } catch { /* Invalid secure sessions never become identities. */ } }
     loaded = true;
   }
   if (session && session.expiresAt <= Date.now() + 60_000) {
     const response = await fetchWithTimeout(`${native!.supabaseUrl}/auth/v1/token?grant_type=refresh_token`, { method: 'POST', headers: { apikey: native!.supabaseKey, 'Content-Type': 'application/json' }, body: JSON.stringify({ refresh_token: session.refreshToken }) });
+    sameSession(generation);
     if (response.status === 400 || response.status === 401) { await disconnectFamily(); throw new ConnectedError('session_expired', 'Log opnieuw in als ouder.', 401); }
-    session = await persistSession(await responseJson(response));
+    await persistSession(await responseJson(response), generation);
   }
+  sameSession(generation);
   return session;
 }
 export async function sendParentCode(email: string): Promise<void> {
@@ -92,22 +107,24 @@ export async function sendParentCode(email: string): Promise<void> {
   await responseJson(await fetchWithTimeout(`${native!.supabaseUrl}/auth/v1/otp`, { method: 'POST', headers: { apikey: native!.supabaseKey, 'Content-Type': 'application/json' }, body: JSON.stringify({ email: email.trim().toLowerCase(), create_user: false }) }));
 }
 export async function verifyParentCode(email: string, code: string): Promise<Session> {
-  configured(); if (!/^\d{6}$/u.test(code)) throw new ConnectedError('invalid_code', 'Vul de zescijferige inlogcode in.');
-  const next = await persistSession(await responseJson(await fetchWithTimeout(`${native!.supabaseUrl}/auth/v1/verify`, { method: 'POST', headers: { apikey: native!.supabaseKey, 'Content-Type': 'application/json' }, body: JSON.stringify({ email: email.trim().toLowerCase(), token: code, type: 'email' }) })));
+  configured(); const generation = sessionGeneration; if (!/^\d{6}$/u.test(code)) throw new ConnectedError('invalid_code', 'Vul de zescijferige inlogcode in.');
+  const next = await persistSession(await responseJson(await fetchWithTimeout(`${native!.supabaseUrl}/auth/v1/verify`, { method: 'POST', headers: { apikey: native!.supabaseKey, 'Content-Type': 'application/json' }, body: JSON.stringify({ email: email.trim().toLowerCase(), token: code, type: 'email' }) })), generation);
   // An Auth token alone never establishes the current account's lifecycle.
   const status = await connectedRequest('/api/parent/status');
   if (status.state === 'active' && status.acceptedTermsVersion === status.termsVersion) await connectedRequest('/api/parent/activity', { eventId: await connectedRequestId(), kind: 'parent_action' });
   return next;
 }
 export async function connectedRequest(path: string, body?: unknown, method = body === undefined ? 'GET' : 'POST', purgeForbidden = true): Promise<Record<string, unknown>> {
-  configured(); if (!path.startsWith('/api/') || path.includes('..')) throw new ConnectedError('invalid_path', 'Ongeldige gezinsactie.');
+  configured(); const generation = sessionGeneration; if (!path.startsWith('/api/') || path.includes('..')) throw new ConnectedError('invalid_path', 'Ongeldige gezinsactie.');
   const current = await familySession(); if (!current) throw new ConnectedError('login_required', 'Log eerst in als ouder.', 401);
+  sameSession(generation);
   const response = await fetchWithTimeout(`${connectedConfig.origin}${path}`, { method, credentials: 'omit', redirect: 'error', headers: {
     Authorization: `Bearer ${current.accessToken}`, 'X-Fabelpad-Parent': current.parentId, Origin: connectedConfig.origin,
     ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
   }, ...(body === undefined ? {} : { body: JSON.stringify(body) }) });
+  sameSession(generation);
   if ([401, 410].includes(response.status) || purgeForbidden && response.status === 403) await Promise.all([clearProtectedContent(), clearConnectedProgress()]);
-  return responseJson(response);
+  const result = await responseJson(response); sameSession(generation); return result;
 }
 export async function loadConnectedAccount(): Promise<{ session: Session; lifecycle: ParentAccountStatus; billing: Record<string, unknown> }> {
   const current = await familySession(); if (!current) throw new ConnectedError('login_required', 'Log eerst in als ouder.', 401);
@@ -224,20 +241,29 @@ async function progressIdentity(): Promise<Session> {
   return session;
 }
 async function readProgressDraft(): Promise<ConnectedProgressDraft | null> {
+  const generation = sessionGeneration, progressRevision = progressGeneration;
   const current = await progressIdentity(), sealed = await AsyncStorage.getItem(`${DRAFT_PREFIX}${current.parentId}`);
+  sameSession(generation);
   if (!sealed) return null;
   try {
     const draft: unknown = JSON.parse(await native!.openProgress(sealed));
+    sameSession(generation); sameProtectedGeneration(progressRevision, progressGeneration);
     if (!object(draft) || draft.schemaVersion !== 1 || draft.parentId !== current.parentId || draft.environment !== connectedConfig.environment
       || !Number.isSafeInteger(draft.baseRevision) || Number(draft.baseRevision) < 0 || !validateFamilySnapshot(draft.baseSnapshot).ok || !validateFamilySnapshot(draft.snapshot).ok) throw new Error();
     return draft as unknown as ConnectedProgressDraft;
-  } catch { throw new ConnectedError('progress_storage_invalid', 'De beveiligde offline voortgang kon niet worden geopend. Je opgeslagen kopie blijft bewaard; neem contact op met support.'); }
+  } catch (error) { if (error instanceof ConnectedError) throw error; throw new ConnectedError('progress_storage_invalid', 'De beveiligde offline voortgang kon niet worden geopend. Je opgeslagen kopie blijft bewaard; neem contact op met support.'); }
 }
-async function writeProgressDraft(draft: ConnectedProgressDraft): Promise<void> {
-  await AsyncStorage.setItem(`${DRAFT_PREFIX}${draft.parentId}`, await native!.sealProgress(JSON.stringify(draft)));
+async function writeProgressDraft(draft: ConnectedProgressDraft, generation: number, progressRevision: number): Promise<void> {
+  await writeForSession(generation, async () => {
+    sameProtectedGeneration(progressRevision, progressGeneration);
+    if (session?.parentId !== draft.parentId) throw new ConnectedError('session_changed', 'De ouderaanmelding is afgesloten.', 401);
+    const sealed = await native!.sealProgress(JSON.stringify(draft)); sameSession(generation); sameProtectedGeneration(progressRevision, progressGeneration);
+    await AsyncStorage.setItem(`${DRAFT_PREFIX}${draft.parentId}`, sealed);
+  });
 }
-async function deleteProgressDraft(parentId: string): Promise<void> { await AsyncStorage.removeItem(`${DRAFT_PREFIX}${parentId}`); }
+async function deleteProgressDraft(parentId: string, generation: number): Promise<void> { await writeForSession(generation, () => AsyncStorage.removeItem(`${DRAFT_PREFIX}${parentId}`)); }
 async function flushProgressDraft(force = false): Promise<ConnectedFamilyState | null> {
+  const generation = sessionGeneration;
   const draft = await readProgressDraft(); if (!draft) return null;
   if (!force && progressRetryAt > Date.now()) return { snapshot: draft.snapshot, revision: draft.baseRevision, pending: true, conflict: false };
   try {
@@ -246,11 +272,11 @@ async function flushProgressDraft(force = false): Promise<ConnectedFamilyState |
     const cloud = current.snapshot as unknown as FamilySnapshot, merged = mergeConnectedProgress(draft, cloud);
     if (merged.conflicts.length) return { snapshot: draft.snapshot, revision: draft.baseRevision, pending: true, conflict: true };
     if (JSON.stringify(merged.snapshot) === JSON.stringify(cloud)) {
-      await deleteProgressDraft(draft.parentId); return { snapshot: cloud, revision, pending: false, conflict: false };
+      await deleteProgressDraft(draft.parentId, generation); return { snapshot: cloud, revision, pending: false, conflict: false };
     }
     const saved = await connectedRequest('/api/family', { baseRevision: revision, snapshot: merged.snapshot }, 'PUT');
     if (!Number.isSafeInteger(saved.revision) || !validateFamilySnapshot(saved.snapshot).ok) throw new ConnectedError('family_unavailable', 'De opgeslagen gezinsgegevens konden niet worden bevestigd.');
-    await deleteProgressDraft(draft.parentId); progressRetryAt = 0;
+    await deleteProgressDraft(draft.parentId, generation); progressRetryAt = 0;
     return { snapshot: saved.snapshot as unknown as FamilySnapshot, revision: Number(saved.revision), pending: false, conflict: false };
   } catch (error) {
     if (error instanceof ConnectedError && error.status && error.status !== 409) throw error;
@@ -271,29 +297,33 @@ export function loadConnectedFamily(): Promise<ConnectedFamilyState> {
   });
 }
 export function saveConnectedProgress(baseRevision: number, previous: FamilySnapshot, snapshot: FamilySnapshot): Promise<ConnectedFamilyState> {
+  const generation = sessionGeneration, progressRevision = progressGeneration;
   return serializeProgress(async () => {
+    sameSession(generation);
     const current = await progressIdentity(), existing = await readProgressDraft();
     if (!validateFamilySnapshot(snapshot).ok || !validateFamilySnapshot(previous).ok || !Number.isSafeInteger(baseRevision)) throw new ConnectedError('invalid_progress', 'Deze leesvoortgang kon niet veilig worden bewaard.');
     const draft: ConnectedProgressDraft = { schemaVersion: 1, parentId: current.parentId, environment: connectedConfig.environment,
       baseRevision: existing?.baseRevision ?? baseRevision, baseSnapshot: existing?.baseSnapshot ?? previous, snapshot, updatedAt: Date.now() };
     // Persist before any network attempt or visual route advance. An app kill
     // during a request therefore leaves a recoverable, device-encrypted draft.
-    await writeProgressDraft(draft);
+    await writeProgressDraft(draft, generation, progressRevision);
     return (await flushProgressDraft())!;
   });
 }
 export function resolveConnectedProgress(useLocal: boolean): Promise<ConnectedFamilyState> {
+  const generation = sessionGeneration, progressRevision = progressGeneration;
   return serializeProgress(async () => {
+    sameSession(generation);
     const draft = await readProgressDraft(), current = await connectedRequest('/api/family');
     if (!validateFamilySnapshot(current.snapshot).ok || !Number.isSafeInteger(current.revision)) throw new ConnectedError('family_unavailable', 'Je online gezinsgegevens konden niet worden gecontroleerd.');
     const cloud = current.snapshot as unknown as FamilySnapshot;
     if (!draft || !useLocal) {
-      if (draft) await deleteProgressDraft(draft.parentId);
+      if (draft) await deleteProgressDraft(draft.parentId, generation);
       return { snapshot: cloud, revision: Number(current.revision), pending: false, conflict: false };
     }
     const merged = mergeConnectedProgress(draft, cloud, true);
     if (merged.conflicts.length) throw new ConnectedError('profile_removed', 'Een betrokken kinderprofiel bestaat online niet meer. Je offline kopie is bewaard; een verwijderd profiel wordt niet opnieuw aangemaakt.');
-    await writeProgressDraft({ ...draft, baseRevision: Number(current.revision), baseSnapshot: cloud, snapshot: merged.snapshot, updatedAt: Date.now() });
+    await writeProgressDraft({ ...draft, baseRevision: Number(current.revision), baseSnapshot: cloud, snapshot: merged.snapshot, updatedAt: Date.now() }, generation, progressRevision);
     return (await flushProgressDraft(true))!;
   });
 }
@@ -302,29 +332,34 @@ export function resolveConnectedProgress(useLocal: boolean): Promise<ConnectedFa
  * bounded expiry. Local bundled stories never use this namespace or key.
  */
 export async function cacheConnectedRelease(storyId: string, response: Record<string, unknown>): Promise<void> {
+  const generation = sessionGeneration, contentRevision = contentGeneration;
   const current = await familySession(), expiry = Date.parse(String(response.offlineUntil ?? ''));
   if (!current || !object(response.release) || !Number.isFinite(expiry) || expiry <= Date.now() || expiry > Date.now() + 24 * 60 * 60_000 + 60_000) return;
   const envelope = { parentId: current.parentId, environment: connectedConfig.environment, validUntil: expiry, downloadedAt: Date.now(), response };
-  await AsyncStorage.setItem(`${CACHE_PREFIX}${current.parentId}.${storyId}`, await native!.sealContent(JSON.stringify(envelope)));
+  await writeForSession(generation, async () => { sameProtectedGeneration(contentRevision, contentGeneration); const sealed = await native!.sealContent(JSON.stringify(envelope)); sameSession(generation); sameProtectedGeneration(contentRevision, contentGeneration); await AsyncStorage.setItem(`${CACHE_PREFIX}${current.parentId}.${storyId}`, sealed); });
 }
 export async function cachedConnectedRelease(storyId: string): Promise<Record<string, unknown> | null> {
-  configured();
+  configured(); const generation = sessionGeneration, contentRevision = contentGeneration;
   // Loading the secure identity is allowed while offline; a failed refresh
   // never extends the lease and is not interpreted as account verification.
   if (!loaded) await familySession().catch(() => {});
+  sameSession(generation);
   if (!session) return null;
   const key = `${CACHE_PREFIX}${session.parentId}.${storyId}`, sealed = await AsyncStorage.getItem(key);
   if (!sealed) return null;
   try {
     const value = JSON.parse(await native!.openContent(sealed));
+    sameSession(generation); sameProtectedGeneration(contentRevision, contentGeneration);
     if (value.parentId !== session.parentId || value.environment !== connectedConfig.environment || typeof value.validUntil !== 'number' || value.validUntil <= Date.now()
       || value.downloadedAt > Date.now() + 60_000 || value.validUntil - value.downloadedAt > 24 * 60 * 60_000 + 60_000 || !object(value.response)) throw new Error();
     return value.response;
-  } catch { await AsyncStorage.removeItem(key); return null; }
+  } catch (error) { if (error instanceof ConnectedError) throw error; await writeForSession(generation, () => AsyncStorage.removeItem(key)); return null; }
 }
 export async function loadConnectedRelease(storyId: string, version?: string): Promise<Record<string, unknown>> {
+  const generation = sessionGeneration;
   try {
     const result = await connectedRequest(`/api/content/${encodeURIComponent(storyId)}${version ? `?version=${encodeURIComponent(version)}` : ''}`);
+    sameSession(generation);
     await cacheConnectedRelease(storyId, result); return result;
   } catch (error) {
     if (error instanceof ConnectedError && error.status) throw error;
