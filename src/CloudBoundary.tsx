@@ -13,6 +13,7 @@ import ProfileReadingFields from './ProfileReadingFields';
 import { amsterdamDate, isValidBirthDate } from './profileReading';
 import { useAmsterdamDate } from './useAmsterdamDate';
 import { ParentActivityQueue, READING_EVENT } from './parentActivity';
+import styles from './profile-import.module.css';
 
 const SIGN_IN = '/inloggen';
 async function signOut() {
@@ -42,8 +43,13 @@ export function DemoLoginButton() {
   return <div className="demo-login-control"><a className="demo-login-button" href={SIGN_IN}><LogIn size={16} /><span>Inloggen als ouder</span></a></div>;
 }
 function pendingImportKey(id: string) { return `fabelpad-import-pending-${encodeURIComponent(id)}`; }
-function markImportPending(id: string, pending: boolean) { try { if (pending) localStorage.setItem(pendingImportKey(id), '1'); else localStorage.removeItem(pendingImportKey(id)); } catch { /* Session import remains explicit. */ } }
-function importPending(id: string) { try { return localStorage.getItem(pendingImportKey(id)) === '1'; } catch { return false; } }
+function markImportPending(id: string, snapshot: FamilySnapshot | null) { try { if (snapshot) localStorage.setItem(pendingImportKey(id), JSON.stringify(snapshot.family.children.map(child => child.id))); else localStorage.removeItem(pendingImportKey(id)); } catch { /* Session import remains explicit. */ } }
+function importPending(id: string, snapshot: FamilySnapshot) {
+  try {
+    const ids: unknown = JSON.parse(localStorage.getItem(pendingImportKey(id)) || 'null');
+    return Array.isArray(ids) && ids.length > 0 && ids.length === snapshot.family.children.length && ids.every(value => typeof value === 'string' && snapshot.family.children.some(child => child.id === value));
+  } catch { return false; }
+}
 
 export default function CloudBoundary({ parent, children, accountOnly = false }: { parent: ParentIdentity | null; children: ReactNode; accountOnly?: boolean }) {
   const today = useAmsterdamDate();
@@ -57,22 +63,46 @@ export default function CloudBoundary({ parent, children, accountOnly = false }:
   const [epoch, setEpoch] = useState(0);
   const [opening, setOpening] = useState(false);
   const [permissions, setPermissions] = useState<Record<string, boolean>>({});
+  const [newPermission, setNewPermission] = useState(false);
+  const [onboardingFlow, setOnboardingFlow] = useState<'import' | 'new'>('new');
+  const [setupPending, setSetupPending] = useState(false);
   const [onboardingNotice, setOnboardingNotice] = useState('');
   const newSnapshot = useRef<FamilySnapshot | null>(null);
   const generation = useRef(0);
+  const currentParent = useRef(parent?.id ?? null); currentParent.current = parent?.id ?? null;
+  const activeClient = useRef<FamilySyncClient | null>(null);
+  const openingOperation = useRef<object | null>(null);
+  const onboardingInitialized = useRef(false);
+  const pendingSetup = useRef<{ snapshot: FamilySnapshot; fromLegacy: boolean } | null>(null);
   const conflictCard = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const token = ++generation.current;
     setGuest(false); setPhase('loading'); setState(INITIAL);
-    if (!parent) { setStorageScope('guest'); setClient(null); setLegacy(null); setPhase('login'); return; }
+    setNewChildName(''); setNewChildBirthDate(''); setPermissions({}); setNewPermission(false);
+    setLegacy(null); setOnboardingFlow('new'); setOpening(false); setSetupPending(false); setOnboardingNotice('');
+    newSnapshot.current = null; openingOperation.current = null; pendingSetup.current = null; onboardingInitialized.current = false; activeClient.current = null;
+    if (!parent) { setStorageScope('guest'); setClient(null); setPhase('login'); return; }
+    const current = () => generation.current === token && currentParent.current === parent.id;
     setStorageScope(`parent:${parent.id}`);
-    const nextClient = new FamilySyncClient(parent.id, { canApplyRemote: () => !document.querySelector('[role="dialog"]'), onMerged(snapshot) { if (generation.current === token) hydrateSnapshot(snapshot); }, onRemote(snapshot) {
-      if (generation.current !== token) return;
-      if (snapshot && snapshot.family.children.length > 0) { hydrateSnapshot(snapshot); setEpoch(value => value + 1); setPhase('ready'); }
+    const nextClient = new FamilySyncClient(parent.id, { canApplyRemote: () => !document.querySelector('[role="dialog"]'), onMerged(snapshot) { if (current()) hydrateSnapshot(snapshot); }, onRemote(snapshot) {
+      if (!current()) return;
+      if (snapshot && snapshot.family.children.length > 0) { openingOperation.current = null; setOpening(false); hydrateSnapshot(snapshot); setEpoch(value => value + 1); setPhase('ready'); }
       else if (accountOnly) { setLegacy(null); setPhase('ready'); }
-      else { setLegacy(legacySnapshotForParent(parent!.id, true)); setPhase('onboarding'); }
+      else {
+        // An explicit conflict choice can discard an unresolved setup in favor
+        // of the confirmed empty family. A dirty draft is never discarded here.
+        if (pendingSetup.current && !nextClient.getState().dirty) {
+          pendingSetup.current = null; openingOperation.current = null; newSnapshot.current = null;
+          setOpening(false); setSetupPending(false); setNewChildName(''); setNewChildBirthDate(''); setPermissions({}); setNewPermission(false); setOnboardingNotice('');
+          markImportPending(parent.id, null); onboardingInitialized.current = false;
+        }
+        // A refreshed empty family must not replace an unfinished import form.
+        if (!onboardingInitialized.current) { const source = legacySnapshotForParent(parent.id, true); setLegacy(source); setOnboardingFlow(source ? 'import' : 'new'); onboardingInitialized.current = true; }
+        setPhase('onboarding');
+      }
     } });
+    activeClient.current = nextClient;
     setClient(nextClient);
     const activity = new ParentActivityQueue(parent.id, { onBlocked: () => { void nextClient.verifyIdentity(); } });
     const cleared = (event: Event) => { if ((event as CustomEvent<{ parentId?: string }>).detail?.parentId === parent.id) activity.discard(); };
@@ -84,18 +114,24 @@ export default function CloudBoundary({ parent, children, accountOnly = false }:
     };
     window.addEventListener(READING_EVENT, reading);
     const stopState = nextClient.subscribe(next => {
-      if (generation.current !== token) return;
+      if (!current()) return;
       setState(next);
       if (next.consentReloadRequired) activity.discardProfile(next.consentReloadRequired);
       if (next.phase === 'signed-out' || (next.phase === 'error' && !next.snapshot)) setPhase(accountOnly ? 'ready' : 'error');
-      if (next.phase === 'saved' && !next.dirty && importPending(parent.id)) { markLegacyImported(parent.id); markImportPending(parent.id, false); }
+      if (next.phase === 'conflict' && pendingSetup.current) setPhase('ready');
+      if (next.phase === 'saved' && !next.dirty && next.snapshot && importPending(parent.id, next.snapshot)) { markLegacyImported(parent.id); markImportPending(parent.id, null); }
+      // A retried PUT can finish on focus/online without onRemote firing. Adopt
+      // that confirmed family before another onboarding snapshot can replace it.
+      if (next.phase === 'saved' && !next.dirty && next.snapshot?.family.children.length && pendingSetup.current) {
+        pendingSetup.current = null; openingOperation.current = null; markImportPending(parent.id, null); setOpening(false); setSetupPending(false); hydrateSnapshot(next.snapshot); setEpoch(value => value + 1); setPhase('ready');
+      }
     });
     const stopStorage = subscribeStorage(snapshot => { if (generation.current === token) nextClient.enqueue(snapshot); });
     const online = () => { void activity.flush(); void nextClient.flush().then(() => { return document.querySelector('[role="dialog"]') ? nextClient.verifyIdentity() : nextClient.refresh(); }); };
     const focus = () => { if (document.visibilityState === 'visible') void (document.querySelector('[role="dialog"]') ? nextClient.verifyIdentity() : nextClient.refresh()); };
     window.addEventListener('online', online); window.addEventListener('focus', focus); document.addEventListener('visibilitychange', focus);
     void nextClient.load();
-    return () => { generation.current += 1; activity.stop(); window.removeEventListener('fabelpad-parent-data-cleared', cleared); window.removeEventListener(READING_EVENT, reading); stopState(); stopStorage(); nextClient.dispose(); window.removeEventListener('online', online); window.removeEventListener('focus', focus); document.removeEventListener('visibilitychange', focus); };
+    return () => { generation.current += 1; openingOperation.current = null; activeClient.current = null; activity.stop(); window.removeEventListener('fabelpad-parent-data-cleared', cleared); window.removeEventListener(READING_EVENT, reading); stopState(); stopStorage(); nextClient.dispose(); window.removeEventListener('online', online); window.removeEventListener('focus', focus); document.removeEventListener('visibilitychange', focus); };
   }, [parent?.id, accountOnly]);
 
   useEffect(() => {
@@ -117,21 +153,34 @@ export default function CloudBoundary({ parent, children, accountOnly = false }:
   }, [state.phase]);
 
   async function begin(snapshot: FamilySnapshot, fromLegacy: boolean) {
-    if (!parent || !client || opening) return;
-    if (!snapshot.family.children.every(child => isValidBirthDate(child.birthDate, amsterdamDate()))) { setOnboardingNotice('Vul een geldige geboortedatum in die niet in de toekomst ligt.'); return; }
-    if (!snapshot.family.children.every(child => permissions[fromLegacy ? child.id : 'new'])) return;
+    if (!parent || !client || client.owner !== parent.id || currentParent.current !== parent.id || activeClient.current !== client || openingOperation.current || client.getState().phase === 'signed-out') return;
+    if (pendingSetup.current && pendingSetup.current.fromLegacy !== fromLegacy) return;
+    const submitted = structuredClone(pendingSetup.current?.snapshot ?? snapshot);
+    if (!submitted.family.children.every(child => child.name.trim() && child.name.trim().length <= 20)) { setOnboardingNotice('Vul voor ieder profiel een voornaam of bijnaam in van maximaal 20 tekens.'); return; }
+    if (!submitted.family.children.every(child => isValidBirthDate(child.birthDate, amsterdamDate()))) { setOnboardingNotice('Vul een geldige geboortedatum in die niet in de toekomst ligt.'); return; }
+    if (!(fromLegacy ? submitted.family.children.every(child => permissions[child.id]) : newPermission)) return;
+    submitted.family.children = submitted.family.children.map(child => ({ ...child, name: child.name.trim() }));
+    const owner = parent.id, operationClient = client, token = generation.current, operation = {};
+    openingOperation.current = operation;
+    const current = () => openingOperation.current === operation && generation.current === token && currentParent.current === owner && activeClient.current === operationClient && operationClient.getState().phase !== 'signed-out';
     setOpening(true);
     setOnboardingNotice('');
     try {
-      for (const child of snapshot.family.children) await accountRequest('/api/parent/consent', { profileId: child.id, consent: true, guardianDeclaration: true }, parent.id);
-      if (fromLegacy) markImportPending(parent.id, true);
-      hydrateSnapshot(snapshot);
-      client.enqueue(snapshot);
-      await client.flush();
-      if (client.getState().phase !== 'saved') { setOnboardingNotice('Toestemming is bewaard, maar het profiel is nog niet veilig opgeslagen. Probeer het opnieuw.'); return; }
-      setEpoch(value => value + 1); setPhase('ready');
-    } catch (error) { setOnboardingNotice((error as Error).message); }
-    finally { setOpening(false); }
+      for (const child of submitted.family.children) {
+        if (!current()) return;
+        await accountRequest('/api/parent/consent', { profileId: child.id, consent: true, guardianDeclaration: true }, owner);
+        if (!current()) return;
+      }
+      pendingSetup.current = { snapshot: structuredClone(submitted), fromLegacy }; setSetupPending(true);
+      markImportPending(owner, fromLegacy ? submitted : null);
+      hydrateSnapshot(submitted);
+      operationClient.enqueue(submitted);
+      await operationClient.flush();
+      if (!current()) return;
+      if (operationClient.getState().phase !== 'saved') { setOnboardingNotice('Toestemming is bewaard, maar het profiel is nog niet veilig opgeslagen. Probeer het opnieuw.'); return; }
+      if (pendingSetup.current) { pendingSetup.current = null; setSetupPending(false); setEpoch(value => value + 1); setPhase('ready'); }
+    } catch (error) { if (current()) setOnboardingNotice((error as Error).message); }
+    finally { if (current()) { openingOperation.current = null; setOpening(false); } }
   }
   function enterGuest() { setStorageScope('guest'); setGuest(true); setPhase('ready'); setEpoch(value => value + 1); }
   const value: CloudContextValue = { parent: guest ? null : parent, state, client: guest ? null : client, guest };
@@ -140,10 +189,28 @@ export default function CloudBoundary({ parent, children, accountOnly = false }:
   if (phase === 'loading') return <AccountShell><div className="account-loading" role="status"><LoaderCircle className="account-spin" size={25} /><span>We zoeken jullie verhalen erbij…</span></div></AccountShell>;
   if (phase === 'login') return <AccountShell><span className="account-eyebrow"><Sparkles size={16} /> IEDER KIND EEN EIGEN AVONTUUR</span><h1>Jullie verhalen.<br />Overal weer thuis.</h1><p>Log als ouder in. Daarna kiest ieder kind zijn eigen plaatje, vrienden en avonturen — ook op een andere telefoon of tablet.</p><a className="account-primary" href={SIGN_IN} target="_top"><LogIn size={19} />Inloggen als ouder<ArrowRight size={18} /></a><div className="account-login-note"><ShieldCheck size={17} /><span>Je logt als ouder in met een e-mailcode of Google. Kinderen hebben geen eigen e-mailadres nodig.</span></div><button className="account-guest" onClick={enterGuest}>Even rondkijken op dit apparaat <ArrowRight size={16} /></button></AccountShell>;
   if (phase === 'onboarding') return <AccountShell><span className="account-eyebrow"><Users size={16} /> EEN BEWUSTE KEUZE VOOR OUDERS</span><h1>Een online profiel<br />als jullie dat willen.</h1><p>Een online kinderprofiel is optioneel. We bewaren de bijnaam, geboortedatum, standaardavatar en leesgegevens om op een ander apparaat verder te lezen. Gebruik een bijnaam. De geboortedatum bepaalt automatisch het leesniveau; alleen jij beheert die in de profielinstellingen. Een identiteitsdocument is niet nodig.</p><p>Je kunt per profiel toestemming intrekken bij Ons gezin. Dan stopt synchronisatie en wissen we dat profiel. Bij accountverwijdering worden de online gezinsgegevens volgens de aangegeven termijn gewist. De <a href="/privacyverklaring">privacyverklaring</a> legt ook uit wat geldt bij langdurige inactiviteit. <a href="/privacy-voor-kinderen">Privacy voor kinderen</a>.</p>
-    {legacy && <><p>Op dit apparaat staan al profielen. Geef voor ieder profiel afzonderlijk toestemming voordat het wordt geüpload.</p><div className="account-import-preview">{legacy.family.children.map(child => <div key={child.id}><h2>{child.name}</h2><ProfileReadingFields id={`import-${child.id}`} birthDate={child.birthDate ?? ''} onBirthDateChange={birthDate => setLegacy(previous => previous ? { ...previous, family: { ...previous.family, children: previous.family.children.map(item => item.id === child.id ? { ...item, birthDate } : item) } } : previous)} required today={today} onOverrideChange={() => {}} showReadingLevel={false} /><label className="account-check"><input type="checkbox" checked={!!permissions[child.id]} onChange={e => setPermissions(previous => ({ ...previous, [child.id]: e.target.checked }))} /><span>Ik ben ouder met gezag of voogd en geef toestemming om de bijnaam, geboortedatum, avatar en leesgegevens van {child.name} te bewaren voor het kinderprofiel en om verder te lezen waar mijn kind is gebleven.</span></label></div>)}</div><button className="account-primary" disabled={opening || !legacy.family.children.every(child => permissions[child.id] && isValidBirthDate(child.birthDate, today))} onClick={() => void begin(legacy, true)}><Download size={18} />Deze profielen online bewaren</button></>}
-    <form onSubmit={event => { event.preventDefault(); if (!newChildName.trim()) { setOnboardingNotice('Vul een voornaam of bijnaam in.'); return; } if (!isValidBirthDate(newChildBirthDate, amsterdamDate())) { setOnboardingNotice('Vul een geldige geboortedatum in die niet in de toekomst ligt.'); return; } newSnapshot.current ??= freshSnapshot(newChildName, newChildBirthDate); const child = newSnapshot.current.family.children[0]; child.name = newChildName.trim().slice(0, 20); child.birthDate = newChildBirthDate; void begin(newSnapshot.current, false); }}><label className="field-label" htmlFor="onboarding-child-name">Voornaam of bijnaam</label><input id="onboarding-child-name" required maxLength={20} autoComplete="off" value={newChildName} onChange={event => setNewChildName(event.target.value)} /><ProfileReadingFields id="onboarding-child" birthDate={newChildBirthDate} onBirthDateChange={setNewChildBirthDate} required today={today} onOverrideChange={() => {}} showReadingLevel={false} />
-    <label className="account-check"><input type="checkbox" checked={!!permissions.new} onChange={e => setPermissions(previous => ({ ...previous, new: e.target.checked }))} /><span>Ik ben ouder met gezag of voogd en geef toestemming om de bijnaam, geboortedatum, avatar en leesgegevens van mijn kind te bewaren voor het kinderprofiel en om verder te lezen waar mijn kind is gebleven.</span></label>
-    <button className={legacy ? 'account-secondary' : 'account-primary'} type="submit" disabled={opening || !permissions.new}>{opening ? 'Veilig bewaren…' : 'Nieuw kindprofiel bewaren'}<ArrowRight size={18} /></button></form>
+    {legacy && <fieldset className={styles.choice} disabled={opening || setupPending}><legend>Welke profielen wil je online bewaren?</legend>
+      <label><input type="radio" name="profile-source" value="import" checked={onboardingFlow === 'import'} onChange={() => { setOnboardingFlow('import'); setOnboardingNotice(''); }} /><span>Profielen van dit apparaat meenemen</span></label>
+      <label><input type="radio" name="profile-source" value="new" checked={onboardingFlow === 'new'} onChange={() => { setOnboardingFlow('new'); setOnboardingNotice(''); if (parent) markImportPending(parent.id, null); }} /><span>Een nieuw kindprofiel maken</span></label>
+    </fieldset>}
+    {legacy && onboardingFlow === 'import' ? <form className={styles.form} onSubmit={event => { event.preventDefault(); void begin(legacy, true); }}>
+      <p>Pas de bijnaam aan als je wilt. De bestaande verhalen, keuzes en leesvoortgang blijven bij hetzelfde profiel. Geef voor ieder profiel afzonderlijk toestemming.</p>
+      <fieldset disabled={opening || setupPending} className={styles.fields}><div className={`account-import-preview ${styles.importPreview}`}>
+        {legacy.family.children.map((child, index) => <div key={child.id} className={styles.profile}>
+          <h2>Profiel {index + 1}</h2>
+          <label htmlFor={`import-${child.id}-name`}>Voornaam of bijnaam van profiel {index + 1}</label>
+          <input id={`import-${child.id}-name`} required maxLength={20} autoComplete="off" value={child.name} onFocus={event => event.currentTarget.select()} onChange={event => { const name = event.target.value; setLegacy(previous => previous ? { ...previous, family: { ...previous.family, children: previous.family.children.map(item => item.id === child.id ? { ...item, name } : item) } } : previous); }} />
+          <ProfileReadingFields id={`import-${child.id}`} birthDate={child.birthDate ?? ''} onBirthDateChange={birthDate => setLegacy(previous => previous ? { ...previous, family: { ...previous.family, children: previous.family.children.map(item => item.id === child.id ? { ...item, birthDate } : item) } } : previous)} required today={today} onOverrideChange={() => {}} showReadingLevel={false} />
+          <label className="account-check"><input type="checkbox" checked={!!permissions[child.id]} onChange={event => setPermissions(previous => ({ ...previous, [child.id]: event.target.checked }))} /><span>Ik ben ouder met gezag of voogd en geef toestemming om de bijnaam, geboortedatum, avatar en leesgegevens van {child.name || `profiel ${index + 1}`} te bewaren voor het kinderprofiel en om verder te lezen waar mijn kind is gebleven.</span></label>
+        </div>)}
+      </div></fieldset><button className="account-primary" disabled={opening || !legacy.family.children.every(child => child.name.trim() && permissions[child.id] && isValidBirthDate(child.birthDate, today))} type="submit"><Download size={18} />{opening ? 'Veilig bewaren…' : 'Deze profielen online bewaren'}</button>
+    </form> : <form className={styles.form} onSubmit={event => { event.preventDefault(); if (!newChildName.trim()) { setOnboardingNotice('Vul een voornaam of bijnaam in.'); return; } if (!isValidBirthDate(newChildBirthDate, amsterdamDate())) { setOnboardingNotice('Vul een geldige geboortedatum in die niet in de toekomst ligt.'); return; } newSnapshot.current ??= freshSnapshot(newChildName, newChildBirthDate); const child = newSnapshot.current.family.children[0]; newSnapshot.current = { ...newSnapshot.current, family: { ...newSnapshot.current.family, children: [{ ...child, name: newChildName.trim().slice(0, 20), birthDate: newChildBirthDate }] } }; void begin(newSnapshot.current, false); }}>
+      {legacy && <p>Je maakt een apart online profiel. De profielen en leesvoortgang die al op dit apparaat staan, worden hiermee niet geüpload.</p>}
+      <fieldset disabled={opening || setupPending} className={styles.fields}><label className="field-label" htmlFor="onboarding-child-name">Voornaam of bijnaam</label><input id="onboarding-child-name" required maxLength={20} autoComplete="off" value={newChildName} onChange={event => setNewChildName(event.target.value)} /><ProfileReadingFields id="onboarding-child" birthDate={newChildBirthDate} onBirthDateChange={setNewChildBirthDate} required today={today} onOverrideChange={() => {}} showReadingLevel={false} />
+      <label className="account-check"><input type="checkbox" checked={newPermission} onChange={event => setNewPermission(event.target.checked)} /><span>Ik ben ouder met gezag of voogd en geef toestemming om de bijnaam, geboortedatum, avatar en leesgegevens van mijn kind te bewaren voor het kinderprofiel en om verder te lezen waar mijn kind is gebleven.</span></label>
+      </fieldset><button className="account-primary" type="submit" disabled={opening || !newPermission}>{opening ? 'Veilig bewaren…' : 'Nieuw kindprofiel bewaren'}<ArrowRight size={18} /></button>
+    </form>}
+    {setupPending && !opening && <p className={styles.pending}>Deze profielopslag is al gestart. Rond dezelfde opslag af met de bewaarknop of wacht tot de verbinding is hersteld. Daarna open je jullie bewaarde gezin en kun je daar een kind toevoegen.</p>}
     {onboardingNotice && <p role="status" className="account-feedback">{onboardingNotice}</p>}
     <p><a href="/lezen">Verder lezen zonder online kinderprofiel →</a></p><p><a href="/profiel/account">Profiel → Account</a></p><p className="account-parent-name">Ingelogd als {parent?.displayName || parent?.email}</p></AccountShell>;
   if (phase === 'error') return <AccountShell><TriangleAlert size={31} className="account-alert-icon" /><h1>Even geen verbinding<br />met jullie verhalen.</h1><p>{state.message || 'Je gegevens worden niet vervangen. Probeer het over een moment nog eens.'}</p>{state.phase === 'signed-out' ? <a className="account-primary" href={SIGN_IN} target="_top"><LogIn size={18} />Opnieuw inloggen</a> : <button className="account-primary" onClick={() => { setPhase('loading'); void client?.load(); }}><RefreshCw size={18} />Opnieuw proberen</button>}</AccountShell>;
