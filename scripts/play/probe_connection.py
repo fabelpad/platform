@@ -6,6 +6,9 @@ tokeninfo uses POST and an Authorization header, as in Google's own auth client:
 https://github.com/googleapis/google-auth-library-nodejs/blob/main/src/auth/oauth2client.ts
 The userinfo.email scope is required to verify the service-account email:
 https://docs.cloud.google.com/docs/authentication/token-types#service_account_access_tokens
+Google's email shorthand has the same scope meaning (observed redundantly in
+tokeninfo during the 2026-11-23 connection check):
+https://developers.google.com/identity/protocols/oauth2/scopes
 The only Play call is GET reviews.list with maxResults=1. Its body is discarded:
 https://developers.google.com/android-publisher/api-ref/rest/v3/reviews/list
 Sources checked 2026-11-23. This is a diagnostic, never a release authorization.
@@ -94,7 +97,10 @@ def verify_claims(claims, expected_account, now):
             or not (verified is True or verified == "true")):
         raise ProbeError("De daadwerkelijke Google-tokenidentiteit is niet het verwachte geverifieerde serviceaccount.")
     scope = claims.get("scope")
-    if not isinstance(scope, str) or frozenset(scope.split()) != SCOPES:
+    # Accept only the redundant "email" identifier seen in Google tokeninfo.
+    # The two canonical scopes remain required; aliases cannot replace either
+    # one, and openid/profile/cloud-platform remain forbidden.
+    if not isinstance(scope, str) or frozenset(scope.split()) - {"email"} != SCOPES:
         raise ProbeError("De daadwerkelijke OAuth-scopes wijken af van de twee beperkte controlescopes. "
                          f"Ontvangen, veilig samengevat: {describe_scopes(scope)}.")
     remaining = integer_field(claims.get("expires_in"))
@@ -158,7 +164,8 @@ def run_probe(args, environment):
     if not re.fullmatch(r"[\x21-\x7e]{16,16384}", access_token):
         raise ProbeError("PLAY_ACCESS_TOKEN ontbreekt of heeft een ongeldige vorm.")
     now = int(time.time())
-    expiry = verify_claims(token_information(access_token), expected_account, now)
+    claims = token_information(access_token)
+    expiry = verify_claims(claims, expected_account, now)
     status = probe_play(access_token)
     return {
         "checkedAt": datetime.now(timezone.utc).isoformat(),
@@ -171,6 +178,7 @@ def run_probe(args, environment):
         "workflowRef": environment["GITHUB_WORKFLOW_REF"],
         "oidcExchangeVerified": True, "tokenIdentityVerified": True,
         "scopes": sorted(SCOPES),
+        "returnedScopes": sorted(set(claims["scope"].split())),
         "tokenExpiresAt": datetime.fromtimestamp(expiry, timezone.utc).isoformat(),
         "playHttpStatus": status, "playReadAccessVerified": status == 200,
         "playReleasePermissionsVerified": False,

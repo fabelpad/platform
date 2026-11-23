@@ -114,6 +114,14 @@ class Claims(unittest.TestCase):
         for verified in (True, "true"):
             self.assertEqual(probe.verify_claims(token_claims(email_verified=verified), ACCOUNT, NOW), NOW + 600)
 
+    def test_google_redundant_email_alias_is_accepted_only_alongside_canonical_scopes(self):
+        scope = " ".join(sorted(probe.SCOPES)) + " email"
+        self.assertEqual(probe.verify_claims(token_claims(scope=scope), ACCOUNT, NOW), NOW + 600)
+        for rejected in ("email", "https://www.googleapis.com/auth/androidpublisher email",
+                         scope + " openid", scope + " profile", scope + " https://www.googleapis.com/auth/cloud-platform"):
+            with self.subTest(scope=rejected), self.assertRaises(probe.ProbeError):
+                probe.verify_claims(token_claims(scope=rejected), ACCOUNT, NOW)
+
     def test_missing_or_unverified_identity_is_rejected(self):
         for changes in ({"email": None}, {"email": "other@example.com"}, {"email_verified": False},
                         {"email_verified": "false"}, {"email_verified": 1}, {"email_verified": None}):
@@ -237,6 +245,8 @@ class Command(unittest.TestCase):
                 self.assertEqual(code, 0)
                 report = json.loads(result_file.read_text())
                 self.assertTrue(report["oidcExchangeVerified"])
+                self.assertEqual(report["scopes"], sorted(probe.SCOPES))
+                self.assertEqual(report["returnedScopes"], sorted(probe.SCOPES))
                 self.assertEqual(report["playReadAccessVerified"], status == 200)
                 self.assertEqual(report["playHttpStatus"], status)
                 for key in ("playReleasePermissionsVerified", "playPublicationPerformed", "playEditCreated",
