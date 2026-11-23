@@ -21,11 +21,12 @@ const fixture = () => ({ schemaVersion: 1, family: { version: 1, children: [{ id
 const owner = () => db.exec('reset role');
 async function identity(actor, role = 'authenticated', onboarding = true) {
   await owner();
+  const privacy = (await db.query("select version from private.legal_document_versions where kind='privacy' order by version desc limit 1")).rows[0].version;
   if (actor) await db.query('insert into auth.sessions(id,user_id) values($1,$1) on conflict do nothing', [actor]);
   await db.query("select set_config('request.jwt.claims',$1,false)", [JSON.stringify({ sub: actor, session_id: actor, amr: [{ method: 'otp', timestamp: Math.floor(Date.now() / 1000) }] })]);
   await db.exec(`set role ${role}`);
   if (actor && onboarding) {
-    await db.query("select public.complete_parent_onboarding('2026-11-22','2026-11-22.1',true,true)");
+    await db.query("select public.complete_parent_onboarding('2026-11-22',$1,true,true)", [privacy]);
     await db.query('select public.consent_child_profile($1,true,true)', [id]);
   }
 }

@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const checks = [
-  'profile-storage-check.mjs', 'cloud-sync-check.mjs', 'parent-activity-check.mjs',
+  'profile-reading-check.mjs', 'profile-storage-check.mjs', 'cloud-sync-check.mjs', 'parent-activity-check.mjs',
   'story-memory-check.mjs', 'catalog-storage-check.mjs', 'story-catalog-check.mjs',
   'story-growth-check.mjs', 'story-reading-levels-check.mjs', 'story-play-check.mjs', 'modal-scroll-check.mjs',
   'sw-cache-check.mjs', 'prototype-platform-check.mjs', 'content-version-check.mjs',

@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { motion, useReducedMotion } from 'motion/react';
 import { ArrowLeft, ArrowRight, BookOpen, Check, Compass, Heart, Leaf, Moon, Music2, Pause, Play, RotateCcw, Sparkles, VolumeX, X } from 'lucide-react';
 import { getEnding, getScene } from './storyData';
-import { DEFAULT_READING_LEVEL, READING_LEVELS, isReadingLevel } from './readingLevel';
+import { DEFAULT_READING_LEVEL, isReadingLevel } from './readingLevel';
 import type { ReadingLevel } from './readingLevel';
 import IllustratedChoiceScene from './IllustratedChoiceScene';
 import { storyPlayArt } from './storyPlayArt';
@@ -21,7 +21,7 @@ import './reader.css';
 import './memory.css';
 import './reader-extended.css';
 
-type Props = { profileId: string; worldId: string; childName: string; muted: boolean; reducedMotion: boolean; textSize?: 'normal' | 'large'; readingLevel?: ReadingLevel; onReadingLevelChange: (value: ReadingLevel) => void; cloudContent?: boolean; previewLimit?: number; onRequestParents?: () => void; onClose: () => void; onComplete: (worldId: string, endingTitle: string) => void };
+type Props = { profileId: string; worldId: string; childName: string; muted: boolean; reducedMotion: boolean; textSize?: 'normal' | 'large'; readingLevel?: ReadingLevel; cloudContent?: boolean; previewLimit?: number; onRequestParents?: () => void; onClose: () => void; onComplete: (worldId: string, endingTitle: string) => void };
 type Saved = { picks: number[]; updatedAt: number; contentVersion?: string; revision?: number; storyId?: string; lastCompletedPicks?: number[]; lastCompletedContentVersion?: string };
 const iconMap = { heart: Heart, sparkles: Sparkles, music: Music2, moon: Moon, leaf: Leaf, compass: Compass };
 const TOTAL = STORY_PARTS;
@@ -33,7 +33,7 @@ function loadPicks(profileId: string, world: string): number[] {
   } catch { return []; }
 }
 
-export default function StoryReader({ profileId, worldId, childName, muted, reducedMotion, textSize, readingLevel, onReadingLevelChange, cloudContent = false, previewLimit, onRequestParents, onClose, onComplete }: Props) {
+export default function StoryReader({ profileId, worldId, childName, muted, reducedMotion, textSize, readingLevel, cloudContent = false, previewLimit, onRequestParents, onClose, onComplete }: Props) {
   const systemReducedMotion = useReducedMotion();
   const calmMotion = reducedMotion || systemReducedMotion === true;
   const world = isStoryId(worldId) ? worldId : 'station';
@@ -266,12 +266,12 @@ export default function StoryReader({ profileId, worldId, childName, muted, redu
         <div className="reader-art">
           <motion.img src={metadata.image} alt={metadata.imageAlt} initial={{ scale: calmMotion ? 1 : 1.04 }} animate={{ scale: 1 }} transition={{ duration: calmMotion ? 0 : 1.2 }} />
           <div className="reader-art-shade" />
-          <span className="reader-art-badge"><Sparkles size={15} />Dit is jouw avontuur</span>
+          <span className="reader-art-badge"><Sparkles size={15} />Het avontuur van {childName}</span>
           <div className="reader-art-caption"><span>Fabelpad presenteert</span><p>{metadata.title}</p><small>Een kleine keuze. Een wereld vol verhalen.</small></div>
         </div>
         <div ref={pageRef} className="reader-page" style={modePageMinHeight && !accessLocked && !complete ? { minHeight: modePageMinHeight } : undefined}>
           <div className="reader-progress-row"><span>{complete ? 'Jouw avontuur is compleet' : `Deel ${picks.length + 1} van ${TOTAL}`}</span><div className="reader-progress-dots" aria-label={`${Math.min(picks.length + 1, TOTAL)} van ${TOTAL} delen`}>{Array.from({ length: TOTAL }, (_, i) => <i key={i} className={i <= picks.length ? 'is-active' : ''} />)}</div></div>
-          {!accessLocked && <div className="reader-level-row"><label className="reader-level">Leesniveau <select value={band} disabled={!levelContent} aria-describedby={!levelContent ? 'reader-level-legacy' : undefined} onChange={event => { if (isReadingLevel(event.target.value)) onReadingLevelChange(event.target.value); }}>{READING_LEVELS.map(level => <option key={level.id} value={level.id}>{level.label}</option>)}</select></label>{!levelContent && <p id="reader-level-legacy" className="reader-level-note">Deze bewaarde verhaalversie gebruikt de oorspronkelijke tekst. Nieuwe avonturen gebruiken je leesniveau.</p>}</div>}
+          {!accessLocked && !levelContent && <p className="reader-level-note">Deze bewaarde verhaalversie gebruikt de oorspronkelijke tekst.</p>}
           {visibleGreeting && !complete && <div className="reader-continuity"><Sparkles size={17} /><span>{visibleGreeting}</span></div>}
           {accessLocked ? <div className="reader-access-gate"><Sparkles size={34} /><span className="reader-eyebrow">ER WACHT NOG EEN HELE WERELD</span><h2 ref={sceneHeadingRef} tabIndex={-1}>Samen een nieuw<br />pad ontdekken?</h2><p>{previewLimit === 1 ? 'Je eerste deel is uit. Je keuze en je plek blijven bewaard.' : 'Dit verhaal hoort bij het gezinspakket.'} Vraag een grote avonturier om samen te kijken.</p><button className="reader-primary" onClick={() => { requestClose(); onRequestParents?.(); }}>Even voor de ouders <ArrowRight size={17} /></button><button className="reader-restart" onClick={requestClose}>Terug naar de verhalen</button><small>Voorbeeld van gratis toegang · er wordt niets gekocht.</small></div> :
             <motion.div className="reader-scene" key={picks.length} initial={{ opacity: 0, y: calmMotion ? 0 : 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: calmMotion ? 0 : .2 }}>

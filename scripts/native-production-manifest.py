@@ -72,7 +72,7 @@ def main():
     name = manifest.get(ANDROID + 'versionName')
     if code != int(os.environ['FABELPAD_ANDROID_VERSION_CODE']) or not 1 <= code <= 2100000000:
         raise ValueError('De productie-versiecode wijkt af.')
-    if name != os.environ.get('FABELPAD_ANDROID_VERSION_NAME', '1.0.0'):
+    if name != os.environ.get('FABELPAD_ANDROID_VERSION_NAME', json.loads((ROOT / 'mobile/package.json').read_text())['version']):
         raise ValueError('De productie-versienaam wijkt af.')
     sdk = manifest.find('uses-sdk')
     target_sdk = int(sdk.get(ANDROID + 'targetSdkVersion', '0'))

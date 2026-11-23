@@ -42,6 +42,33 @@ function put(storage, key, value) { storage.setItem(key, JSON.stringify(value));
   }
 }
 
+// Birth dates and deliberate profile overrides survive snapshots without inventing
+// missing dates or converting the former reader preference into an override.
+{
+  const { storage, api } = await fixture();
+  const child = api.createChild('Noor', 2, '2020-02-29');
+  api.saveFamily({ version: 1, children: [{ ...child, readingLevelOverride: '9plus' }], activeId: child.id });
+  api.saveChild(child.id, 'prefs', { muted: true, calm: true, readingLevel: 'under6' });
+  const snapshot = api.exportSnapshot();
+  assert.equal(api.isFamilySnapshot(snapshot), true);
+  assert.equal(snapshot.family.children[0].birthDate, '2020-02-29');
+  assert.equal(snapshot.family.children[0].readingLevelOverride, '9plus');
+  const reloaded = (await fixture(storage)).api;
+  assert.deepEqual(reloaded.loadFamily(), snapshot.family);
+  for (const birthDate of ['', '2020-04-31', '2021-02-29', '9999-01-01']) {
+    assert.throws(() => api.createChild('Ongeldig', 0, birthDate));
+    const invalid = structuredClone(snapshot); invalid.family.children[0].birthDate = birthDate;
+    assert.equal(api.isFamilySnapshot(invalid), false);
+  }
+  const invalidLevel = structuredClone(snapshot); invalidLevel.family.children[0].readingLevelOverride = '6-8';
+  assert.equal(api.isFamilySnapshot(invalidLevel), false);
+  const legacy = { version: 1, children: [{ id: 'legacy-no-date', name: 'Pip', avatar: 0 }], activeId: 'legacy-no-date' };
+  api.saveFamily(legacy); api.saveChild('legacy-no-date', 'prefs', { muted: false, calm: false, readingLevel: '9plus' });
+  assert.deepEqual(api.loadFamily(), legacy);
+  assert.equal(api.exportSnapshot().family.children[0].birthDate, undefined);
+  assert.equal(api.exportSnapshot().family.children[0].readingLevelOverride, undefined);
+}
+
 // All data from the original single-child prototype belongs only to its first child.
 {
   const storage = new MemoryStorage();

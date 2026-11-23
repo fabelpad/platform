@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-const activeParent = { state: 'active', termsVersion: '2026-11-22', privacyVersion: '2026-11-22.1', acceptedTermsVersion: '2026-11-22', shownPrivacyVersion: '2026-11-22.1', lastActivityAt: '2026-11-22T12:00:00Z', deletionDeadline: null, consents: [] };
+const activeParent = { state: 'active', termsVersion: '2026-11-22', privacyVersion: '2026-11-23', acceptedTermsVersion: '2026-11-22', shownPrivacyVersion: '2026-11-23', lastActivityAt: '2026-11-22T12:00:00Z', deletionDeadline: null, consents: [] };
 
 test('website, child library, family and admin routes stay distinct without simulated roles or plans', async ({ page, request }) => {
   const errors: string[] = [];
@@ -23,6 +23,8 @@ test('website, child library, family and admin routes stay distinct without simu
   await page.locator('.reader-choice,.illustrated-choice-option').first().click();
   await expect(page.getByText('Deel 2 van 5', { exact: true })).toBeVisible();
   await page.goto('/ouders');
+  await page.locator('#local-parent-answer').fill('12');
+  await page.getByRole('button', { name: 'Naar de ouderomgeving', exact: true }).click();
   await expect(page.getByRole('heading', { level: 1 })).toContainText('Hun avonturen');
   await expect(page.locator('body')).not.toContainText(/demo|prototype|abonnement|founder/i);
   await expect(page.getByRole('link', { name: 'Inloggen als ouder' })).toHaveAttribute('href', '/inloggen');

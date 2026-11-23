@@ -3,7 +3,7 @@ import type { ParentAccountStatus } from '../../lib/parentAccount';
 import type { FamilySnapshot } from '../../src/profileStorage';
 
 const parent = { id: '11111111-1111-4111-8111-111111111111', email: 'parent@example.test', displayName: 'Testouder' };
-const documents = { termsVersion: '2026-11-22', privacyVersion: '2026-11-22.1' };
+const documents = { termsVersion: '2026-11-22', privacyVersion: '2026-11-23' };
 const active: ParentAccountStatus = { state: 'active', ...documents, acceptedTermsVersion: documents.termsVersion, shownPrivacyVersion: documents.privacyVersion, lastActivityAt: '2026-11-22T12:00:00Z', deletionDeadline: null, consents: [] };
 const pending: ParentAccountStatus = { ...active, state: 'onboarding', acceptedTermsVersion: null, shownPrivacyVersion: null };
 const existing: FamilySnapshot = { schemaVersion: 1, family: { version: 1, children: [{ id: 'child-registration-existing', name: 'Avonturier', avatar: 0 }], activeId: 'child-registration-existing' }, data: { 'child-registration-existing': {} } };
@@ -81,13 +81,15 @@ test('one registration declaration and terms choice survive OTP verification and
   await page.getByRole('textbox', { name: '6-cijferige code uit je e-mail' }).fill('123456');
   await page.getByRole('button', { name: 'Veilig inloggen' }).click();
   await expect(page).toHaveURL(/\/gezin$/);
-  const create = page.getByRole('button', { name: 'Start met een nieuw profiel Avonturier' });
+  const create = page.getByRole('button', { name: 'Nieuw kindprofiel bewaren' });
   await expect(create).toBeDisabled();
   await expectNoParentDeclarations(page);
   // Child-specific consent remains a separate, required decision.
   await expect(page.getByRole('checkbox')).toHaveCount(1);
   expect(uploads).toBe(0); expect(consents).toBe(0);
   await page.getByRole('checkbox', { name: /Ik ben ouder met gezag of voogd en geef toestemming/ }).check();
+  await page.locator('#onboarding-child-name').fill('Avonturier');
+  await page.locator('#onboarding-child-birth-date').fill('2019-11-23');
   await create.click();
   await expect(page.locator('.world-card')).toHaveCount(13);
   await expect(page.getByText('Avonturen bewaard', { exact: true })).toBeVisible();

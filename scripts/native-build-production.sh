@@ -14,7 +14,7 @@ elif [[ $# != 0 ]]; then echo 'Gebruik: native-build-production.sh [--unsigned-c
 export PATH="${JAVA_HOME}/bin:${ANDROID_HOME}/platform-tools:${PATH}"
 export FABELPAD_VARIANT=production FABELPAD_UNSIGNED_CHECK="${task_unsigned}" CI=1 CMAKE_BUILD_PARALLEL_LEVEL=1
 export FABELPAD_ANDROID_PACKAGE="${FABELPAD_ANDROID_PACKAGE:-nl.fabelpad.app}"
-export FABELPAD_ANDROID_VERSION_NAME="${FABELPAD_ANDROID_VERSION_NAME:-1.0.0}"
+export FABELPAD_ANDROID_VERSION_NAME="${FABELPAD_ANDROID_VERSION_NAME:-$(node -p 'require(process.argv[1]).version' "${task_root}/mobile/package.json")}"
 export FABELPAD_BUILD_SOURCE_SHA="$(git -C "${task_root}" rev-parse HEAD)"
 export FABELPAD_BUILD_SOURCE_DIRTY=false
 if [[ -n "$(git -C "${task_root}" status --porcelain)" ]]; then

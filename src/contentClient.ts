@@ -4,6 +4,7 @@ import { worlds } from './worlds';
 import { getEditorialPublication } from './editorialStore';
 import type { ContentRelease } from '../lib/server/content';
 import { bundledReadingLevels } from './contentReadingLevels';
+import { personalizeStoryText } from './storyPersonalization';
 
 const memoryReleases = new Map<string, ContentRelease>();
 const key = (id: string, version: string) => `fabelpad-content-v1:${id}:${version}`;
@@ -65,4 +66,4 @@ export async function loadContentRelease(id: string, version: string | undefined
     throw error;
   }
 }
-export function personalText(text: string, name: string) { return text.replaceAll('__FABELPAD_CHILD__', name.trim() || 'Avonturier'); }
+export const personalText = personalizeStoryText;

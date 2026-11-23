@@ -6,9 +6,16 @@ import CloudBoundary, { ParentAccountPanel } from './CloudBoundary';
 import { accountRequest, PageShell, readAccountSession, type AccountSession } from './AccountPage';
 import { parentNeedsOnboarding, type ParentAccountStatus } from '../lib/parentAccount';
 import { reportConsciousParentAction } from './parentActivity';
+import ProfileReadingFields from './ProfileReadingFields';
+import { amsterdamDate, isValidBirthDate } from './profileReading';
+import { useAmsterdamDate } from './useAmsterdamDate';
+import type { ReadingLevel, ReadingPrefs } from './readingLevel';
 import { clearParentDeviceData, createChild, exportSnapshot, loadFamily, MAX_CHILDREN, readChild, saveChild, saveFamily, subscribeStorage } from './profileStorage';
 
 function FamilySettings({ onBack, parentId }: { onBack: () => void; parentId: string }) {
+  const today = useAmsterdamDate();
+  const [birthDate, setBirthDate] = useState('');
+  const [readingLevelOverride, setReadingLevelOverride] = useState<ReadingLevel | undefined>();
   const [family, setFamily] = useState(() => loadFamily());
   const [name, setName] = useState('');
   const [editing, setEditing] = useState<string | null>(null);
@@ -18,19 +25,21 @@ function FamilySettings({ onBack, parentId }: { onBack: () => void; parentId: st
   const [status, setStatus] = useState<ParentAccountStatus | null>(null);
   const [busy, setBusy] = useState(false);
   const active = family.children.find(c => c.id === family.activeId) || family.children[0];
-  const prefs = readChild(active.id, 'prefs', { muted: false, calm: false, textSize: 'normal' });
+  const prefs = readChild<ReadingPrefs>(active.id, 'prefs', { muted: false, calm: false, textSize: 'normal' });
   useEffect(() => subscribeStorage(() => setFamily(loadFamily())), []);
   useEffect(() => { void fetch('/api/parent/status', { cache: 'no-store' }).then(r => r.json()).then(setStatus).catch(() => setNotice('De toestemmingsstatus is nu niet bereikbaar.')); }, []);
   async function update(event: FormEvent) {
     event.preventDefault();
     if (!name.trim() || busy || !editing && !consent) return;
     if (!editing && family.children.length >= MAX_CHILDREN) return;
+    const previousChild = family.children.find(child => child.id === editing);
+    if ((!editing || previousChild?.birthDate || birthDate) && !isValidBirthDate(birthDate, amsterdamDate())) { setNotice('Vul een geldige geboortedatum in die niet in de toekomst ligt.'); return; }
     setBusy(true); setNotice('');
     try {
-      const child = editing ? null : createChild(name, 0);
+      const child = editing ? null : { ...createChild(name, 0, birthDate), readingLevelOverride };
       if (child) await accountRequest('/api/parent/consent', { profileId: child.id, consent: true, guardianDeclaration: true }, parentId);
-      const children = editing ? family.children.map(c => c.id === editing ? { ...c, name: name.trim().slice(0,20) } : c) : [...family.children, child!];
-      const next = { ...family, children }; saveFamily(next); setFamily(next); setName(''); setEditing(null); setConsent(false); setNotice('Profiel bijgewerkt. De opslagstatus toont of het ook is gesynchroniseerd.');
+      const children = editing ? family.children.map(c => c.id === editing ? { ...c, name: name.trim().slice(0,20), ...(birthDate ? { birthDate } : {}), readingLevelOverride } : c) : [...family.children, child!];
+      const next = { ...family, children }; saveFamily(next); setFamily(next); setName(''); setBirthDate(''); setReadingLevelOverride(undefined); setEditing(null); setConsent(false); setNotice('Profiel bijgewerkt. De opslagstatus toont of het ook is gesynchroniseerd.');
       reportConsciousParentAction(parentId);
       const response = await fetch('/api/parent/status', { cache: 'no-store' }); if (response.ok) setStatus(await response.json());
     } catch (error) { setNotice((error as Error).message); } finally { setBusy(false); }
@@ -52,15 +61,15 @@ function FamilySettings({ onBack, parentId }: { onBack: () => void; parentId: st
   }
   function updatePreferences(value: typeof prefs) { saveChild(active.id, 'prefs', value); setFamily({ ...family }); reportConsciousParentAction(parentId); }
   return <PageShell><button className="account-secondary" onClick={onBack}>← Terug naar de verhalen</button><h1>Ons gezin.</h1><ParentAccountPanel />
-    <section className="family-settings"><h2>Ieder een eigen plekje</h2><p>Gebruik een bijnaam. Een geboortedatum of identiteitsdocument is niet nodig. <a href="/privacy-voor-kinderen">Privacy voor kinderen</a>.</p>
-      {family.children.map(child => { const permission = status?.consents.find(item => item.profileId === child.id && !item.withdrawnAt); return <div className="family-profile-row" key={child.id}><div><strong>{child.name}</strong><small className="profile-consent-status">{permission ? `Toestemming gegeven op ${new Date(permission.grantedAt).toLocaleDateString('nl-NL')}` : 'Toestemmingsstatus wordt gecontroleerd'}</small></div><button className="account-secondary" disabled={busy} onClick={() => { setEditing(child.id); setName(child.name); }}>Bewerken</button><button className="account-secondary" disabled={busy} onClick={() => setDeleting(child.id)}>Toestemming intrekken</button></div>; })}
+    <section className="family-settings"><h2>Ieder een eigen plekje</h2><p>Gebruik een bijnaam. De geboortedatum bepaalt automatisch het leesniveau; alleen jij beheert die in de profielinstellingen. Een identiteitsdocument is niet nodig. <a href="/privacy-voor-kinderen">Privacy voor kinderen</a>.</p>
+      {family.children.map(child => { const permission = status?.consents.find(item => item.profileId === child.id && !item.withdrawnAt); return <div className="family-profile-row" key={child.id}><div><strong>{child.name}</strong><small className="profile-consent-status">{permission ? `Toestemming gegeven op ${new Date(permission.grantedAt).toLocaleDateString('nl-NL')}` : 'Toestemmingsstatus wordt gecontroleerd'}</small></div><button className="account-secondary" disabled={busy} onClick={() => { setEditing(child.id); setName(child.name); setBirthDate(child.birthDate ?? ''); setReadingLevelOverride(child.readingLevelOverride); setNotice(''); }}>Bewerken</button><button className="account-secondary" disabled={busy} onClick={() => setDeleting(child.id)}>Toestemming intrekken</button></div>; })}
       {deleting && <div role="alert"><p>Toestemming voor {family.children.find(c => c.id === deleting)?.name} intrekken? Het online profiel en de bijbehorende leesgegevens worden gewist. Nieuwe synchronisatie voor dit profiel stopt. Andere profielen blijven bestaan.</p><div className="account-actions"><button className="account-secondary" disabled={busy} onClick={() => setDeleting(null)}>Annuleren</button><button className="account-primary" disabled={busy} onClick={() => void remove(deleting)}>Trek toestemming in en wis dit profiel</button></div></div>}
-      <form onSubmit={update}><label>{editing ? 'Bijnaam aanpassen' : 'Nieuw online kinderprofiel'}<input required maxLength={20} placeholder="Bijvoorbeeld Avonturier" value={name} onChange={e => setName(e.target.value)} /></label>
-        {!editing && <><label className="account-check"><input type="checkbox" required checked={consent} onChange={e => setConsent(e.target.checked)} /><span>Ik ben ouder met gezag of voogd en geef toestemming om de bijnaam, avatar en leesgegevens van mijn kind te bewaren voor het kinderprofiel en om verder te lezen waar mijn kind is gebleven.</span></label><p className="account-legal-note">Deze keuze geldt alleen voor dit profiel. Je trekt toestemming hier even eenvoudig in. Het profiel blijft bewaard zolang de toestemming en het actieve gezinsaccount bestaan. <a href="/privacyverklaring">Lees meer over bewaren, inactiviteit en verwijderen</a>.</p></>}
-        <button className="account-primary" disabled={busy || !editing && (family.children.length >= MAX_CHILDREN || !consent)}>{editing ? 'Wijziging bewaren' : 'Online kindprofiel toevoegen'}</button>{editing && <button className="account-secondary" type="button" onClick={() => { setEditing(null); setName(''); }}>Bewerken annuleren</button>}
+      <form onSubmit={update}><label>{editing ? 'Bijnaam aanpassen' : 'Nieuw online kinderprofiel'}<input required maxLength={20} placeholder="Bijvoorbeeld Avonturier" value={name} onChange={e => setName(e.target.value)} /></label><ProfileReadingFields id="family-profile" birthDate={birthDate} onBirthDateChange={setBirthDate} required={!editing || !!family.children.find(child => child.id === editing)?.birthDate} today={today} readingLevelOverride={readingLevelOverride} onOverrideChange={setReadingLevelOverride} legacyLevel={editing ? readChild<ReadingPrefs>(editing, 'prefs', { muted: false, calm: false }).readingLevel : undefined} />
+        {!editing && <><label className="account-check"><input type="checkbox" required checked={consent} onChange={e => setConsent(e.target.checked)} /><span>Ik ben ouder met gezag of voogd en geef toestemming om de bijnaam, geboortedatum, avatar en leesgegevens van mijn kind te bewaren voor het kinderprofiel en om verder te lezen waar mijn kind is gebleven.</span></label><p className="account-legal-note">Deze keuze geldt alleen voor dit profiel. Je trekt toestemming hier even eenvoudig in. Het profiel blijft bewaard zolang de toestemming en het actieve gezinsaccount bestaan. <a href="/privacyverklaring">Lees meer over bewaren, inactiviteit en verwijderen</a>.</p></>}
+        <button className="account-primary" disabled={busy || !editing && (family.children.length >= MAX_CHILDREN || !consent)}>{editing ? 'Wijziging bewaren' : 'Online kindprofiel toevoegen'}</button>{editing && <button className="account-secondary" type="button" onClick={() => { setEditing(null); setName(''); setBirthDate(''); setReadingLevelOverride(undefined); }}>Bewerken annuleren</button>}
       </form><small>Maximaal vijf profielen. <a href="/lezen">Lezen zonder online kinderprofiel</a> blijft mogelijk.</small>
     </section>
-    <section className="family-settings"><h2>Fijn lezen voor {active.name}</h2>{[{ key: 'muted', label: 'Geluid uit' }, { key: 'calm', label: 'Minder beweging' }].map(item => <label key={item.key}><span><input style={{width:'auto'}} type="checkbox" checked={!!prefs[item.key as 'muted' | 'calm']} onChange={e => updatePreferences({ ...prefs, [item.key]: e.target.checked })} /> {item.label}</span></label>)}<label>Tekstgrootte<select value={prefs.textSize} onChange={e => updatePreferences({ ...prefs, textSize: e.target.value })}><option value="normal">Normaal</option><option value="large">Groter</option></select></label></section>
+    <section className="family-settings"><h2>Fijn lezen voor {active.name}</h2>{[{ key: 'muted', label: 'Geluid uit' }, { key: 'calm', label: 'Minder beweging' }].map(item => <label key={item.key}><span><input style={{width:'auto'}} type="checkbox" checked={!!prefs[item.key as 'muted' | 'calm']} onChange={e => updatePreferences({ ...prefs, [item.key]: e.target.checked })} /> {item.label}</span></label>)}<label>Tekstgrootte<select value={prefs.textSize} onChange={e => updatePreferences({ ...prefs, textSize: e.target.value === 'large' ? 'large' : 'normal' })}><option value="normal">Normaal</option><option value="large">Groter</option></select></label></section>
     <section className="family-settings"><h2>Jullie gegevens</h2><p>Download de gezinsgegevens die op dit apparaat beschikbaar zijn.</p><button className="account-secondary" onClick={download}>Gezinsgegevens downloaden</button><p><a href="/profiel/account">Profiel → Account → Account verwijderen</a></p><p>Er zijn op dit moment geen betaalde abonnementen of aankopen.</p></section>{notice && <p role="status" className="account-feedback">{notice}</p>}
   </PageShell>;
 }

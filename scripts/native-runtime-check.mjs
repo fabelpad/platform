@@ -11,8 +11,9 @@ try {
   const { appendChoice } = await import(await compileSource(new URL('../mobile/src/readerProgress.ts', import.meta.url), directory));
   const { createStorageQueue } = await import(await compileSource(new URL('../mobile/src/storageQueue.ts', import.meta.url), directory));
   const { storiesForProfile, normalizeStoryVersions } = await import(await compileSource(new URL('../mobile/src/storyReleases.ts', import.meta.url), directory));
-  const { normalizeReadingLevel, normalizeReadingHistory, readingContent, withCompatibleReading, completedRoute, completedVersion, completedCount } = await import(await compileSource(new URL('../mobile/src/readingLevels.ts', import.meta.url), directory));
+  const { normalizeReadingLevel, normalizeReadingHistory, readingContent, withCompatibleReading, completedRoute, completedVersion, completedCount, amsterdamDate, automaticReadingLevel, effectiveReadingLevel, isValidBirthDate, nextAmsterdamDayDelay, profileWithReadingSettings, profileReadingLevel } = await import(await compileSource(new URL('../mobile/src/readingLevels.ts', import.meta.url), directory));
   const { getReadingScene, getReadingEnding } = await import(await compileSource(new URL('../src/storyReadingLevels.ts', import.meta.url), directory));
+  const { PARENT_SESSION_MS, parentSessionIsActive, parentYearAllowsAccess } = await import(await compileSource(new URL('../mobile/src/parentAccess.ts', import.meta.url), directory));
   const catalog = JSON.parse(await readFile(new URL('../mobile/src/content.json', import.meta.url), 'utf8'));
   assert.equal(catalog.stories.length, 13);
   assert.equal(catalog.stories.reduce((sum, story) => sum + Object.keys(story.scenes).length, 0), 403);
@@ -96,6 +97,52 @@ try {
   const profile = id => ({ id, name: id, avatar: 0, picks: { station: [] }, favorites: [], calm: false, largeText: false });
   assert.equal(normalizeReadingLevel(undefined), '6to8');
   assert.equal(normalizeReadingLevel('unknown'), '6to8');
+  assert.equal(parentYearAllowsAccess('2000', '2026-11-23'), true, 'A synthetic adult can enter local parent settings');
+  for (const answer of ['', '20', '2020', '1899', 'abcd']) assert.equal(parentYearAllowsAccess(answer, '2026-11-23'), false);
+  const sessionStart = 123_000;
+  assert.equal(parentSessionIsActive(0, sessionStart), false);
+  assert.equal(parentSessionIsActive(sessionStart + PARENT_SESSION_MS, sessionStart), true);
+  assert.equal(parentSessionIsActive(sessionStart + PARENT_SESSION_MS, sessionStart + PARENT_SESSION_MS), false, 'Parent access ends at the session boundary');
+  assert.equal(parentSessionIsActive(0, sessionStart + 1), false, 'Backgrounding invalidates a previously valid session');
+  const birthday = { ...profile('birthday'), readingLevel: '9plus', picks: { station: [1, 0, 1] } };
+  for (const invalid of ['', '2026-04-31', '2025-02-29', '2026-11-24']) {
+    assert.equal(isValidBirthDate(invalid, '2026-11-23'), false);
+    assert.throws(() => profileWithReadingSettings(birthday, invalid, undefined, true, '2026-11-23'), /geboortedatum/);
+  }
+  assert.equal(isValidBirthDate('2024-02-29', '2026-11-23'), true);
+  assert.equal(profileWithReadingSettings(birthday, '2024-02-29', undefined, true, '2026-11-23').birthDate, '2024-02-29');
+  for (const [birthDate, dates, expected] of [
+    ['2020-11-23', ['2026-11-22', '2026-11-23', '2026-11-24'], ['under6', '6to8', '6to8']],
+    ['2017-11-23', ['2026-11-22', '2026-11-23', '2026-11-24'], ['6to8', '9plus', '9plus']],
+    ['2020-02-29', ['2029-02-28', '2029-03-01', '2029-03-02'], ['6to8', '9plus', '9plus']],
+  ]) dates.forEach((today, index) => assert.equal(automaticReadingLevel(birthDate, today), expected[index]));
+  assert.equal(amsterdamDate(new Date('2026-11-22T23:01:00Z')), '2026-11-23', 'Android and server use Dutch midnight, regardless of device timezone');
+  assert.equal(nextAmsterdamDayDelay(new Date('2026-11-22T22:59:59.000Z')), 1020, 'An active app refreshes just after Dutch midnight');
+  assert.equal(nextAmsterdamDayDelay(new Date('2026-03-28T23:00:00.000Z')), 23 * 3600000 + 20, 'Dutch spring transition is a 23-hour calendar day');
+  assert.equal(nextAmsterdamDayDelay(new Date('2026-10-24T22:00:00.000Z')), 25 * 3600000 + 20, 'Dutch autumn transition is a 25-hour calendar day');
+  normalizeReadingHistory(birthday);
+  assert.equal(birthday.birthDate, undefined, 'Legacy profiles get no invented birthday');
+  assert.equal(birthday.readingLevelOverride, undefined, 'A former reader selection is no explicit parent override');
+  assert.equal(profileReadingLevel(birthday, '2026-11-23'), '9plus', 'A valid old category remains readable until a date is supplied');
+  const invalidSavedDate = { ...birthday, birthDate: '2026-04-31', readingLevelOverride: 'unknown' };
+  normalizeReadingHistory(invalidSavedDate);
+  assert.equal(invalidSavedDate.birthDate, undefined);
+  assert.equal(invalidSavedDate.readingLevelOverride, undefined);
+  assert.deepEqual(invalidSavedDate.picks.station, birthday.picks.station, 'Invalid added metadata never discards a legacy route');
+  const automatic = profileWithReadingSettings(birthday, '2019-11-23', undefined, false, '2026-11-23');
+  assert.equal(profileReadingLevel(automatic, '2026-11-23'), '6to8', 'A supplied birthday supersedes an old reader setting immediately');
+  assert.deepEqual(automatic.picks.station, [1, 0, 1], 'A date edit keeps the route and chapter');
+  const manual = profileWithReadingSettings(automatic, automatic.birthDate, '9plus', false, '2026-11-23');
+  const restoredManual = JSON.parse(JSON.stringify(manual));
+  assert.equal(profileReadingLevel(restoredManual, '2026-11-23'), '9plus', 'An explicit parent choice survives saving and reopening');
+  const dateEditedManual = profileWithReadingSettings(restoredManual, '2022-01-01', restoredManual.readingLevelOverride, false, '2026-11-23');
+  assert.equal(profileReadingLevel(dateEditedManual, '2026-11-23'), '9plus', 'Date changes preserve an explicit override');
+  const resetAutomatic = profileWithReadingSettings(dateEditedManual, dateEditedManual.birthDate, undefined, false, '2026-11-23');
+  assert.equal(profileReadingLevel(resetAutomatic, '2026-11-23'), 'under6', 'Removing the override immediately restores the birthday category');
+  assert.equal(effectiveReadingLevel({}, undefined, '2026-11-23'), '6to8');
+  const switchedProfiles = ['2021-11-23', '2019-11-23', '2017-11-23'].map((birthDate, index) => ({ ...profile(`age-${index}`), birthDate, picks: { station: [index % 2] } }));
+  assert.deepEqual(switchedProfiles.map(p => profileReadingLevel(p, '2026-11-23')), ['under6', '6to8', '9plus']);
+  assert.deepEqual(switchedProfiles.map(p => p.picks.station), [[0], [1], [0]], 'Switching between age categories never merges child progress');
   const migrated = { ...profile('migrated'), picks: { station: [1, 0, 1, 0, 1] }, storyVersions: { station: 'legacy-version' }, readingLevel: 'malformed', lastCompletedPicks: { invalid: [0] } };
   normalizeReadingHistory(migrated);
   assert.equal(migrated.readingLevel, '6to8');
@@ -174,5 +221,5 @@ try {
   await Promise.all([first, deletion, last]);
   assert.deepEqual(JSON.parse(durable), { route: [1, 1] }, 'Deletion is ordered with later writes');
   assert.deepEqual(operations.map(([operation]) => operation), ['set', 'set', 'remove', 'set']);
-  console.log('Native runtime geslaagd: 13 verhalen / 65 hoofdstukken / 403 scènes / 416 eindroutes × 3 leesniveaus (1209 scènes / 1248 eindes); 20 gecontroleerde runtime-illustraties, onveranderlijke releases, veilige legacy-leesniveaus, vijfdekeuze/aandenken en laatstvoltooide route; stationsacties, dubbele tik, timercleanup, profielhervatten, versievaste verhalen/eindes na updates, opslagfout en schrijf-/wisvolgorde. Geen toesteltest.');
+  console.log('Native runtime geslaagd: verplichte geldige geboortedatum voor nieuwe persoonlijke profielen, 6e/9e verjaardag, schrikkeldag op 1 maart, Nederlandse middernacht en zomertijd, bestaande profielen zonder verzonnen datum, handmatige oudervoorkeur en terug naar automatisch, profielwissel met routebehoud; 13 verhalen / 65 hoofdstukken / 403 scènes / 416 eindroutes × 3 leesniveaus (1209 scènes / 1248 eindes); 20 gecontroleerde runtime-illustraties, onveranderlijke releases, vijfdekeuze/aandenken en laatstvoltooide route; stationsacties, dubbele tik, timercleanup, profielhervatten, versievaste verhalen/eindes na updates, opslagfout en schrijf-/wisvolgorde. Geen toesteltest.');
 } finally { await rm(directory, { recursive: true, force: true }); }

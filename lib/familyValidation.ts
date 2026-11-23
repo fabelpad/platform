@@ -1,5 +1,7 @@
 import { STORY_IDS, MEMORY_ENCOUNTERS, MEMORY_ITEMS, MEMORY_THREADS, MEMORY_EVENTS } from '../src/storyCatalog';
 import { isReadingLevel } from '../src/readingLevel';
+import type { ReadingLevel } from '../src/readingLevel';
+import { isValidBirthDate } from '../src/profileReading';
 
 export const MAX_FAMILY_BYTES = 256 * 1024;
 export const MAX_CHILDREN = 5;
@@ -9,7 +11,7 @@ type WorldId = typeof WORLD_IDS[number];
 
 export type FamilySnapshot = {
   schemaVersion: 1;
-  family: { version: 1; children: { id: string; name: string; avatar: number }[]; activeId: string };
+  family: { version: 1; children: { id: string; name: string; avatar: number; birthDate?: string; readingLevelOverride?: ReadingLevel }[]; activeId: string };
   data: Record<string, Record<string, unknown>>;
 };
 export type SnapshotValidation = { ok: true; snapshot: FamilySnapshot } | { ok: false; reason: string };
@@ -94,7 +96,9 @@ export function validateFamilySnapshot(value: unknown): SnapshotValidation {
     ? { ok: true, snapshot: value as FamilySnapshot } : invalid('Een leeg online gezin bevat geen actief profiel of leesgegevens.');
   const ids = new Set<string>();
   for (const child of family.children) {
-    if (!object(child) || !keys(child, ['id', 'name', 'avatar']) || typeof child.id !== 'string' || !/^[a-zA-Z0-9_-]{1,80}$/.test(child.id) || ['__proto__', 'prototype', 'constructor'].includes(child.id) || ids.has(child.id) || !text(child.name, 20) || !integer(child.avatar, 0, 3)) return invalid('Een kindprofiel bevat ongeldige gegevens.');
+    if (!object(child) || !keys(child, ['id', 'name', 'avatar', 'birthDate', 'readingLevelOverride'], ['id', 'name', 'avatar']) || typeof child.id !== 'string' || !/^[a-zA-Z0-9_-]{1,80}$/.test(child.id) || ['__proto__', 'prototype', 'constructor'].includes(child.id) || ids.has(child.id) || !text(child.name, 20) || !integer(child.avatar, 0, 3)) return invalid('Een kindprofiel bevat ongeldige gegevens.');
+    if (Object.hasOwn(child, 'birthDate') && !isValidBirthDate(child.birthDate)) return invalid('Vul een bestaande geboortedatum in die niet in de toekomst ligt.');
+    if (Object.hasOwn(child, 'readingLevelOverride') && !isReadingLevel(child.readingLevelOverride)) return invalid('Kies een geldig leesniveau of gebruik automatisch leesniveau.');
     ids.add(child.id);
   }
   if (typeof family.activeId !== 'string' || !ids.has(family.activeId)) return invalid('Het actieve kindprofiel bestaat niet in dit gezin.');
@@ -104,6 +108,19 @@ export function validateFamilySnapshot(value: unknown): SnapshotValidation {
     for (const [field, record] of Object.entries(fields)) if (!childField(field, record)) return invalid('Een verhaalrecord bevat ongeldige gegevens.');
   }
   return { ok: true, snapshot: value as FamilySnapshot };
+}
+
+/** Legacy profiles may remain undated. Only an ID already stored in this own
+ * family qualifies; a claimed revision or another parent's profile cannot make
+ * a newly created child look like a legacy child. The database repeats this
+ * check inside its lifecycle/CAS write lock. */
+export function validateFamilyProfileChanges(snapshot: FamilySnapshot, previous: FamilySnapshot | null): { ok: true } | { ok: false; reason: string } {
+  const existing = new Map(previous?.family.children.map(child => [child.id, child]) ?? []);
+  for (const child of snapshot.family.children) {
+    const before = existing.get(child.id);
+    if (!child.birthDate && (!before || before.birthDate)) return { ok: false, reason: 'Vul voor dit kindprofiel een geldige geboortedatum in.' };
+  }
+  return { ok: true };
 }
 
 export function validPutBody(value: unknown): value is { baseRevision: number; snapshot: unknown } {

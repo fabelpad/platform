@@ -9,7 +9,7 @@ type StoredStory = { picks: number[]; revision: number; contentVersion: string; 
 async function syntheticProfile(page: Page, options: { large?: boolean; world?: string; picks?: number[]; level?: string; version?: string; release?: unknown } = {}) {
   await page.addInitScript(({ prefix, profile, options }) => {
     const base = `${prefix}fabelpad-child-${profile}-`;
-    localStorage.setItem(`${prefix}fabelpad-family`, JSON.stringify({ version: 1, children: [{ id: profile, name: 'Avonturier', avatar: 0 }], activeId: profile }));
+    if (!localStorage.getItem(`${prefix}fabelpad-family`)) localStorage.setItem(`${prefix}fabelpad-family`, JSON.stringify({ version: 1, children: [{ id: profile, name: 'Avonturier', avatar: 0 }], activeId: profile }));
     if (!localStorage.getItem(`${base}prefs`)) localStorage.setItem(`${base}prefs`, JSON.stringify({ muted: true, calm: true, ...(options.large ? { textSize: 'large' } : {}), ...(options.level ? { readingLevel: options.level } : {}) }));
     if (options.world && options.picks && !localStorage.getItem(`${base}story-${options.world}`)) localStorage.setItem(`${base}story-${options.world}`, JSON.stringify({ picks: options.picks, revision: options.picks.length, updatedAt: 1, storyId: options.world, ...(options.version ? { contentVersion: options.version } : {}) }));
     if (options.world && options.version && options.release) localStorage.setItem(`fabelpad-content-v1:${options.world}:${options.version}`, JSON.stringify(options.release));
@@ -27,7 +27,7 @@ for (const [storyIndex, world] of worlds.entries()) test(`${world.id}: all five 
   await syntheticProfile(page);
   await page.setViewportSize({ width: storyIndex % 2 ? 390 : 768, height: 900 });
   await page.goto(`/lezen?story=${world.id}`);
-  await expect(page.getByRole('combobox', { name: 'Leesniveau', exact: true })).toHaveValue('6to8');
+  await expect(page.locator('.reader-shell select')).toHaveCount(0);
   const picks: number[] = [];
   for (let chapter = 0; chapter < 5; chapter++) {
     await expect(page.getByText(`Deel ${chapter + 1} van 5`, { exact: true })).toBeVisible();
@@ -88,25 +88,29 @@ test('illustrated choices remain usable with large text across phone, tablet and
   }
 });
 
-test('reading level switches preserve the active route, chapter, pinned edition and progress', async ({ page }) => {
+test('parent profile reading preferences preserve the active route, chapter, pinned edition and progress', async ({ page }) => {
   await syntheticProfile(page, { world: 'station', picks: [1, 0] });
   await page.goto('/lezen?story=station');
-  const level = page.getByRole('combobox', { name: 'Leesniveau', exact: true });
-  await expect(level).toHaveValue('6to8');
+  await expect(page.locator('.reader-shell select')).toHaveCount(0);
   const initial = await stored(page, 'station');
   const textMiddle = await page.locator('.reader-story-text').innerText();
-  await level.selectOption('under6');
+  async function chooseInProfile(level: string) {
+    await page.goto('/ouders');
+    await expect(page.locator('.pd-shell,.local-parent-gate')).toBeVisible();
+    if (await page.locator('#local-parent-answer').count()) { await page.locator('#local-parent-answer').fill('12'); await page.getByRole('button', { name: 'Naar de ouderomgeving', exact: true }).click(); }
+    await page.getByRole('button', { name: 'Profiel van Avonturier bewerken' }).click();
+    await page.locator('#pd-profile-reading-level').selectOption(level);
+    await page.getByRole('button', { name: 'Profiel bewaren', exact: true }).click();
+    await page.goto('/lezen?story=station&readingLevel=9plus');
+    await expect(page.getByText('Deel 3 van 5', { exact: true })).toBeVisible();
+    await expect(page.locator('.reader-shell select')).toHaveCount(0);
+    expect(await stored(page, 'station')).toEqual(initial);
+  }
+  await chooseInProfile('under6');
   const textYoung = await page.locator('.reader-story-text').innerText();
   expect(textYoung).not.toBe(textMiddle);
-  await expect(page.getByText('Deel 3 van 5', { exact: true })).toBeVisible();
-  expect(await stored(page, 'station')).toEqual(initial);
-  await level.selectOption('9plus');
+  await chooseInProfile('9plus');
   expect(await page.locator('.reader-story-text').innerText()).not.toBe(textYoung);
-  expect(await stored(page, 'station')).toEqual(initial);
-  await page.getByRole('button', { name: 'Verhaal sluiten', exact: true }).click();
-  await page.getByRole('button', { name: 'Open Het Verdwaalde Station', exact: true }).click();
-  await expect(level).toHaveValue('9plus');
-  await expect(page.getByText('Deel 3 van 5', { exact: true })).toBeVisible();
   expect((await stored(page, 'station')).picks).toEqual([1, 0]);
 });
 
@@ -143,8 +147,8 @@ test('a saved custom edition is never overwritten by current reading-level rewri
   await syntheticProfile(page, { world: 'dream', picks: [], version: release.contentVersion, release });
   await page.goto('/lezen?story=dream');
   await expect(page.locator('.reader-story-text')).toHaveText(release.scenes[''].text);
-  await expect(page.getByRole('combobox', { name: 'Leesniveau', exact: true })).toBeDisabled();
-  await expect(page.locator('#reader-level-legacy')).toContainText('bewaarde verhaalversie');
+  await expect(page.locator('.reader-shell select')).toHaveCount(0);
+  await expect(page.locator('.reader-level-note')).toContainText('bewaarde verhaalversie');
   expect((await stored(page, 'dream')).contentVersion).toBe('feed000000000001');
 });
 
@@ -155,12 +159,16 @@ test('an unchanged original edition supports reading levels without changing its
   release.contentVersion = 'feed000000000002';
   await syntheticProfile(page, { world: 'dream', picks: [1, 0], version: release.contentVersion, release });
   await page.goto('/lezen?story=dream');
-  const level = page.getByRole('combobox', { name: 'Leesniveau', exact: true });
-  await expect(level).toBeEnabled();
-  await expect(level).toHaveValue('6to8');
+  await expect(page.locator('.reader-shell select')).toHaveCount(0);
   expect((await page.locator('.reader-story-text').innerText()).replace(/\s+/gu, ' ').trim()).toBe(expected.replace(/\s+/gu, ' ').trim());
   const before = await stored(page, 'dream');
-  await level.selectOption('under6');
+  await page.goto('/ouders');
+    await expect(page.locator('.pd-shell,.local-parent-gate')).toBeVisible();
+    if (await page.locator('#local-parent-answer').count()) { await page.locator('#local-parent-answer').fill('12'); await page.getByRole('button', { name: 'Naar de ouderomgeving', exact: true }).click(); }
+  await page.getByRole('button', { name: 'Profiel van Avonturier bewerken' }).click();
+  await page.locator('#pd-profile-reading-level').selectOption('under6');
+  await page.getByRole('button', { name: 'Profiel bewaren', exact: true }).click();
+  await page.goto('/lezen?story=dream');
   expect((await page.locator('.reader-story-text').innerText()).replace(/\s+/gu, ' ').trim()).not.toBe(expected.replace(/\s+/gu, ' ').trim());
   expect(await stored(page, 'dream')).toEqual(before);
   expect(before).toMatchObject({ picks: [1, 0], contentVersion: 'feed000000000002' });

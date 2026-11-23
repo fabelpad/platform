@@ -1,4 +1,4 @@
-import { MAX_FAMILY_BYTES, validPutBody, validateFamilySnapshot } from '../familyValidation';
+import { MAX_FAMILY_BYTES, validPutBody, validateFamilyProfileChanges, validateFamilySnapshot } from '../familyValidation';
 import { createSupabaseServerClient, getVerifiedParent } from '../supabase/server';
 import { checkMutationOrigin, handleApiError, privateJson, readJson, RequestError } from './http';
 import { parentRpcError, requireActiveParentAccount } from './parent';
@@ -25,6 +25,14 @@ export async function handleSupabaseFamilyRequest(request: Request): Promise<Res
     if (!validPutBody(body)) throw new RequestError(422, 'invalid_request', 'Het opslagverzoek is ongeldig.');
     const checked = validateFamilySnapshot(body.snapshot);
     if (!checked.ok) throw new RequestError(422, 'invalid_snapshot', checked.reason);
+    // Only this authenticated parent's stored IDs establish legacy status.
+    // The RPC repeats the comparison while holding the existing write lock.
+    const { data: stored, error: storedError } = await client.from('family_documents').select('snapshot,revision').eq('parent_id', parent.id).maybeSingle();
+    if (storedError) throw storedError;
+    const previous = stored ? validateFamilySnapshot(stored.snapshot) : null;
+    if (previous && !previous.ok) throw new Error('Invalid stored family');
+    const changes = validateFamilyProfileChanges(checked.snapshot, previous?.ok ? previous.snapshot : null);
+    if (!changes.ok) throw new RequestError(422, 'invalid_snapshot', changes.reason);
     const { data, error } = await client.rpc('save_family_snapshot', { p_base_revision: body.baseRevision, p_snapshot: checked.snapshot });
     if (error) parentRpcError(error);
     if (!data) throw new Error('Missing save outcome');

@@ -1,16 +1,22 @@
 package nl.fabelpad.speech
 
 import android.os.Bundle
+import android.app.DatePickerDialog
+import android.content.res.Configuration
 import android.content.pm.PackageManager
 import android.os.Handler
 import android.os.Looper
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
 import android.speech.tts.Voice
+import android.view.ContextThemeWrapper
 import expo.modules.kotlin.Promise
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 import java.util.UUID
+import java.util.Calendar
+import java.util.GregorianCalendar
+import java.util.Locale
 
 /** Only an installed Dutch voice that reports offline synthesis may receive text. */
 class FabelpadOfflineSpeechModule : Module() {
@@ -22,6 +28,7 @@ class FabelpadOfflineSpeechModule : Module() {
   private var generation = 0L
   private var engineGeneration = 0L
   private var finalUtterance: String? = null
+  private var dateDialog: DatePickerDialog? = null
 
   override fun definition() = ModuleDefinition {
     Name("FabelpadOfflineSpeech")
@@ -35,9 +42,22 @@ class FabelpadOfflineSpeechModule : Module() {
     AsyncFunction("stop") { promise: Promise ->
       main.post { stopSpeech(); promise.resolve(null) }
     }
+    AsyncFunction("pickBirthDate") { initialDate: String, latestDate: String, promise: Promise ->
+      main.post {
+        runCatching { pickBirthDate(initialDate, latestDate, promise) }.onFailure {
+          promise.reject("ERR_BIRTH_DATE_PICKER", "De datumkiezer kon niet worden geopend.", null)
+        }
+      }
+    }
+    AsyncFunction("closeBirthDatePicker") { promise: Promise ->
+      main.post { dateDialog?.dismiss(); dateDialog = null; promise.resolve(null) }
+    }
+    OnActivityEntersBackground { main.post { dateDialog?.dismiss(); dateDialog = null } }
     OnDestroy {
       main.post {
         destroyed = true
+        dateDialog?.dismiss()
+        dateDialog = null
         stopSpeech()
         engine?.shutdown()
         engineGeneration += 1
@@ -45,6 +65,45 @@ class FabelpadOfflineSpeechModule : Module() {
         ready = false
       }
     }
+  }
+
+  /** A local calendar picker: date strings have no UTC conversion or network destination. */
+  private fun pickBirthDate(initialDate: String, latestDate: String, promise: Promise) {
+    val activity = appContext.currentActivity
+    if (destroyed || activity == null || activity.isFinishing || dateDialog != null) {
+      promise.reject("ERR_BIRTH_DATE_PICKER", "De datumkiezer is nu niet beschikbaar.", null)
+      return
+    }
+    fun calendar(value: String): Calendar {
+      require(Regex("\\d{4}-\\d{2}-\\d{2}").matches(value))
+      val parts = value.split('-').map(String::toInt)
+      return GregorianCalendar().apply {
+        isLenient = false
+        set(parts[0], parts[1] - 1, parts[2], 12, 0, 0)
+        set(Calendar.MILLISECOND, 0)
+        timeInMillis // Validate, without logging or returning an instant to JavaScript.
+      }
+    }
+    val latest = calendar(latestDate)
+    val selected = calendar(initialDate.ifEmpty { latestDate })
+    val context = ContextThemeWrapper(activity, android.R.style.Theme_DeviceDefault_Light_Dialog).apply {
+      applyOverrideConfiguration(Configuration(activity.resources.configuration).apply { setLocale(Locale.forLanguageTag("nl-NL")) })
+    }
+    var delivered = false
+    val dialog = DatePickerDialog(context, { _, year, month, day ->
+      if (!delivered) {
+        delivered = true
+        promise.resolve(String.format(Locale.ROOT, "%04d-%02d-%02d", year, month + 1, day))
+      }
+    }, selected.get(Calendar.YEAR), selected.get(Calendar.MONTH), selected.get(Calendar.DAY_OF_MONTH))
+    dialog.setTitle("Geboortedatum")
+    dialog.datePicker.maxDate = latest.timeInMillis
+    dialog.setOnDismissListener {
+      dateDialog = null
+      if (!delivered) { delivered = true; promise.resolve(null) }
+    }
+    dateDialog = dialog
+    dialog.show()
   }
 
   @Suppress("DEPRECATION")

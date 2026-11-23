@@ -2,7 +2,7 @@ import { test, expect, type Page } from '@playwright/test';
 import type { FamilySnapshot } from '../../src/profileStorage';
 
 const parent = { id: 'synthetic-family-jsonb', email: 'parent@example.test', displayName: 'Testouder' };
-const active = { state: 'active', termsVersion: '2026-11-22', privacyVersion: '2026-11-22.1', acceptedTermsVersion: '2026-11-22', shownPrivacyVersion: '2026-11-22.1', lastActivityAt: '2026-11-22T12:00:00Z', deletionDeadline: null, consents: [] };
+const active = { state: 'active', termsVersion: '2026-11-22', privacyVersion: '2026-11-23', acceptedTermsVersion: '2026-11-22', shownPrivacyVersion: '2026-11-23', lastActivityAt: '2026-11-22T12:00:00Z', deletionDeadline: null, consents: [] };
 // PostgreSQL JSONB serializes object keys by length and then byte order. Their
 // order is immaterial; profile arrays and story-choice arrays stay ordered.
 function jsonbOrder(value: unknown): unknown {
@@ -39,7 +39,9 @@ test('first consented profile accepts the PostgreSQL response and reopens withou
   });
   await page.goto('/gezin');
   await page.getByRole('checkbox').check();
-  await page.getByRole('button', { name: 'Start met een nieuw profiel Avonturier' }).click();
+  await page.locator('#onboarding-child-name').fill('Avonturier');
+  await page.locator('#onboarding-child-birth-date').fill('2019-11-23');
+  await page.getByRole('button', { name: 'Nieuw kindprofiel bewaren' }).click();
   await expect(page.locator('.world-card')).toHaveCount(13);
   await expect(page.getByText('Avonturen bewaard', { exact: true })).toBeVisible();
   expect(uploads).toBe(1); expect(consents).toBe(1);
@@ -63,7 +65,7 @@ test('a profile saved before the response bug is recovered from a stale dirty dr
   await page.goto('/gezin');
   await expect(page.locator('.world-card')).toHaveCount(13);
   await expect(page.getByText('Avonturen bewaard', { exact: true })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Start met een nieuw profiel Avonturier' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Nieuw kindprofiel bewaren' })).toHaveCount(0);
   expect(uploads).toBe(0); expect(consents).toBe(0);
   const draft = await page.evaluate(parentId => JSON.parse(localStorage.getItem(`fabelpad-cloud-draft-${encodeURIComponent(parentId)}`)!), parent.id);
   expect(draft.dirty).toBe(false); expect(draft.revision).toBe(1); expect(draft.snapshot).toEqual(snapshot);

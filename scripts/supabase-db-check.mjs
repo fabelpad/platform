@@ -14,9 +14,10 @@ const parentB = '22222222-2222-4222-8222-222222222222';
 const administrator = '33333333-3333-4333-8333-333333333333';
 const bootstrapAdministrator = '44444444-4444-4444-8444-444444444444';
 const pendingAdministrator = '55555555-5555-4555-8555-555555555555';
-const fixture = name => ({ schemaVersion: 1, family: { version: 1, children: [{ id: 'shared-child-id', name, avatar: 0 }], activeId: 'shared-child-id' }, data: { 'shared-child-id': { favorites: ['station'], started: ['station'], completed: {}, prefs: { muted: false, calm: true }, 'story-station': { picks: [0], updatedAt: 1790000000000, contentVersion: 'a'.repeat(16), storyId: 'station', revision: 1 }, memory: { version: 1, encounters: [], items: [], openThreads: [], events: [] } } } });
+const fixture = name => ({ schemaVersion: 1, family: { version: 1, children: [{ id: 'shared-child-id', name, avatar: 0, birthDate: '2019-05-14' }], activeId: 'shared-child-id' }, data: { 'shared-child-id': { favorites: ['station'], started: ['station'], completed: {}, prefs: { muted: false, calm: true }, 'story-station': { picks: [0], updatedAt: 1790000000000, contentVersion: 'a'.repeat(16), storyId: 'station', revision: 1 }, memory: { version: 1, encounters: [], items: [], openThreads: [], events: [] } } } });
 async function identity(id, role = 'authenticated', extra = {}) {
   await db.exec('reset role');
+  const privacy = (await db.query("select version from private.legal_document_versions where kind='privacy' order by version desc limit 1")).rows[0].version;
   const session = id;
   if (id && role === 'authenticated' && !extra.is_anonymous) {
     await db.query("update auth.users set email=coalesce(email,'synthetic-'||id::text||'@example.test'),email_confirmed_at=coalesce(email_confirmed_at,now()) where id=$1",[id]);
@@ -25,7 +26,7 @@ async function identity(id, role = 'authenticated', extra = {}) {
   await db.query("select set_config('request.jwt.claims', $1, false)", [JSON.stringify({ sub: id,session_id:session,amr:[{method:'otp',timestamp:Math.floor(Date.now()/1000)}], ...extra })]);
   await db.exec(`set role ${role}`);
   if (id && role === 'authenticated' && !extra.is_anonymous) {
-    await db.query("select public.complete_parent_onboarding('2026-11-22','2026-11-22.1',true,true)");
+    await db.query("select public.complete_parent_onboarding('2026-11-22',$1,true,true)", [privacy]);
     await db.query("select public.consent_child_profile('shared-child-id',true,true)");
   }
 }

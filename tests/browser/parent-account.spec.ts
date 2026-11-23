@@ -2,7 +2,7 @@ import { test, expect, type Page } from '@playwright/test';
 import type { FamilySnapshot } from '../../src/profileStorage';
 
 const parent = { id: 'synthetic-parent-legal', email: 'parent@example.test', displayName: 'Testouder' };
-const current = { termsVersion: '2026-11-22', privacyVersion: '2026-11-22.1' };
+const current = { termsVersion: '2026-11-22', privacyVersion: '2026-11-23' };
 const active = { state: 'active', ...current, acceptedTermsVersion: current.termsVersion, shownPrivacyVersion: current.privacyVersion, lastActivityAt: '2026-11-22T12:00:00Z', deletionDeadline: null, consents: [] };
 async function session(page: Page, lifecycle: unknown = active) {
   await page.route('**/api/auth/session', route => route.fulfill({ json: { configured: true, parent, admin: false, providers: { email: true, google: true }, lifecycle } }));
@@ -80,11 +80,13 @@ test('an optional online child profile is never uploaded before its own consent'
   await page.route('**/api/parent/consent', route => { consents++; return route.fulfill({ json: active }); });
   await page.route('**/api/family', route => { if (route.request().method() === 'PUT') { uploads++; snapshot = route.request().postDataJSON().snapshot; } return route.fulfill({ json: { parent, revision: uploads, snapshot } }); });
   await page.goto('/gezin');
-  const create = page.getByRole('button', { name: 'Start met een nieuw profiel Avonturier' });
+  const create = page.getByRole('button', { name: 'Nieuw kindprofiel bewaren' });
   await expect(create).toBeDisabled();
   await expect(page.getByRole('link', { name: 'Verder lezen zonder online kinderprofiel →' })).toBeVisible();
   expect(uploads).toBe(0);
   await page.getByRole('checkbox').check();
+  await page.locator('#onboarding-child-name').fill('Avonturier');
+  await page.locator('#onboarding-child-birth-date').fill('2019-11-23');
   await create.click();
   await expect(page.locator('.world-card')).toHaveCount(13);
   expect(consents).toBe(1);

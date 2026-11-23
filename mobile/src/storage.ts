@@ -7,7 +7,7 @@ import { normalizeReadingHistory } from './readingLevels';
 const KEY = 'fabelpad-native-prototype-v1';
 const queue = createStorageQueue(AsyncStorage, KEY);
 export function freshStore(contentVersion: string): Store {
-  return { schemaVersion: 1, contentVersion, activeId: 'local-child', profiles: [{ id: 'local-child', name: 'Avonturier', avatar: 0, picks: {}, storyVersions: {}, lastCompletedPicks: {}, lastCompletedStoryVersions: {}, readingLevel: '6to8', favorites: [], calm: false, largeText: false }] };
+  return { schemaVersion: 1, contentVersion, activeId: 'local-child', profiles: [{ id: 'local-child', name: 'Avonturier', avatar: 0, isPersonal: false, picks: {}, storyVersions: {}, lastCompletedPicks: {}, lastCompletedStoryVersions: {}, readingLevel: '6to8', favorites: [], calm: false, largeText: false }] };
 }
 export async function loadStore(contentVersion: string, storyIds: string[], availableVersions = [contentVersion]): Promise<{ store: Store; contentChanged: boolean }> {
   const raw = await AsyncStorage.getItem(KEY);

@@ -1,3 +1,4 @@
+import nativePackage from './package.json';
 const variant = process.env.FABELPAD_VARIANT || 'demo';
 if (variant !== 'demo' && variant !== 'production') throw new Error('FABELPAD_VARIANT moet demo of production zijn.');
 const production = variant === 'production';
@@ -8,7 +9,7 @@ if (!packageId || !/^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*){2,}$/.test(packageId)) {
 if (production && packageId !== 'nl.fabelpad.app') throw new Error('De vastgelegde productie-package-ID is nl.fabelpad.app.');
 const versionCode = Number(process.env.FABELPAD_ANDROID_VERSION_CODE || '1');
 if (!Number.isSafeInteger(versionCode) || versionCode < 1 || versionCode > 2_100_000_000) throw new Error('FABELPAD_ANDROID_VERSION_CODE moet een geheel getal van 1 tot en met 2100000000 zijn.');
-const versionName = production ? process.env.FABELPAD_ANDROID_VERSION_NAME || '1.0.0' : '0.1.0';
+const versionName = production ? process.env.FABELPAD_ANDROID_VERSION_NAME || nativePackage.version : '0.1.0';
 if (!/^\d+\.\d+\.\d+$/.test(versionName)) throw new Error('FABELPAD_ANDROID_VERSION_NAME moet major.minor.patch zijn.');
 if (production && !process.env.FABELPAD_ANDROID_VERSION_CODE) throw new Error('Leg FABELPAD_ANDROID_VERSION_CODE expliciet vast voor iedere productiebuild.');
 const privacyUrl = process.env.FABELPAD_PRIVACY_URL || (production ? 'https://fabelpad.nl/privacy' : '');

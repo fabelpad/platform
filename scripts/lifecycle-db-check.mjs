@@ -11,7 +11,7 @@ const PREVIEW='66666666-6666-4666-8666-666666666666';
 let clock='2026-11-22T12:00:00.000Z';let id=0;
 let currentPrivacyVersion='2026-11-22';
 const event=()=>`bbbbbbbb-bbbb-4bbb-8bbb-${String(++id).padStart(12,'0')}`;
-const fixture=(ids=['child-a'])=>({schemaVersion:1,family:{version:1,children:ids.map((id,i)=>({id,name:'Bijnaam',avatar:i%4})),activeId:ids[0]??''},data:Object.fromEntries(ids.map(id=>[id,{favorites:['station'],prefs:{muted:false,calm:true}}]))});
+const fixture=(ids=['child-a'])=>({schemaVersion:1,family:{version:1,children:ids.map((id,i)=>({id,name:'Bijnaam',avatar:i%4,birthDate:'2019-05-14'})),activeId:ids[0]??''},data:Object.fromEntries(ids.map(id=>[id,{favorites:['station'],prefs:{muted:false,calm:true}}]))});
 const owner=async()=>db.exec('reset role');
 async function tick(value){clock=value;await owner();await db.exec(`create or replace function private.lifecycle_now() returns timestamptz language sql volatile set search_path='' as $$ select '${value}'::timestamptz $$`);}
 async function identity(actor,{fresh=true,session=true,anonymous=false,method='otp'}={}){

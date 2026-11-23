@@ -1,4 +1,7 @@
 import type { Profile, ReadingContent, ReadingLevel, Story } from './types';
+import { amsterdamDate, effectiveReadingLevel, isValidBirthDate } from '../../src/profileReading';
+
+export { amsterdamDate, automaticReadingLevel, effectiveReadingLevel, isValidBirthDate } from '../../src/profileReading';
 
 export const DEFAULT_READING_LEVEL: ReadingLevel = '6to8';
 export const readingLevels: { id: ReadingLevel; label: string }[] = [
@@ -31,6 +34,9 @@ export function completedCount(profile: Profile): number {
 /** Normalize only the new fields; a malformed preference never discards saved routes. */
 export function normalizeReadingHistory(profile: Profile): void {
   profile.readingLevel = normalizeReadingLevel(profile.readingLevel);
+  // Older reader choices are fallback text variants, never explicit parent overrides.
+  if (!isValidBirthDate(profile.birthDate)) delete profile.birthDate;
+  if (!readingLevels.some(level => level.id === profile.readingLevelOverride)) delete profile.readingLevelOverride;
   const previous = profile.lastCompletedPicks && typeof profile.lastCompletedPicks === 'object' && !Array.isArray(profile.lastCompletedPicks) ? profile.lastCompletedPicks : {};
   const versions = profile.lastCompletedStoryVersions && typeof profile.lastCompletedStoryVersions === 'object' && !Array.isArray(profile.lastCompletedStoryVersions) ? profile.lastCompletedStoryVersions : {};
   profile.lastCompletedPicks = Object.fromEntries(Object.entries(previous).filter(([id, route]) => !!id && Array.isArray(route) && route.length === 5 && route.every(choice => choice === 0 || choice === 1)).map(([id, route]) => [id, [...route]]));
@@ -42,4 +48,31 @@ export function normalizeReadingHistory(profile: Profile): void {
     const version = typeof versions[id] === 'string' ? versions[id] : profile.storyVersions?.[id];
     if (version) profile.lastCompletedStoryVersions[id] = version;
   }
+}
+
+/** Profile editing preserves all reading routes. Only new personal profiles require a date. */
+export function profileWithReadingSettings(profile: Profile, birthDate: string, override: ReadingLevel | undefined, creating: boolean, today = amsterdamDate()): Profile {
+  if ((creating || birthDate !== '' || profile.birthDate !== undefined) && !isValidBirthDate(birthDate, today)) {
+    throw new Error('Vul een geldige geboortedatum in die niet in de toekomst ligt.');
+  }
+  if (override !== undefined && !readingLevels.some(level => level.id === override)) throw new Error('Kies een geldig leesniveau.');
+  const next = { ...profile, ...(birthDate ? { birthDate } : {}), readingLevelOverride: override };
+  if (!birthDate) delete next.birthDate;
+  return next;
+}
+
+export function profileReadingLevel(profile: Profile, today = amsterdamDate()): ReadingLevel {
+  return effectiveReadingLevel(profile, profile.readingLevel, today);
+}
+
+/** Schedule the next Dutch calendar day, including 23/25-hour DST days. */
+export function nextAmsterdamDayDelay(now = new Date()): number {
+  const start = now.getTime(), currentDate = amsterdamDate(now);
+  let before = start, after = start + 27 * 60 * 60 * 1000;
+  while (after - before > 1) {
+    const middle = Math.floor((before + after) / 2);
+    if (amsterdamDate(new Date(middle)) === currentDate) before = middle;
+    else after = middle;
+  }
+  return Math.max(1, after - start + 20);
 }

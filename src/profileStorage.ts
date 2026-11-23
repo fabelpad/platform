@@ -1,6 +1,8 @@
 import { STORY_IDS } from './storyCatalog';
+import { isReadingLevel, type ReadingLevel } from './readingLevel';
+import { isValidBirthDate } from './profileReading';
 
-export type ChildProfile = { id: string; name: string; avatar: number };
+export type ChildProfile = { id: string; name: string; avatar: number; birthDate?: string; readingLevelOverride?: ReadingLevel };
 export type Family = { version: 1; children: ChildProfile[]; activeId: string };
 export type FamilySnapshot = { schemaVersion: 1; family: Family; data: Record<string, Record<string, unknown>> };
 export const MAX_CHILDREN = 5;
@@ -41,7 +43,7 @@ export function normalizeFamily(value: unknown): Family | null {
   for (const candidate of value.children) {
     if (!record(candidate) || typeof candidate.id !== 'string' || !/^[a-zA-Z0-9_-]{1,80}$/.test(candidate.id) || ids.has(candidate.id)) continue;
     ids.add(candidate.id);
-    children.push({ id: candidate.id, name: cleanName(candidate.name), avatar: cleanAvatar(candidate.avatar) });
+    children.push({ id: candidate.id, name: cleanName(candidate.name), avatar: cleanAvatar(candidate.avatar), ...(isValidBirthDate(candidate.birthDate) ? { birthDate: candidate.birthDate as string } : {}), ...(isReadingLevel(candidate.readingLevelOverride) ? { readingLevelOverride: candidate.readingLevelOverride } : {}) });
     if (children.length === MAX_CHILDREN) break;
   }
   if (!children.length) return null;
@@ -59,8 +61,9 @@ export function isFamilySnapshot(value: unknown): value is FamilySnapshot {
   if (!family || !record(value.family) || Object.keys(value.family).length !== 3 ||
     value.family.version !== family.version || value.family.activeId !== family.activeId ||
     !Array.isArray(value.family.children) || value.family.children.length !== family.children.length ||
-    value.family.children.some((child, index) => !record(child) || Object.keys(child).length !== 3 ||
-      child.id !== family.children[index].id || child.name !== family.children[index].name || child.avatar !== family.children[index].avatar)) return false;
+    value.family.children.some((child, index) => !record(child) || Object.keys(child).some(key => !['id', 'name', 'avatar', 'birthDate', 'readingLevelOverride'].includes(key)) ||
+      child.id !== family.children[index].id || child.name !== family.children[index].name || child.avatar !== family.children[index].avatar ||
+      ('birthDate' in child && child.birthDate !== family.children[index].birthDate) || ('readingLevelOverride' in child && child.readingLevelOverride !== family.children[index].readingLevelOverride))) return false;
   const childIds = new Set(family.children.map(child => child.id));
   return Object.entries(value.data).every(([id, fields]) => childIds.has(id) && record(fields) && Object.keys(fields).every(field => (CHILD_FIELDS as readonly string[]).includes(field)));
 }
@@ -84,9 +87,10 @@ export function saveChild(childId: string, field: string, value: unknown): boole
   if (!(CHILD_FIELDS as readonly string[]).includes(field)) return false;
   try { setRaw(childKey(childId, field), JSON.stringify(value)); return !volatileKeys.has(physical(childKey(childId, field))); } catch { return false; }
 }
-export function createChild(name: string, avatar: number): ChildProfile {
+export function createChild(name: string, avatar: number, birthDate?: string): ChildProfile {
+  if (birthDate !== undefined && !isValidBirthDate(birthDate)) throw new Error('Vul een geldige geboortedatum in die niet in de toekomst ligt.');
   const id = typeof globalThis.crypto?.randomUUID === 'function' ? globalThis.crypto.randomUUID() : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 13)}`;
-  return { id: `child-${id}`, name: cleanName(name), avatar: cleanAvatar(avatar) };
+  return { id: `child-${id}`, name: cleanName(name), avatar: cleanAvatar(avatar), ...(birthDate ? { birthDate } : {}) };
 }
 export function saveFamily(family: Family): void { const normalized = normalizeFamily(family); if (normalized) setRaw(FAMILY_KEY, JSON.stringify(normalized)); }
 function copyLegacyField(firstId: string, field: string, legacyKey: string, valid: (value: unknown) => boolean): void {
@@ -123,8 +127,8 @@ function snapshotWithFamily(family: Family): FamilySnapshot {
   return { schemaVersion: 1, family: { ...family, activeId: family.children[0].id }, data };
 }
 export function exportSnapshot(): FamilySnapshot { return snapshotWithFamily(loadFamily()); }
-export function freshSnapshot(): FamilySnapshot {
-  const child = createChild('Avonturier', 0);
+export function freshSnapshot(name = 'Avonturier', birthDate?: string): FamilySnapshot {
+  const child = createChild(name, 0, birthDate);
   return { schemaVersion: 1, family: { version: 1, children: [child], activeId: child.id }, data: { [child.id]: {} } };
 }
 export function hydrateSnapshot(snapshot: FamilySnapshot): void {
