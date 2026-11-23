@@ -126,6 +126,21 @@ class Claims(unittest.TestCase):
             with self.subTest(scope=scope), self.assertRaises(probe.ProbeError):
                 probe.verify_claims(token_claims(scope=scope), ACCOUNT, NOW)
 
+    def test_scope_diagnostic_names_only_static_identifiers(self):
+        scope = " ".join(probe.SCOPES) + " openid"
+        with self.assertRaises(probe.ProbeError) as caught:
+            probe.verify_claims(token_claims(scope=scope), ACCOUNT, NOW)
+        self.assertIn("openid", str(caught.exception))
+        self.assertIn("https://www.googleapis.com/auth/androidpublisher", str(caught.exception))
+        for malicious in (TOKEN, "https://www.googleapis.com/auth/" + TOKEN,
+                          "line\ninjection", "x" * 2049):
+            with self.subTest(malicious=malicious[:10]), self.assertRaises(probe.ProbeError) as caught:
+                probe.verify_claims(token_claims(scope=malicious), ACCOUNT, NOW)
+            self.assertNotIn(malicious, str(caught.exception))
+            self.assertNotIn(TOKEN, str(caught.exception))
+        self.assertEqual(probe.describe_scopes(None), "geen tekstveld")
+        self.assertEqual(probe.describe_scopes(""), "leeg")
+
     def test_missing_expired_implausible_and_mismatched_expiries_are_rejected(self):
         for changes in ({"expires_in": None}, {"expires_in": True}, {"expires_in": "1.5"},
                         {"expires_in": 0}, {"expires_in": -1}, {"expires_in": 43201},

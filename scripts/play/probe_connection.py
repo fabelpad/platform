@@ -29,6 +29,11 @@ OWNER_ID = "352706055"
 PACKAGE = "nl.fabelpad.app"
 SCOPES = frozenset({"https://www.googleapis.com/auth/androidpublisher",
                     "https://www.googleapis.com/auth/userinfo.email"})
+# Diagnostics may name only these static public identifiers, never arbitrary
+# server text. In particular, a malformed scope could itself contain a token.
+DIAGNOSTIC_SCOPES = SCOPES | frozenset({"openid", "email", "profile",
+    "https://www.googleapis.com/auth/userinfo.profile",
+    "https://www.googleapis.com/auth/cloud-platform"})
 MAX_TOKENINFO_BYTES = 65536
 PLAY_PATH = f"/androidpublisher/v3/applications/{PACKAGE}/reviews?maxResults=1"
 WORKFLOWS = {
@@ -70,6 +75,17 @@ def integer_field(value):
     return int(value)
 
 
+def describe_scopes(value):
+    if not isinstance(value, str):
+        return "geen tekstveld"
+    if len(value) > 2048:
+        return "te lang; inhoud afgeschermd"
+    items = value.split()
+    visible = sorted(set(items) & DIAGNOSTIC_SCOPES)
+    hidden = len(items) - len(visible)
+    return ", ".join(visible) + (f"; {hidden} onbekende items afgeschermd" if hidden else "") or "leeg"
+
+
 def verify_claims(claims, expected_account, now):
     if not isinstance(claims, dict):
         raise ProbeError("Google gaf geen geldig tokeninformatie-object terug.")
@@ -79,7 +95,8 @@ def verify_claims(claims, expected_account, now):
         raise ProbeError("De daadwerkelijke Google-tokenidentiteit is niet het verwachte geverifieerde serviceaccount.")
     scope = claims.get("scope")
     if not isinstance(scope, str) or frozenset(scope.split()) != SCOPES:
-        raise ProbeError("De daadwerkelijke OAuth-scopes wijken af van de twee beperkte controlescopes.")
+        raise ProbeError("De daadwerkelijke OAuth-scopes wijken af van de twee beperkte controlescopes. "
+                         f"Ontvangen, veilig samengevat: {describe_scopes(scope)}.")
     remaining = integer_field(claims.get("expires_in"))
     expiry = integer_field(claims.get("exp"))
     if not 0 < remaining <= 43200 or not 0 < expiry - now <= 43200:
