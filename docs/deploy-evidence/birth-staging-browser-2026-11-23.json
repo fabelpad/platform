@@ -1,0 +1,303 @@
+{
+  "origin": "https://staging.fabelpad.nl",
+  "expectedSourceSha": "228d951ac0db0bac03c7a74c9d67a8c547b005fa",
+  "startedAt": "2026-11-23T01:07:56.696Z",
+  "scope": "Postdeployment staging verification only; production/public routing and hosted account data are not changed.",
+  "realHttpsReadOnly": [
+    {
+      "path": "/api/health",
+      "status": 200,
+      "environment": "staging",
+      "revision": "228d951ac0db0bac03c7a74c9d67a8c547b005fa",
+      "scope": "process-liveness-only",
+      "backend": "configured-unverified",
+      "limitation": "Process liveness and configuration only; not hosted Supabase readiness."
+    },
+    {
+      "path": "/api/auth/session",
+      "status": 200,
+      "configured": true,
+      "parent": null,
+      "admin": false,
+      "providers": {
+        "email": true,
+        "google": true
+      }
+    },
+    {
+      "path": "/api/family",
+      "status": 401,
+      "error": "not_authenticated"
+    },
+    {
+      "path": "/api/legal/documents",
+      "status": 200,
+      "privacyVersion": "2026-11-23",
+      "termsVersion": "2026-11-22"
+    },
+    {
+      "path": "/privacy",
+      "status": 200,
+      "privacyVersion": "2026-11-23",
+      "containsBirthDatePurpose": true
+    },
+    {
+      "path": "/legal/2026-11-22/privacyverklaring.md",
+      "status": 200,
+      "sha256": "97673d3103443115097def26e20e6c677650dcb760d095de900ae3c5c5961cb7"
+    },
+    {
+      "path": "/privacy?versie=2026-11-22",
+      "status": 307,
+      "redirectsTo": "/legal/2026-11-22/privacyverklaring.md"
+    },
+    {
+      "path": "/privacyverklaring?versie=2026-11-22",
+      "status": 307,
+      "redirectsTo": "/legal/2026-11-22/privacyverklaring.md"
+    },
+    {
+      "path": "/legal/2026-11-22.1/privacyverklaring.md",
+      "status": 200,
+      "sha256": "c3f6186be703dda5320b70227070fea79e395eac225dbbbde0420913c57727e4"
+    },
+    {
+      "path": "/privacy?versie=2026-11-22.1",
+      "status": 307,
+      "redirectsTo": "/legal/2026-11-22.1/privacyverklaring.md"
+    },
+    {
+      "path": "/privacyverklaring?versie=2026-11-22.1",
+      "status": 307,
+      "redirectsTo": "/legal/2026-11-22.1/privacyverklaring.md"
+    },
+    {
+      "path": "/legal/2026-11-23/privacyverklaring.md",
+      "status": 200,
+      "sha256": "f108fc40b0aa5fc3d99c754eb71abacd234c05b4611c383c40a8a0b3505539e3"
+    },
+    {
+      "path": "/privacy?versie=2026-11-23",
+      "status": 200
+    },
+    {
+      "path": "/privacyverklaring?versie=2026-11-23",
+      "status": 200
+    },
+    {
+      "path": "/api/content and /api/content/:id",
+      "status": 200,
+      "stories": 13,
+      "chapters": 65,
+      "scenes": 403,
+      "endings": 416,
+      "readingLevels": 3,
+      "readingScenes": 1209,
+      "readingEndings": 1248,
+      "illustrations": [
+        {
+          "path": "/art/balloon.webp",
+          "bytes": 317964,
+          "sha256": "0067f6a8a29bb522745de3f1ca33713ee471f4238477662be31ae4d8cf6fb4c2"
+        },
+        {
+          "path": "/art/clock.webp",
+          "bytes": 336186,
+          "sha256": "207c06ebf7ac8d2f81ad2b17af08c25fc858a7b103ea4bdf2e4575e445f0be72"
+        },
+        {
+          "path": "/art/dream.webp",
+          "bytes": 255004,
+          "sha256": "2c681556807a32c3092bbbd281b9ae888cc00e146ecedda0d27d9d17bc1d6ab6"
+        },
+        {
+          "path": "/art/forest.webp",
+          "bytes": 521456,
+          "sha256": "53d50ed83f7cd1e3e46561d2bac20464b1eb2f833df47b58cc1ce590830c5295"
+        },
+        {
+          "path": "/art/garden.webp",
+          "bytes": 392796,
+          "sha256": "2a9e30365a7142b62cbed4c03e46a79f768968dd566f51bf2072d3301cd06208"
+        },
+        {
+          "path": "/art/library.webp",
+          "bytes": 414638,
+          "sha256": "323a1ac390bab1bd1a7f9e5e6bf2b2352e7879bd6693168cb95098a80f53a654"
+        },
+        {
+          "path": "/art/moonbakery.webp",
+          "bytes": 334652,
+          "sha256": "e62d8f6e0291d5e567424e68b9d67b20b377258f8eb2c68ea1efa10bfbd93a47"
+        },
+        {
+          "path": "/art/ocean.webp",
+          "bytes": 366030,
+          "sha256": "7aa0142647f0cf32af1b7e26a98ac64ad11a6e9bd2ca6e940586cad98c65a2b6"
+        },
+        {
+          "path": "/art/play/dibbel.webp",
+          "bytes": 228872,
+          "sha256": "5eabfeff0c5df775ed8a0b4bac9d6badb67e6559f179e0ad4eab6b369e0b966b"
+        },
+        {
+          "path": "/art/play/dream-scene.webp",
+          "bytes": 339262,
+          "sha256": "f3a033721ded05e9e9a8a2592b26abe05864b5d68e1e3b72a52206102388a599"
+        },
+        {
+          "path": "/art/play/ocean-scene.webp",
+          "bytes": 398600,
+          "sha256": "da797bca418dcd33cc02336cc6a839ce691025cb8ea623ffad4ce972e0632c6d"
+        },
+        {
+          "path": "/art/play/station-platform.webp",
+          "bytes": 404678,
+          "sha256": "e19c35a1d6c3445530ad0df7abbcf46e31dc70623f01c98d5e0ecb31974f9639"
+        },
+        {
+          "path": "/art/play/station-scene.webp",
+          "bytes": 381598,
+          "sha256": "ed737fd3d37825009271066572aab5b3731b3b0572d969fdefc4d0ab756bf5ac"
+        },
+        {
+          "path": "/art/play/toy-scene.webp",
+          "bytes": 230744,
+          "sha256": "fb66693646609b9dc1c92494124c15583b4b3c133852ec1c35a387431c72e186"
+        },
+        {
+          "path": "/art/play/train.webp",
+          "bytes": 199986,
+          "sha256": "a85dede027151a6ce03363e28137643c61dee5de5003267f00f21e072b3c8d69"
+        },
+        {
+          "path": "/art/snow.webp",
+          "bytes": 363808,
+          "sha256": "609908c9894cfa1b00ff50a082dce24c09817452d13169f1ba3cee697abda128"
+        },
+        {
+          "path": "/art/stars.webp",
+          "bytes": 368936,
+          "sha256": "c8f4511a0091feb035123a43f4b545933278802afeacb17af7ece725524b5d41"
+        },
+        {
+          "path": "/art/station.webp",
+          "bytes": 222354,
+          "sha256": "7883d89e0ea7d009599105d0e892a8a9861c7e50a42f9dcde4162bd9a135c315"
+        },
+        {
+          "path": "/art/toy.webp",
+          "bytes": 133614,
+          "sha256": "f9b375b75e7178900e5cbd8eaa5c5c560ddce18b96329fd0c21dc62f0b6f007d"
+        },
+        {
+          "path": "/art/weather-v2.webp",
+          "bytes": 376378,
+          "sha256": "886e4d3a48f84c61baeaaa96e18c65a890bf87b892da912a9724c96fb11289ac"
+        }
+      ]
+    }
+  ],
+  "realAnonymousBrowser": [
+    {
+      "path": "/privacy",
+      "currentVersionVisible": true,
+      "birthDatePurposeVisible": true,
+      "noPhoneOverflow": true
+    },
+    {
+      "path": "/lezen?story=dream&readingLevel=under6",
+      "readerVisible": true,
+      "levelSelectorAbsent": true,
+      "birthDateHidden": true,
+      "heroLoaded": true,
+      "scope": "Real anonymous deployed client; generic local reading profile only."
+    }
+  ],
+  "syntheticInterceptedClient": {
+    "scope": "Actual deployed JavaScript and UI; all parent/session/family/activity/consent API responses are synthetic in-browser fixtures. This does not prove hosted login, database writes, consent persistence or mail delivery.",
+    "checks": [
+      {
+        "scenario": "Online-profile onboarding UI",
+        "missingDateBlocked": true,
+        "birthDateRoundtripInFixture": true,
+        "defaultAutomatic": true
+      },
+      {
+        "scenario": "Parent profile settings and reader",
+        "dutchDateVisibleOnlyInParentEditor": true,
+        "explicitOverrideSurvivesDateEdit": true,
+        "automaticResetWorks": true,
+        "updatedAgeVariantShown": "under6",
+        "chapterAndPicksPreserved": true,
+        "childNameVisible": true,
+        "readerLevelSelectorAbsent": true
+      }
+    ],
+    "interceptedWrites": [
+      {
+        "path": "/api/parent/consent",
+        "method": "POST",
+        "destination": "In-memory browser fixture only"
+      },
+      {
+        "path": "/api/family",
+        "method": "PUT",
+        "destination": "In-memory browser fixture only"
+      },
+      {
+        "path": "/api/parent/activity",
+        "method": "POST",
+        "destination": "In-memory browser fixture only"
+      },
+      {
+        "path": "/api/parent/activity",
+        "method": "POST",
+        "destination": "In-memory browser fixture only"
+      },
+      {
+        "path": "/api/family",
+        "method": "PUT",
+        "destination": "In-memory browser fixture only"
+      },
+      {
+        "path": "/api/parent/activity",
+        "method": "POST",
+        "destination": "In-memory browser fixture only"
+      },
+      {
+        "path": "/api/family",
+        "method": "PUT",
+        "destination": "In-memory browser fixture only"
+      },
+      {
+        "path": "/api/parent/activity",
+        "method": "POST",
+        "destination": "In-memory browser fixture only"
+      },
+      {
+        "path": "/api/family",
+        "method": "PUT",
+        "destination": "In-memory browser fixture only"
+      },
+      {
+        "path": "/api/parent/activity",
+        "method": "POST",
+        "destination": "In-memory browser fixture only"
+      }
+    ]
+  },
+  "safety": {
+    "realHttpMethods": [
+      "GET"
+    ],
+    "freshBrowserContexts": true,
+    "realCredentialsUsed": false,
+    "existingProfilesUsed": false,
+    "hostedMutations": 0,
+    "mailSent": false,
+    "unexpectedBlockedRequests": []
+  },
+  "status": "passed",
+  "finishedAt": "2026-11-23T01:08:04.399Z"
+}

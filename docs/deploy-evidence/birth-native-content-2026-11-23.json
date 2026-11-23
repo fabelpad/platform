@@ -1,0 +1,181 @@
+{
+  "schemaVersion": 1,
+  "checkedAt": "2026-11-23T00:50:55.460333+00:00",
+  "sourceCommit": "228d951ac0db0bac03c7a74c9d67a8c547b005fa",
+  "sourceWorkingTreeDirtyAtBuild": false,
+  "artifact": "/tmp/fabelpad-birth-production-20261123/artifacts/native/fabelpad-production.aab",
+  "artifactSha256": "6e32d9faed68febb783e9a0c2a0a2683cd418858fbc7af3e78ca539bea9de746",
+  "artifactBytes": 38917985,
+  "packageId": "nl.fabelpad.app",
+  "versionName": "1.0.1",
+  "versionCode": 2,
+  "signedReportedBySeparateManifestValidation": true,
+  "zipIntegrityVerified": true,
+  "runtimeAssetCount": 20,
+  "runtimeAssetHashesVerifiedAgainstImmutableCatalogAndActualSourceFiles": true,
+  "runtimeAssets": [
+    {
+      "sourceAsset": "/art/station.webp",
+      "aabEntry": "base/res/drawable-mdpi-v4/assets_art_station.webp",
+      "sha256": "7883d89e0ea7d009599105d0e892a8a9861c7e50a42f9dcde4162bd9a135c315"
+    },
+    {
+      "sourceAsset": "/art/play/station-scene.webp",
+      "aabEntry": "base/res/drawable-mdpi-v4/assets_art_play_stationscene.webp",
+      "sha256": "ed737fd3d37825009271066572aab5b3731b3b0572d969fdefc4d0ab756bf5ac"
+    },
+    {
+      "sourceAsset": "/art/dream.webp",
+      "aabEntry": "base/res/drawable-mdpi-v4/assets_art_dream.webp",
+      "sha256": "2c681556807a32c3092bbbd281b9ae888cc00e146ecedda0d27d9d17bc1d6ab6"
+    },
+    {
+      "sourceAsset": "/art/play/dream-scene.webp",
+      "aabEntry": "base/res/drawable-mdpi-v4/assets_art_play_dreamscene.webp",
+      "sha256": "f3a033721ded05e9e9a8a2592b26abe05864b5d68e1e3b72a52206102388a599"
+    },
+    {
+      "sourceAsset": "/art/toy.webp",
+      "aabEntry": "base/res/drawable-mdpi-v4/assets_art_toy.webp",
+      "sha256": "f9b375b75e7178900e5cbd8eaa5c5c560ddce18b96329fd0c21dc62f0b6f007d"
+    },
+    {
+      "sourceAsset": "/art/play/toy-scene.webp",
+      "aabEntry": "base/res/drawable-mdpi-v4/assets_art_play_toyscene.webp",
+      "sha256": "fb66693646609b9dc1c92494124c15583b4b3c133852ec1c35a387431c72e186"
+    },
+    {
+      "sourceAsset": "/art/weather-v2.webp",
+      "aabEntry": "base/res/drawable-mdpi-v4/assets_art_weatherv2.webp",
+      "sha256": "886e4d3a48f84c61baeaaa96e18c65a890bf87b892da912a9724c96fb11289ac"
+    },
+    {
+      "sourceAsset": "/art/moonbakery.webp",
+      "aabEntry": "base/res/drawable-mdpi-v4/assets_art_moonbakery.webp",
+      "sha256": "e62d8f6e0291d5e567424e68b9d67b20b377258f8eb2c68ea1efa10bfbd93a47"
+    },
+    {
+      "sourceAsset": "/art/ocean.webp",
+      "aabEntry": "base/res/drawable-mdpi-v4/assets_art_ocean.webp",
+      "sha256": "7aa0142647f0cf32af1b7e26a98ac64ad11a6e9bd2ca6e940586cad98c65a2b6"
+    },
+    {
+      "sourceAsset": "/art/play/ocean-scene.webp",
+      "aabEntry": "base/res/drawable-mdpi-v4/assets_art_play_oceanscene.webp",
+      "sha256": "da797bca418dcd33cc02336cc6a839ce691025cb8ea623ffad4ce972e0632c6d"
+    },
+    {
+      "sourceAsset": "/art/garden.webp",
+      "aabEntry": "base/res/drawable-mdpi-v4/assets_art_garden.webp",
+      "sha256": "2a9e30365a7142b62cbed4c03e46a79f768968dd566f51bf2072d3301cd06208"
+    },
+    {
+      "sourceAsset": "/art/clock.webp",
+      "aabEntry": "base/res/drawable-mdpi-v4/assets_art_clock.webp",
+      "sha256": "207c06ebf7ac8d2f81ad2b17af08c25fc858a7b103ea4bdf2e4575e445f0be72"
+    },
+    {
+      "sourceAsset": "/art/library.webp",
+      "aabEntry": "base/res/drawable-mdpi-v4/assets_art_library.webp",
+      "sha256": "323a1ac390bab1bd1a7f9e5e6bf2b2352e7879bd6693168cb95098a80f53a654"
+    },
+    {
+      "sourceAsset": "/art/balloon.webp",
+      "aabEntry": "base/res/drawable-mdpi-v4/assets_art_balloon.webp",
+      "sha256": "0067f6a8a29bb522745de3f1ca33713ee471f4238477662be31ae4d8cf6fb4c2"
+    },
+    {
+      "sourceAsset": "/art/forest.webp",
+      "aabEntry": "base/res/drawable-mdpi-v4/assets_art_forest.webp",
+      "sha256": "53d50ed83f7cd1e3e46561d2bac20464b1eb2f833df47b58cc1ce590830c5295"
+    },
+    {
+      "sourceAsset": "/art/snow.webp",
+      "aabEntry": "base/res/drawable-mdpi-v4/assets_art_snow.webp",
+      "sha256": "609908c9894cfa1b00ff50a082dce24c09817452d13169f1ba3cee697abda128"
+    },
+    {
+      "sourceAsset": "/art/stars.webp",
+      "aabEntry": "base/res/drawable-mdpi-v4/assets_art_stars.webp",
+      "sha256": "c8f4511a0091feb035123a43f4b545933278802afeacb17af7ece725524b5d41"
+    },
+    {
+      "sourceAsset": "/art/play/station-platform.webp",
+      "aabEntry": "base/res/drawable-mdpi-v4/assets_art_play_stationplatform.webp",
+      "sha256": "e19c35a1d6c3445530ad0df7abbcf46e31dc70623f01c98d5e0ecb31974f9639"
+    },
+    {
+      "sourceAsset": "/brand/logo.webp",
+      "aabEntry": "base/res/drawable-mdpi-v4/assets_brand_logo.webp",
+      "sha256": "b30b3fcb5789c8d40cab8510f033192861db6814ad08de4d7b5a11a20d24e6c9"
+    },
+    {
+      "sourceAsset": "/brand/mascot.webp",
+      "aabEntry": "base/res/drawable-mdpi-v4/assets_brand_mascot.webp",
+      "sha256": "9492f2607abdca7dae05d5858939954f8539487f68876e66f921ea741ea7ca28"
+    }
+  ],
+  "hermes": {
+    "aabEntry": "base/assets/index.android.bundle",
+    "bytes": 3641216,
+    "bytecodeVersion": 99,
+    "contentVersion": "247d7d1c63cc4fa3",
+    "storyIds": [
+      "station",
+      "dream",
+      "toy",
+      "weather",
+      "moonbakery",
+      "ocean",
+      "garden",
+      "clock",
+      "library",
+      "balloon",
+      "forest",
+      "snow",
+      "stars"
+    ],
+    "readingLevelTokensPresent": [
+      "under6",
+      "6to8",
+      "9plus"
+    ],
+    "profileAndParentRouteTokensPresent": [
+      "birthDate",
+      "readingLevelOverride",
+      "Europe/Amsterdam",
+      "parent-gate",
+      "profile-settings"
+    ],
+    "verification": "Static token presence in compiled Hermes bytes; does not prove device rendering or execution."
+  },
+  "nativeDex": {
+    "entries": [
+      "base/dex/classes.dex"
+    ],
+    "registeredModuleAndMethodTokensPresent": [
+      "FabelpadOfflineSpeech",
+      "pickBirthDate",
+      "closeBirthDatePicker",
+      "Landroid/app/DatePickerDialog;"
+    ],
+    "verification": "Actual DEX references include the Fabelpad module, picker methods, and Android DatePickerDialog; no device execution claimed."
+  },
+  "sourceChecksAtExactArtifactCommit": {
+    "readerContainsNoReadingLevelPickerOrReadingLevelWrite": true,
+    "readerUsesEffectiveProfileReadingLevel": true,
+    "activeChildNameHeaderPresent": true,
+    "parentAndProfileSettingsProtectedByLocalParentSession": true,
+    "datePickerDismissedOnSessionEndOrBackground": true,
+    "limitation": "These are source checks tied to the recorded clean artifact commit, not UI behavior inferred from binary strings."
+  },
+  "deviceInstallationTestedByThisInspection": false,
+  "deviceRuntimeTestedByThisInspection": false,
+  "playUploadedByThisInspection": false,
+  "limitations": [
+    "No physical-device or emulator interaction test.",
+    "No end-to-end TTS/network observation.",
+    "No Play upload, pre-launch report, or approval.",
+    "Signing, manifest, ELF alignment, and bundletool validation are owned by the separate build report."
+  ]
+}

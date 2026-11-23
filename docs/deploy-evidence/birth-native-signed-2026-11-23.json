@@ -1,0 +1,64 @@
+{
+  "schemaVersion": 1,
+  "variant": "production",
+  "packageId": "nl.fabelpad.app",
+  "versionName": "1.0.1",
+  "versionCode": 2,
+  "artifact": "fabelpad-production.aab",
+  "sha256": "6e32d9faed68febb783e9a0c2a0a2683cd418858fbc7af3e78ca539bea9de746",
+  "bytes": 38917985,
+  "signed": true,
+  "uploadCertificateSha256": "3598b0e2d3d6d7d5127110970352733e79e3f122f1bb60161704af2e421887de",
+  "minSdk": 24,
+  "targetSdk": 36,
+  "architectures": [
+    "arm64-v8a",
+    "x86_64"
+  ],
+  "permissions": [
+    "android.permission.VIBRATE",
+    "nl.fabelpad.app.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
+  ],
+  "nativeLibraries": 44,
+  "elf16KiBVerified": true,
+  "bundle16KiBAlignmentRequested": true,
+  "dexUncompressedBytes": 4763904,
+  "bundletoolVersion": "1.18.3",
+  "toolchain": {
+    "node": "v24.18.0",
+    "expo": "58.0.26",
+    "reactNative": "0.88.1",
+    "gradle": "9.4.1",
+    "compileSdk": 37,
+    "buildTools": "37.0.0",
+    "ndk": "27.1.12297006"
+  },
+  "source": {
+    "gitSha": "228d951ac0db0bac03c7a74c9d67a8c547b005fa",
+    "workingTreeDirty": false,
+    "buildStartIdentityRecorded": true
+  },
+  "backendConnected": false,
+  "deviceInstallationTested": false,
+  "deviceRuntimeTested": false,
+  "playUploaded": false,
+  "configuration": {
+    "variant": "production",
+    "contentVersion": "247d7d1c63cc4fa3",
+    "privacyUrl": "https://fabelpad.nl/privacy",
+    "supportUrl": "mailto:support@fabelpad.nl",
+    "launcherSha256": "9b92bb7af04669c5c084eb9210878304a5c61859126576ece27305628b846b03"
+  },
+  "universalApk": {
+    "artifact": "fabelpad-production.apk",
+    "sha256": "100e476f26c189d26d9b8c661192a10aa1d3a00b834d12fc3295c891fcc969c7",
+    "bytes": 54516015,
+    "signatureVerified": true,
+    "zipAlignment16KiBVerified": true,
+    "signing": "upload key; Google Play signs its delivered APKs with its own app-signing key"
+  },
+  "r8Mapping": {
+    "artifact": "fabelpad-production-mapping.txt",
+    "sha256": "23a0201addbba5e9db97ce1eed49f62a64ef15f6975cba5f4c371efd91163339"
+  }
+}

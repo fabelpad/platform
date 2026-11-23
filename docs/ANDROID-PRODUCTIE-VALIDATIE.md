@@ -1,3 +1,5 @@
+> **Actuele bundel, 23 november 2026:** Fabelpad **1.0.1 (2)** is ondertekend en gecontroleerd. Gebruik het [actuele bouw-/uploadverslag](ANDROID-PRODUCTIE-1.0.1.md) en de bijbehorende bestanden. De versie-, hash- en bereikbaarheidsgegevens hieronder beschrijven de eerdere voorbereiding van 18 november.
+
 # Fabelpad Android — productiebuild 1.0.0 (1)
 
 Gecontroleerd op 18 november 2026. De eigenaar bevestigde `nl.fabelpad.app` als gratis, volledig lokale eerste release. Play-indiening en toestelacceptatie blijven afzonderlijke stappen.
@@ -5,7 +7,7 @@ Gecontroleerd op 18 november 2026. De eigenaar bevestigde `nl.fabelpad.app` als 
 | Onderdeel | Werkelijk resultaat |
 | --- | --- |
 | Broncommit | `8dcb98c4287dc78421b092ee395ace05f492baaa`; vastgelegd bij start; schone werkboom bij start en controle |
-| AAB | `artifacts/native/fabelpad-production.aab`, 37.005.584 bytes, SHA-256 `ffc22ec85449074a667a243dc132dfa46e9a484c756dc57c859433ba68ba6e1c` |
+| AAB | `artifacts/native/archive-1.0.0-20261118/fabelpad-production.aab`, 37.005.584 bytes, SHA-256 `ffc22ec85449074a667a243dc132dfa46e9a484c756dc57c859433ba68ba6e1c` |
 | Identiteit | Fabelpad, `nl.fabelpad.app`, production/release, versionName 1.0.0, versionCode 1 |
 | Ondertekening | Eigen PKCS12/RSA-3072-uploadsleutel; JAR-signatuur en overeenkomst met beschermd uploadcertificaat geverifieerd; geen debugsigning |
 | Publiek uploadcertificaat | `artifacts/native/fabelpad-upload-certificate.pem`; SHA-256 `3598b0e2d3d6d7d5127110970352733e79e3f122f1bb60161704af2e421887de` |
@@ -15,7 +17,7 @@ Gecontroleerd op 18 november 2026. De eigenaar bevestigde `nl.fabelpad.app` als 
 | 16 KB | Alle 44 native libraries: ELF PT_LOAD minimaal 16 KB; PAGE_ALIGNMENT_16K in bundleconfig; gegenereerde APK slaagt voor zipalign 16 KB |
 | Bundletool | 1.18.3, officiële download/checksum gecontroleerd; validate/config/manifest/build-apks geslaagd |
 | Optimalisatie | R8 en resource shrink aan; DEX samen 4.760.040 ongecomprimeerde bytes; corresponderende mapping bewaard |
-| APK voor acceptatie/captures | `fabelpad-production.apk`, 51.857.216 bytes, SHA-256 `f14713f6492d68ef062948ad814599d4c3b50a0e605547154c36d21adff23681`; signing en ZIP-uitlijning geverifieerd |
+| APK voor acceptatie/captures | `artifacts/native/archive-1.0.0-20261118/fabelpad-production.apk`, 51.857.216 bytes, SHA-256 `f14713f6492d68ef062948ad814599d4c3b50a0e605547154c36d21adff23681`; signing en ZIP-uitlijning geverifieerd |
 | Native checks | TypeScript, runtimecontracten inclusief contentversies/migratie, Expo-dependencycontrole en release-lint geslaagd |
 | Gradle | lintRelease + bundleRelease geslaagd in 5m22s, 546 taken; geen niet-bestaande unit-testtaak als geslaagde test geteld |
 | Play-route | 27 offline tests voor API, CI-vrijgave en artefactidentiteit geslaagd; Bash/Python gecontroleerd; actuele GitHub-uitslag bij PR #2 |

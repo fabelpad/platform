@@ -1,0 +1,84 @@
+{
+  "date": "2026-11-23",
+  "scope": "Web profile birth-date validation, automatic/profile-only reading level, local/cloud legacy migration, and reader route preservation using synthetic data",
+  "runtime": {
+    "checksNode": "24.18.0",
+    "pnpm": "11.25.0",
+    "browserExecutable": "/home/codex/.cache/ms-playwright/chromium_headless_shell-1254/chrome-headless-shell-linux64/chrome-headless-shell",
+    "server": "Next.js 16.3.4 webpack dev, local mode, 127.0.0.1:3017"
+  },
+  "checks": [
+    {
+      "command": "pnpm typecheck",
+      "exitCode": 0
+    },
+    {
+      "command": "pnpm check:profiles",
+      "exitCode": 0,
+      "coverage": [
+        "Existing family isolation and JSONB key ordering",
+        "Birth date and explicit override survive save/reload/snapshot",
+        "Reject blank, non-existent, non-leap and future dates",
+        "Preserve missing dates and legacy preference without inventing overrides"
+      ]
+    },
+    {
+      "command": "pnpm exec playwright test tests/browser/profile-reading.spec.ts tests/browser/complete-adventures.spec.ts tests/browser/family-persistence.spec.ts tests/browser/parent-account.spec.ts tests/browser/registration-proof.spec.ts tests/browser/fabelpad.spec.ts --reporter=line",
+      "exitCode": 0,
+      "passed": 51,
+      "failed": 0,
+      "durationAsReported": "2.8m",
+      "note": "This run used the seven-profile-scenario revision before adding the separate ninth-birthday scenario."
+    },
+    {
+      "command": "pnpm exec playwright test tests/browser/profile-reading.spec.ts --reporter=line",
+      "exitCode": 0,
+      "passed": 8,
+      "failed": 0,
+      "durationAsReported": "34.9s",
+      "coverage": [
+        "New local child needs date behind parent gate; blank/31 April/future rejected, 29 February accepted and Dutch display verified",
+        "Switch ages 5/7/9, ignore old reader query parameter, preserve separate routes",
+        "Manual override save/reload/date edit and explicit automatic reset",
+        "Legacy preference and route survive date addition, downloaded variant data and cached content",
+        "Sixth birthday over Dutch midnight and foreground resume",
+        "Ninth birthday over Dutch midnight and foreground resume",
+        "New cloud child date and separate override synchronize through family snapshots",
+        "Local legacy first online import requires date and retains its route"
+      ]
+    },
+    {
+      "command": "pnpm exec playwright test tests/browser/reader.spec.ts tests/browser/privacy-admin.spec.ts tests/browser/legal.spec.ts tests/browser/email-settings.spec.ts --reporter=json",
+      "passed": 22,
+      "failed": 2,
+      "durationMs": 74823.236,
+      "report": "/tmp/fabelpad-profile-browser-remaining-20261123.json",
+      "failuresResolved": "Both legal cases expected the previous current privacy version. Updating the current version and retaining redirect/byte checks for 2026-11-22.1 resolved these cases."
+    },
+    {
+      "command": "pnpm exec playwright test tests/browser/legal.spec.ts --reporter=json",
+      "exitCode": 0,
+      "passed": 4,
+      "failed": 0,
+      "durationMs": 20209.589,
+      "report": "/tmp/fabelpad-profile-browser-legal-20261123.json",
+      "coverage": [
+        "Current privacy version 2026-11-23 and its exact downloadable bytes",
+        "Historical privacy versions 2026-11-22 and 2026-11-22.1 redirect and retain exact original SHA-256",
+        "Public legal pages, local offline speech and child privacy-request behavior"
+      ]
+    }
+  ],
+  "limitations": [
+    "No production account/database was written by these browser tests",
+    "No physical Android device test is represented by this web report"
+  ],
+  "remainingBrowserReport": "/tmp/fabelpad-profile-browser-remaining-20261123.json",
+  "aggregate": {
+    "uniqueBrowserScenariosPassed": 76,
+    "totalBrowserScenariosListed": 76,
+    "testFiles": 10,
+    "remainingFailures": 0,
+    "note": "Results combine the initial 51-case run, the final eight profile cases, the 24 remaining baseline cases and the repaired four-case legal rerun; overlapping cases are counted once."
+  }
+}

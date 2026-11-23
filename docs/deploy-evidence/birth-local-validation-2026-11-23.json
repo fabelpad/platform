@@ -1,0 +1,46 @@
+{
+  "sourceSha": "228d951ac0db0bac03c7a74c9d67a8c547b005fa",
+  "worktree": "/tmp/fabelpad-birth-web-20261123",
+  "log": "/tmp/fabelpad-birth-clean-web-20261123.log",
+  "startedAt": "2026-11-23T00:44:26.849160+00:00",
+  "initialFreeBytes": 10275418112,
+  "initialFreeInodes": 14427891,
+  "configuration": "Fresh .env.example copied to .env.local, local mode, empty public Supabase values, email/Google auth disabled, no inherited environment or host secrets, telemetry disabled",
+  "command": "pnpm install --frozen-lockfile && bash scripts/local-build.sh",
+  "status": "passed",
+  "exitCode": 0,
+  "elapsedSeconds": 52.734,
+  "finishedAt": "2026-11-23T00:45:19.583551+00:00",
+  "output": {
+    "directory": "/tmp/fabelpad-birth-web-20261123/.next",
+    "sizeBytes": 83596485,
+    "buildId": "VXmeW6SQl7ApQ0A1I7RjU",
+    "startCommand": "pnpm start --port <isolated-loopback-port>",
+    "standalone": false
+  },
+  "isolatedStartSmoke": {
+    "port": 3317,
+    "checks": [
+      {
+        "path": "/api/health",
+        "status": 200,
+        "jsonValid": true
+      },
+      {
+        "path": "/privacy",
+        "status": 200,
+        "containsBirthDateDisclosure": true,
+        "containsPublisher": true
+      },
+      {
+        "path": "/api/content/dream",
+        "status": 200,
+        "readingLevels": 3,
+        "scenesPerLevel": 31,
+        "endingsPerLevel": 32
+      }
+    ],
+    "stopped": true,
+    "log": "/tmp/fabelpad-birth-clean-web-smoke-20261123.log"
+  }
+}

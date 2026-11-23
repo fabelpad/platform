@@ -1,3 +1,5 @@
+> **Actuele bundel, 23 november 2026:** Fabelpad **1.0.1 (2)** is ondertekend en gecontroleerd. Gebruik het [actuele bouw-/uploadverslag](ANDROID-PRODUCTIE-1.0.1.md) en de bijbehorende bestanden. De versie-, hash- en bereikbaarheidsgegevens hieronder beschrijven de eerdere voorbereiding van 18 november.
+
 # Fabelpad — productie-AAB, Play App Signing en automatische updates
 
 Gecontroleerd op **18 november 2026**. Deze procedure hoort uitsluitend bij **Fabelpad**, repository **`fabelpad/platform`**, Android-pakket **`nl.fabelpad.app`**, integratiebranch **`main`** en telefoon/tablet. De eerste productieversie is **1.0.0**, lokaal met **versionCode 1**. Het volledige scherminvulblad staat in [GOOGLE-PLAY-INVULBLAD-PRODUCTIE.md](GOOGLE-PLAY-INVULBLAD-PRODUCTIE.md).

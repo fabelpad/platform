@@ -1,0 +1,155 @@
+{
+  "checkedAt": "2026-11-23 01:14:17 UTC",
+  "repository": "fabelpad/platform",
+  "integrationBranch": "main",
+  "applicationSha": "228d951ac0db0bac03c7a74c9d67a8c547b005fa",
+  "scope": "Child birth dates, automatic profile reading levels, explicit parent overrides, legacy/route preservation and visible child names on web and native Android.",
+  "githubRuns": {
+    "webCi": {
+      "conclusion": "success",
+      "createdAt": "2026-11-23T00:44:15Z",
+      "databaseId": 45090519395,
+      "event": "push",
+      "headSha": "228d951ac0db0bac03c7a74c9d67a8c547b005fa",
+      "name": "Lokale bouw en contentcontrole",
+      "status": "completed",
+      "updatedAt": "2026-11-23T00:46:05Z",
+      "url": "https://github.com/fabelpad/platform/actions/runs/45090519395"
+    },
+    "nativeCi": {
+      "conclusion": "success",
+      "createdAt": "2026-11-23T00:44:15Z",
+      "databaseId": 45090519222,
+      "event": "push",
+      "headSha": "228d951ac0db0bac03c7a74c9d67a8c547b005fa",
+      "name": "Fabelpad Android CI",
+      "status": "completed",
+      "updatedAt": "2026-11-23T01:02:54Z",
+      "url": "https://github.com/fabelpad/platform/actions/runs/45090519222"
+    },
+    "stagingCandidate": {
+      "conclusion": "success",
+      "createdAt": "2026-11-23T01:03:09Z",
+      "databaseId": 45092314545,
+      "event": "workflow_dispatch",
+      "headSha": "228d951ac0db0bac03c7a74c9d67a8c547b005fa",
+      "name": "Fabelpad staging kandidaat 228d951ac0db0bac03c7a74c9d67a8c547b005fa",
+      "status": "completed",
+      "updatedAt": "2026-11-23T01:05:03Z",
+      "url": "https://github.com/fabelpad/platform/actions/runs/45092314545"
+    },
+    "stagingActivation": {
+      "conclusion": "success",
+      "createdAt": "2026-11-23T01:06:34Z",
+      "databaseId": 45092641979,
+      "event": "workflow_dispatch",
+      "headSha": "228d951ac0db0bac03c7a74c9d67a8c547b005fa",
+      "name": "Fabelpad staging activatie 228d951ac0db0bac03c7a74c9d67a8c547b005fa-45092314545-1",
+      "status": "completed",
+      "updatedAt": "2026-11-23T01:07:26Z",
+      "url": "https://github.com/fabelpad/platform/actions/runs/45092641979"
+    },
+    "productionCandidate": {
+      "conclusion": "success",
+      "createdAt": "2026-11-23T01:05:23Z",
+      "databaseId": 45092530884,
+      "event": "workflow_dispatch",
+      "headSha": "228d951ac0db0bac03c7a74c9d67a8c547b005fa",
+      "name": "Fabelpad production kandidaat 228d951ac0db0bac03c7a74c9d67a8c547b005fa",
+      "status": "completed",
+      "updatedAt": "2026-11-23T01:07:17Z",
+      "url": "https://github.com/fabelpad/platform/actions/runs/45092530884"
+    },
+    "productionActivation": {
+      "conclusion": "success",
+      "createdAt": "2026-11-23T01:09:55Z",
+      "databaseId": 45092968383,
+      "event": "workflow_dispatch",
+      "headSha": "228d951ac0db0bac03c7a74c9d67a8c547b005fa",
+      "name": "Fabelpad production activatie 228d951ac0db0bac03c7a74c9d67a8c547b005fa-45092530884-1",
+      "status": "completed",
+      "updatedAt": "2026-11-23T01:10:48Z",
+      "url": "https://github.com/fabelpad/platform/actions/runs/45092968383"
+    }
+  },
+  "web": {
+    "cleanBuildPassed": true,
+    "cleanBuildSeconds": 52.734,
+    "uniqueBrowserChecksPassed": 76,
+    "localConfiguration": "isolated local mode; no provider credentials or writes",
+    "stagingHttpsChecksPassed": true,
+    "privateBrowserFlow": "intercepted synthetic APIs, distinct from real anonymous HTTPS checks",
+    "healthScope": "process-liveness-only",
+    "actualOtpGoogleMailAcceptance": false
+  },
+  "database": {
+    "stagingProject": "tlwfpivafcokcjyjwgmq",
+    "productionProject": "aptprpkosqctwrzeetgs",
+    "migrationsPerProject": 14,
+    "addedMigrations": [
+      "20261123002951_child_birth_date_reading_profile.sql",
+      "20261123003259_child_birth_date_privacy_information.sql"
+    ],
+    "previousTwelveHistoryRowsPreserved": true,
+    "existingUserFamilyConsentAcceptanceReleaseHashesPreserved": true,
+    "hostedPureValidatorCasesPerProject": 15,
+    "publicPrivacyVersion": "2026-11-23",
+    "termsVersion": "2026-11-22",
+    "authMailVaultSettingsChanged": false
+  },
+  "host": {
+    "sshTarget": "dg-vps-08",
+    "machineId": "05db94b99eca4c3d815f6585ef8ed517",
+    "auditChecksPassed": 91,
+    "existingOtherServicesPreserved": 6,
+    "sharedConfigurationAndProxyPreserved": true,
+    "publicProductionActivated": false,
+    "staging": {
+      "candidate": "228d951ac0db0bac03c7a74c9d67a8c547b005fa-45092314545-1",
+      "configId": "birth-20261123-stg",
+      "loopbackPort": 4188
+    },
+    "production": {
+      "candidate": "228d951ac0db0bac03c7a74c9d67a8c547b005fa-45092530884-1",
+      "configId": "birth-20261123-prd",
+      "loopbackPort": 4189
+    },
+    "previousAppAndRuntimeCombinationsPreserved": true,
+    "barePreviousAppIsFunctionallySafeRollback": false
+  },
+  "native": {
+    "packageId": "nl.fabelpad.app",
+    "versionName": "1.0.1",
+    "versionCode": 2,
+    "signed": true,
+    "bytes": 38917985,
+    "sha256": "6e32d9faed68febb783e9a0c2a0a2683cd418858fbc7af3e78ca539bea9de746",
+    "productionBuild": "Gradle lintRelease + bundleRelease, 546 tasks, 5m50s",
+    "allTwentyRuntimeImagesVerified": true,
+    "nativeDatePickerDexPresenceVerified": true,
+    "nativeLibraries16KiBVerified": 44,
+    "bundleAndApk16KiBAlignmentVerified": true,
+    "deviceInstallationTested": false,
+    "deviceRuntimeTested": false,
+    "playUploaded": false,
+    "automaticCloudPlayPublicationEnabled": false
+  },
+  "evidence": {
+    "local": "birth-local-validation-2026-11-23.json",
+    "browser": "birth-web-browser-2026-11-23.json",
+    "nativeSigned": "birth-native-signed-2026-11-23.json",
+    "nativeContent": "birth-native-content-2026-11-23.json",
+    "stagingDatabase": "birth-database-staging-2026-11-23.json",
+    "productionDatabase": "birth-database-production-2026-11-23.json",
+    "hostBefore": "birth-host-before-2026-11-23.json",
+    "hostAfter": "birth-host-after-2026-11-23.json",
+    "staging": "birth-staging-browser-2026-11-23.json"
+  },
+  "openSteps": [
+    "Physical Android phone/tablet acceptance including actual offline TTS provider behavior",
+    "Verify Play account, package registration, unused versionCode and test/production access",
+    "Provide external Store assets",
+    "Enable and verify production HTTPS/privacy under its separate public activation order",
+    "Configure own Cloud/Play identities and apply reviewed automation setup before enabling automatic releases"
+  ]
+}

@@ -1,0 +1,525 @@
+{
+  "environment": "production",
+  "projectId": "aptprpkosqctwrzeetgs",
+  "workspaceAccount": "Duindorpdoet",
+  "repository": "fabelpad/platform",
+  "sourceCommit": "228d951ac0db0bac03c7a74c9d67a8c547b005fa",
+  "scope": "Two additive birth-date/profile-reading and informational privacy migrations; no real registration, mail, Auth settings, secrets or app activation performed by this database task.",
+  "before": {
+    "checkedAt": "2026-11-23T01:08:12.329999+00:00",
+    "familyDigest": "d41d8cd98f00b204e9800998ecf8427e",
+    "releaseDigest": "dc4050ed6e5c2a58426f7303f4989e3b",
+    "consentsDigest": "d41d8cd98f00b204e9800998ecf8427e",
+    "legalDocuments": [
+      {
+        "kind": "privacy",
+        "sha256": "97673d3103443115097def26e20e6c677650dcb760d095de900ae3c5c5961cb7",
+        "version": "2026-11-22"
+      },
+      {
+        "kind": "privacy",
+        "sha256": "c3f6186be703dda5320b70227070fea79e395eac225dbbbde0420913c57727e4",
+        "version": "2026-11-22.1"
+      },
+      {
+        "kind": "terms",
+        "sha256": "8da71baa717f1e98b393320532670b4ebbddacbd390a14dba3c4cc144b394840",
+        "version": "2026-11-22"
+      }
+    ],
+    "functionDigests": [
+      {
+        "acl": "{postgres=X/postgres,anon=X/postgres,authenticated=X/postgres}",
+        "bodyMd5": "c3d733eaf9b3ca61685aac964488bc9b",
+        "signature": "begin_parent_registration(text,text,text,text,text,boolean,boolean)",
+        "normalizedMd5": "ae80074028bdf4d4086e7831b9d0b380",
+        "expectedNewNormalizedMd5": "ae80074028bdf4d4086e7831b9d0b380"
+      },
+      {
+        "acl": "{postgres=X/postgres,authenticated=X/postgres}",
+        "bodyMd5": "81df18e85457ee4c4b68f9479be66bf5",
+        "signature": "complete_parent_onboarding(text,text,boolean,boolean,text)",
+        "normalizedMd5": "8fc7cf05552cbec13850a202f23d9c83",
+        "expectedNewNormalizedMd5": "8fc7cf05552cbec13850a202f23d9c83"
+      },
+      {
+        "acl": "{postgres=X/postgres,authenticated=X/postgres}",
+        "bodyMd5": "e8e9a8c438033d209d7302304fc1a062",
+        "signature": "complete_parent_registration(text,text)",
+        "normalizedMd5": "95818d2038d2d8866b44c0daa861d61d",
+        "expectedNewNormalizedMd5": "95818d2038d2d8866b44c0daa861d61d"
+      },
+      {
+        "acl": "{postgres=X/postgres,authenticated=X/postgres}",
+        "bodyMd5": "7dead1dbebe90a6b0416016418a5ace6",
+        "signature": "consent_child_profile(text,boolean,boolean)",
+        "normalizedMd5": "7ff2e58749e5074865c4b1b445d12053",
+        "expectedNewNormalizedMd5": "7ff2e58749e5074865c4b1b445d12053"
+      },
+      {
+        "acl": "{postgres=X/postgres,authenticated=X/postgres}",
+        "bodyMd5": "833e6827575fef5a2dea135bb7a48e86",
+        "signature": "get_account_lifecycle()",
+        "normalizedMd5": "29619ac9ca4710fc7dd44665ac64b1f1",
+        "expectedNewNormalizedMd5": "29619ac9ca4710fc7dd44665ac64b1f1"
+      },
+      {
+        "acl": "{postgres=X/postgres,anon=X/postgres,authenticated=X/postgres}",
+        "bodyMd5": "804b01ae3f03f54111901b2987f76233",
+        "signature": "private.begin_parent_registration(text,text,text,text,text,boolean,boolean)",
+        "normalizedMd5": "e1f2caf9c0abbc93564459fed5f69158",
+        "expectedNewNormalizedMd5": "5b144ccbc14d81e12f4651a4dbb9f399"
+      },
+      {
+        "acl": "{postgres=X/postgres,authenticated=X/postgres}",
+        "bodyMd5": "4208b862a7b5a9fd2ade6f2bbb3a2b96",
+        "signature": "private.complete_parent_onboarding(text,text,boolean,boolean,text)",
+        "normalizedMd5": "6221a03bbbfeb01cf2391e0281e350b9",
+        "expectedNewNormalizedMd5": "53be46321eeb398571fe71063a8a70e2"
+      },
+      {
+        "acl": "{postgres=X/postgres,authenticated=X/postgres}",
+        "bodyMd5": "ecb5e2e3f477b55b6d9734b6f4d7c1b9",
+        "signature": "private.complete_parent_registration(text,text)",
+        "normalizedMd5": "bdbea8321010b104ace879316dcf9292",
+        "expectedNewNormalizedMd5": "b7b976fd0b7f02391eef82d252299dd4"
+      },
+      {
+        "acl": "{postgres=X/postgres,authenticated=X/postgres}",
+        "bodyMd5": "49c1da1ad9b962d1b8146230f4b230d8",
+        "signature": "private.consent_child_profile(text,boolean,boolean)",
+        "normalizedMd5": "cabe3b83c5250bc3dbac27ecd688bc52",
+        "expectedNewNormalizedMd5": "f272af3267b8ff2543b490696e8cd770"
+      },
+      {
+        "acl": "{postgres=X/postgres,authenticated=X/postgres}",
+        "bodyMd5": "4c137861e9c08e55c9a1160fdbcf3626",
+        "signature": "private.get_account_lifecycle()",
+        "normalizedMd5": "88b8603d170d0d1dcd6e60a9ffe10233",
+        "expectedNewNormalizedMd5": "9de77a80891143c12f23576630551c15"
+      },
+      {
+        "acl": "{postgres=X/postgres,authenticated=X/postgres}",
+        "bodyMd5": "956d4728510dac61da79cdf6716084a4",
+        "signature": "private.save_family_snapshot(bigint,jsonb)",
+        "normalizedMd5": "b789a740dda99aab264cb0900cba6c8a",
+        "expectedNewNormalizedMd5": "b789a740dda99aab264cb0900cba6c8a"
+      },
+      {
+        "acl": "{postgres=X/postgres}",
+        "bodyMd5": "c692c1d950deb3b5d0c537a01a527f6a",
+        "signature": "private.valid_family_snapshot(jsonb)",
+        "normalizedMd5": "997b257af3c1362f38a4bd6fcd052cc4",
+        "expectedNewNormalizedMd5": "997b257af3c1362f38a4bd6fcd052cc4"
+      },
+      {
+        "acl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+        "bodyMd5": "797bbd6c20d182c8681fee0a21ca3f40",
+        "signature": "save_family_snapshot(bigint,jsonb)",
+        "normalizedMd5": "6372e77cbc7de2a7b33ed940a2b00432",
+        "expectedNewNormalizedMd5": "6372e77cbc7de2a7b33ed940a2b00432"
+      }
+    ],
+    "migrationHashes": [
+      {
+        "md5": "1835bef2f08fd0430f0bf1ca92c3a067",
+        "name": "family_content_contract",
+        "version": "20261104095714",
+        "statementCount": 1
+      },
+      {
+        "md5": "db536f3636e67569342e3dd892a835b1",
+        "name": "verified_bootstrap_admin",
+        "version": "20261122140451",
+        "statementCount": 1
+      },
+      {
+        "md5": "5c1c5a50e2fbd1b7ae6afa0e70484c1a",
+        "name": "admin_email_settings",
+        "version": "20261122150754",
+        "statementCount": 1
+      },
+      {
+        "md5": "4164ab4638cd00614225ad738a3b3e6d",
+        "name": "parent_account_lifecycle",
+        "version": "20261122172905",
+        "statementCount": 1
+      },
+      {
+        "md5": "ec2b39bd171297f632b51a9e4e7d0bb3",
+        "name": "lifecycle_worker_schedule",
+        "version": "20261122174433",
+        "statementCount": 1
+      },
+      {
+        "md5": "24a1b4c5641e46966fbda911a6125444",
+        "name": "signed_lifecycle_worker_requests",
+        "version": "20261122175306",
+        "statementCount": 1
+      },
+      {
+        "md5": "caa4b4eb7065e65cd98d5a72f2ae95b4",
+        "name": "private_pg_net_extension",
+        "version": "20261122175654",
+        "statementCount": 1
+      },
+      {
+        "md5": "9520f3661762278749c395d6db7885e1",
+        "name": "account_deletion_deadline_preview",
+        "version": "20261122182638",
+        "statementCount": 1
+      },
+      {
+        "md5": "d67fb30a3346acdc0f5f239b34929cf4",
+        "name": "backup_erasure_evidence_retention",
+        "version": "20261122190748",
+        "statementCount": 1
+      },
+      {
+        "md5": "0bc15e76822c361157f345980cc531a5",
+        "name": "privacy_backup_support_update",
+        "version": "20261122190924",
+        "statementCount": 1
+      },
+      {
+        "md5": "798bace3f4f142f27c17b1f6f55e78b4",
+        "name": "parent_registration_proof",
+        "version": "20261122210104",
+        "statementCount": 1
+      },
+      {
+        "md5": "c22291fbea68bcd5e3bcfb5758dda639",
+        "name": "reading_levels_completed_routes",
+        "version": "20261122233351",
+        "statementCount": 1
+      }
+    ],
+    "protectedCounts": {
+      "users": 0,
+      "consents": 0,
+      "families": 0,
+      "releases": 26,
+      "acceptances": 0,
+      "registrationProofs": 0
+    },
+    "acceptancesDigest": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  "sourceMigrations": [
+    {
+      "file": "20261123002951_child_birth_date_reading_profile.sql",
+      "version": "20261123002951",
+      "name": "child_birth_date_reading_profile",
+      "md5": "62862263046eb794ed404a7383537870",
+      "sha256": "15e665d9fd2d76c55d0bd91e8602624f8e43f949c39c765378dda78dd6107667"
+    },
+    {
+      "file": "20261123003259_child_birth_date_privacy_information.sql",
+      "version": "20261123003259",
+      "name": "child_birth_date_privacy_information",
+      "md5": "f309b1fd89c90ceac8ae05344920947e",
+      "sha256": "10b58b060b19905eb1ae693530cc39bb333233ce92c3f020dcdba9f4977af65a"
+    }
+  ],
+  "generatedMigrationsBeforeNormalization": [
+    {
+      "md5": "62862263046eb794ed404a7383537870",
+      "name": "child_birth_date_reading_profile",
+      "version": "20261123010924",
+      "statementCount": 1
+    },
+    {
+      "md5": "f309b1fd89c90ceac8ae05344920947e",
+      "name": "child_birth_date_privacy_information",
+      "version": "20261123010926",
+      "statementCount": 1
+    }
+  ],
+  "normalization": {
+    "onlyOwnTwoVersionColumnsChanged": true,
+    "requiredGuards": [
+      "exact generated timestamp",
+      "exact migration name",
+      "one stored statement",
+      "exact stored SQL MD5",
+      "source version absent",
+      "exactly one changed row",
+      "all twelve earlier version/name/SQL hashes unchanged",
+      "exactly fourteen total history rows"
+    ],
+    "previousTwelveStatementsPreserved": true
+  },
+  "after": {
+    "checkedAt": "2026-11-23T01:10:13.217453+00:00",
+    "familyDigest": "d41d8cd98f00b204e9800998ecf8427e",
+    "releaseDigest": "dc4050ed6e5c2a58426f7303f4989e3b",
+    "consentsDigest": "d41d8cd98f00b204e9800998ecf8427e",
+    "legalDocuments": [
+      {
+        "kind": "privacy",
+        "sha256": "97673d3103443115097def26e20e6c677650dcb760d095de900ae3c5c5961cb7",
+        "version": "2026-11-22"
+      },
+      {
+        "kind": "privacy",
+        "sha256": "c3f6186be703dda5320b70227070fea79e395eac225dbbbde0420913c57727e4",
+        "version": "2026-11-22.1"
+      },
+      {
+        "kind": "privacy",
+        "sha256": "f108fc40b0aa5fc3d99c754eb71abacd234c05b4611c383c40a8a0b3505539e3",
+        "version": "2026-11-23"
+      },
+      {
+        "kind": "terms",
+        "sha256": "8da71baa717f1e98b393320532670b4ebbddacbd390a14dba3c4cc144b394840",
+        "version": "2026-11-22"
+      }
+    ],
+    "functionDigests": [
+      {
+        "acl": "{postgres=X/postgres,anon=X/postgres,authenticated=X/postgres}",
+        "bodyMd5": "c3d733eaf9b3ca61685aac964488bc9b",
+        "signature": "begin_parent_registration(text,text,text,text,text,boolean,boolean)",
+        "normalizedMd5": "ae80074028bdf4d4086e7831b9d0b380",
+        "expectedNewNormalizedMd5": "ae80074028bdf4d4086e7831b9d0b380"
+      },
+      {
+        "acl": "{postgres=X/postgres,authenticated=X/postgres}",
+        "bodyMd5": "81df18e85457ee4c4b68f9479be66bf5",
+        "signature": "complete_parent_onboarding(text,text,boolean,boolean,text)",
+        "normalizedMd5": "8fc7cf05552cbec13850a202f23d9c83",
+        "expectedNewNormalizedMd5": "8fc7cf05552cbec13850a202f23d9c83"
+      },
+      {
+        "acl": "{postgres=X/postgres,authenticated=X/postgres}",
+        "bodyMd5": "e8e9a8c438033d209d7302304fc1a062",
+        "signature": "complete_parent_registration(text,text)",
+        "normalizedMd5": "95818d2038d2d8866b44c0daa861d61d",
+        "expectedNewNormalizedMd5": "95818d2038d2d8866b44c0daa861d61d"
+      },
+      {
+        "acl": "{postgres=X/postgres,authenticated=X/postgres}",
+        "bodyMd5": "7dead1dbebe90a6b0416016418a5ace6",
+        "signature": "consent_child_profile(text,boolean,boolean)",
+        "normalizedMd5": "7ff2e58749e5074865c4b1b445d12053",
+        "expectedNewNormalizedMd5": "7ff2e58749e5074865c4b1b445d12053"
+      },
+      {
+        "acl": "{postgres=X/postgres,authenticated=X/postgres}",
+        "bodyMd5": "833e6827575fef5a2dea135bb7a48e86",
+        "signature": "get_account_lifecycle()",
+        "normalizedMd5": "29619ac9ca4710fc7dd44665ac64b1f1",
+        "expectedNewNormalizedMd5": "29619ac9ca4710fc7dd44665ac64b1f1"
+      },
+      {
+        "acl": "{postgres=X/postgres,anon=X/postgres,authenticated=X/postgres}",
+        "bodyMd5": "6fa5e86523c5c5c442f8eadc67486696",
+        "signature": "private.begin_parent_registration(text,text,text,text,text,boolean,boolean)",
+        "normalizedMd5": "5b144ccbc14d81e12f4651a4dbb9f399",
+        "expectedNewNormalizedMd5": "5b144ccbc14d81e12f4651a4dbb9f399"
+      },
+      {
+        "acl": "{postgres=X/postgres,authenticated=X/postgres}",
+        "bodyMd5": "4601b5dff65a1b1aec766ebbbb073802",
+        "signature": "private.complete_parent_onboarding(text,text,boolean,boolean,text)",
+        "normalizedMd5": "53be46321eeb398571fe71063a8a70e2",
+        "expectedNewNormalizedMd5": "53be46321eeb398571fe71063a8a70e2"
+      },
+      {
+        "acl": "{postgres=X/postgres,authenticated=X/postgres}",
+        "bodyMd5": "de3e4d5726de78e87ed0c7636e9c60f6",
+        "signature": "private.complete_parent_registration(text,text)",
+        "normalizedMd5": "b7b976fd0b7f02391eef82d252299dd4",
+        "expectedNewNormalizedMd5": "b7b976fd0b7f02391eef82d252299dd4"
+      },
+      {
+        "acl": "{postgres=X/postgres,authenticated=X/postgres}",
+        "bodyMd5": "02da004e9b6bac698b3308ffa5a387b1",
+        "signature": "private.consent_child_profile(text,boolean,boolean)",
+        "normalizedMd5": "f272af3267b8ff2543b490696e8cd770",
+        "expectedNewNormalizedMd5": "f272af3267b8ff2543b490696e8cd770"
+      },
+      {
+        "acl": "{postgres=X/postgres,authenticated=X/postgres}",
+        "bodyMd5": "4060581893bfc8fd06e846468326f561",
+        "signature": "private.get_account_lifecycle()",
+        "normalizedMd5": "9de77a80891143c12f23576630551c15",
+        "expectedNewNormalizedMd5": "9de77a80891143c12f23576630551c15"
+      },
+      {
+        "acl": "{postgres=X/postgres,authenticated=X/postgres}",
+        "bodyMd5": "48f32c0926041c2f637be218ab18f8b9",
+        "signature": "private.save_family_snapshot(bigint,jsonb)",
+        "normalizedMd5": "bcaa064696bfd9a27fe0690b846b1e85",
+        "expectedNewNormalizedMd5": "bcaa064696bfd9a27fe0690b846b1e85"
+      },
+      {
+        "acl": "{postgres=X/postgres}",
+        "bodyMd5": "da54110754124b83879c01c51553c863",
+        "signature": "private.valid_family_snapshot(jsonb)",
+        "normalizedMd5": "d86dbdf567864197735564c5242dcf43",
+        "expectedNewNormalizedMd5": "d86dbdf567864197735564c5242dcf43"
+      },
+      {
+        "acl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+        "bodyMd5": "797bbd6c20d182c8681fee0a21ca3f40",
+        "signature": "save_family_snapshot(bigint,jsonb)",
+        "normalizedMd5": "6372e77cbc7de2a7b33ed940a2b00432",
+        "expectedNewNormalizedMd5": "6372e77cbc7de2a7b33ed940a2b00432"
+      }
+    ],
+    "migrationHashes": [
+      {
+        "md5": "1835bef2f08fd0430f0bf1ca92c3a067",
+        "name": "family_content_contract",
+        "version": "20261104095714",
+        "statementCount": 1
+      },
+      {
+        "md5": "db536f3636e67569342e3dd892a835b1",
+        "name": "verified_bootstrap_admin",
+        "version": "20261122140451",
+        "statementCount": 1
+      },
+      {
+        "md5": "5c1c5a50e2fbd1b7ae6afa0e70484c1a",
+        "name": "admin_email_settings",
+        "version": "20261122150754",
+        "statementCount": 1
+      },
+      {
+        "md5": "4164ab4638cd00614225ad738a3b3e6d",
+        "name": "parent_account_lifecycle",
+        "version": "20261122172905",
+        "statementCount": 1
+      },
+      {
+        "md5": "ec2b39bd171297f632b51a9e4e7d0bb3",
+        "name": "lifecycle_worker_schedule",
+        "version": "20261122174433",
+        "statementCount": 1
+      },
+      {
+        "md5": "24a1b4c5641e46966fbda911a6125444",
+        "name": "signed_lifecycle_worker_requests",
+        "version": "20261122175306",
+        "statementCount": 1
+      },
+      {
+        "md5": "caa4b4eb7065e65cd98d5a72f2ae95b4",
+        "name": "private_pg_net_extension",
+        "version": "20261122175654",
+        "statementCount": 1
+      },
+      {
+        "md5": "9520f3661762278749c395d6db7885e1",
+        "name": "account_deletion_deadline_preview",
+        "version": "20261122182638",
+        "statementCount": 1
+      },
+      {
+        "md5": "d67fb30a3346acdc0f5f239b34929cf4",
+        "name": "backup_erasure_evidence_retention",
+        "version": "20261122190748",
+        "statementCount": 1
+      },
+      {
+        "md5": "0bc15e76822c361157f345980cc531a5",
+        "name": "privacy_backup_support_update",
+        "version": "20261122190924",
+        "statementCount": 1
+      },
+      {
+        "md5": "798bace3f4f142f27c17b1f6f55e78b4",
+        "name": "parent_registration_proof",
+        "version": "20261122210104",
+        "statementCount": 1
+      },
+      {
+        "md5": "c22291fbea68bcd5e3bcfb5758dda639",
+        "name": "reading_levels_completed_routes",
+        "version": "20261122233351",
+        "statementCount": 1
+      },
+      {
+        "md5": "62862263046eb794ed404a7383537870",
+        "name": "child_birth_date_reading_profile",
+        "version": "20261123002951",
+        "statementCount": 1
+      },
+      {
+        "md5": "f309b1fd89c90ceac8ae05344920947e",
+        "name": "child_birth_date_privacy_information",
+        "version": "20261123003259",
+        "statementCount": 1
+      }
+    ],
+    "protectedCounts": {
+      "users": 0,
+      "consents": 0,
+      "families": 0,
+      "releases": 26,
+      "acceptances": 0,
+      "registrationProofs": 0
+    },
+    "acceptancesDigest": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  "preservationChecks": {
+    "oldTwelveHistoryUnchanged": true,
+    "fourteenExpectedHistoryRows": true,
+    "protectedCountsUnchanged": true,
+    "familyDigestUnchanged": true,
+    "acceptancesDigestUnchanged": true,
+    "consentsDigestUnchanged": true,
+    "releaseDigestUnchanged": true,
+    "oldLegalDocumentsUnchanged": true,
+    "allExistingFunctionAclsUnchanged": true,
+    "privacyFunctionsOnlyVersionChanged": true,
+    "publicWrappersUnchanged": true
+  },
+  "hostedReadonlyContractChecks": {
+    "cases": {
+      "datedSnapshot": true,
+      "futureRejected": true,
+      "legacySnapshot": true,
+      "dateTimeRejected": true,
+      "nullDateRejected": true,
+      "emptyDateRejected": true,
+      "validLeapAccepted": true,
+      "validOverride6to8": true,
+      "validOverride9plus": true,
+      "invalidLeapRejected": true,
+      "validOverrideUnder6": true,
+      "nullOverrideRejected": true,
+      "invalidOverrideRejected": true,
+      "missingAprilDayRejected": true,
+      "unknownProfileFieldRejected": true
+    },
+    "familyRls": true,
+    "allCasesPass": true,
+    "privacyVersion": "2026-11-23",
+    "directWriteDenied": true,
+    "legalTextHashesValid": true,
+    "privateHelpersDenied": true,
+    "stableDateValidation": true,
+    "newProfileDateGuardInRpc": true,
+    "stableSnapshotValidation": true,
+    "amsterdamClockInValidator": true,
+    "inactivityDeletionEnabled": false
+  },
+  "securityAdvisors": [
+    {
+      "name": "rls_enabled_no_policy",
+      "level": "INFO",
+      "count": 15,
+      "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy"
+    }
+  ],
+  "allChecksPassed": true,
+  "limits": [
+    "No real OTP or Google login, inbox delivery, reviewer account or user mutation was performed.",
+    "Hosted profile-date creation/edits were verified through pure validators and function definitions; real UI acceptance and actual authenticated write behavior remain covered by isolated local tests and subsequent owner acceptance.",
+    "Database metadata alone does not prove app activation or public HTTPS availability.",
+    "No public routing or Auth/mail configuration was changed."
+  ]
+}

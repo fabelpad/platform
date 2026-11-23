@@ -1,74 +1,70 @@
 # Fabelpad — actuele status staging en production
 
-Controledatum: **23 november 2026, Europe/Amsterdam**. Actieve appbron: **`ec82395ba57904302bc4a93e71e5dba63def2950`**, repository `fabelpad/platform`, integratiebranch `main`. Zie het [releasebewijs](deploy-evidence/complete-release-2026-11-23.json) en de [validatie van avonturen en leesniveaus](VALIDATIE-AVONTUREN-2026-11-23.md).
+Controledatum: **23 november 2026, Europe/Amsterdam**. Appbron **`228d951ac0db0bac03c7a74c9d67a8c547b005fa`**, repository `fabelpad/platform`, integratiebranch `main`. Beide kandidaatbouwen en activeringen zijn geslaagd. Zie het [releasebewijs](deploy-evidence/birth-release-2026-11-23.json), de [profielvalidatie](VALIDATIE-GEBOORTEDATUM-2026-11-23.md) en de [ondertekende Android-bouw](ANDROID-PRODUCTIE-1.0.1.md).
 
-**Beide appservices zijn actief, boot-enabled en exact op deze bron gecontroleerd.** Staging is bereikbaar op **[staging.fabelpad.nl](https://staging.fabelpad.nl)**. De productieapp draait op haar eigen loopbackpoort; **de publieke productieroute blijft uit**. Proxy, DNS, externe mailconfiguratie en zes bestaande services zijn behouden.
+**Staging is bereikbaar op https://staging.fabelpad.nl. De bestaande productie-installatie draait op haar eigen loopbackpoort; publieke productie-HTTPS blijft uit.** Bestaande accounts, verkeer, proxy, DNS, runners en overige services zijn behouden.
 
-## Geïntegreerde avonturen
+## Geboortedatum en leesniveau
 
-Alle **13 avonturen** hebben **5 hoofdstukken**, **2 keuzes per hoofdstuk** en een speelprent bij elk van de **65 hoofdstukken**. Web en native gebruiken **hero → volledige verhaaltekst → Wat kies jij? → speelprent of keuzeknoppen → voorlezen/opslagstatus**. Een keuze gaat eenmaal door naar de hero van het volgende hoofdstuk; keuze vijf opent de afsluiting en kent het bijbehorende aandenken toe. De twee specifieke stationsopdrachten en treinanimatie blijven op web behouden. Native gebruikt illustraties met twee directe keuzes op alle hoofdstukken en behoudt de moduswissel.
+Nieuwe persoonlijke kindprofielen vereisen een geboortedatum. Datum en handmatige leesvoorkeur staan uitsluitend bij het kind in de ouderinstellingen. De gedeelde kalenderfunctie gebruikt `Europe/Amsterdam`, voltooide jaren, de zesde en negende verjaardag en 1 maart voor 29 februari in een niet-schrikkeljaar. De categorie wordt opnieuw bepaald bij profielwisseling, verhaalopen, middernacht en terugkeer naar de app. Een bewuste handmatige voorkeur blijft staan totdat de ouder automatisch kiest en bewaart.
 
-De drie volledige leesniveaus gebruiken dezelfde routes. `6to8` is de standaard zonder profielvoorkeur; wisselen bewaart hoofdstuk, routekeuzes, vastgezette editie en voortgang. De jongere versies blijven per volledige route binnen 5% van de oorspronkelijke omvang. Een voltooide route kan zonder voortgangsherschrijving worden teruggelezen of vanaf hoofdstuk één opnieuw worden gespeeld; de laatst voltooide route/contentversie blijft bewaard. Bestaande verhaal-ID’s, route-indexen, aandenkens, geauthenticeerde toegang, downloads en oude contentversies blijven bruikbaar.
+Bestaande profielen blijven leesbaar zonder geboortedatum. Tot toevoegen geldt de eerder bewaarde geldige categorie, anders `6to8`; oude readerkeuzes worden geen expliciete ouderoverride. De reader heeft geen niveaukiezer meer. Directe links en downloads gebruiken het profielniveau met behoud van verhaal-ID, hoofdstuk, route, aandenkens en voltooide geschiedenis. De kindnaam vervangt oude naamcodes en de hoofdletterplaceholder Avonturier; de hero toont steeds het avontuur van het kind.
+
+Alle dertien avonturen behouden vijf hoofdstukken, twee keuzes en de 65 speelprenten. Hero, tekst en keuzemoment blijven in dezelfde volgorde staan. Stationsopdrachten, treinanimatie, gewone knoppen, teruglezen en herstart blijven werken. Alle 403 hoofdstukvarianten en 416 eindroutes per niveau zijn gecontroleerd.
 
 ## Uitgevoerde controles
 
-| Onderdeel | Bewijs | Resultaat en grens |
-| --- | --- | --- |
-| Schone bronbuild | [Lokale validatie](deploy-evidence/complete-local-validation-2026-11-23.json) | **PASS, 46,8 seconden**, Node 24.18.0 / pnpm 11.25.0 / Next 16.3.4, exact-SHA-gitarchive en geïsoleerde lokale configuratie |
-| Volledige browsersuite | [Lokale validatie](deploy-evidence/complete-local-validation-2026-11-23.json) | **68/68 PASS**, 18 nieuwe avontuurscenario’s, 360/390/768/1440 px; geen failures/skips/flaky tests |
-| Leesniveau- en routecontrole | [Lokale validatie](deploy-evidence/complete-local-validation-2026-11-23.json) | **403 hoofdstukvarianten en 416 eindroutes per niveau**; alle routes binnen 5%, exacte aandenkens en routebetekenissen |
-| PostgreSQL/JSON-contract | [Lokale validatie](deploy-evidence/complete-local-validation-2026-11-23.json) | **38 snapshot- en 37 bundelgevallen**, legacy-upgrade, CAS, consent, ouderisolatie, hash en private rechten |
-| Native export/typecontrole/runtime | [Native validatie](deploy-evidence/complete-native-validation-2026-11-23.json) | **PASS**, drie niveaus, 20 bron-/exportillustraties, reproduceerbare export en behouden oude archiefbytes |
-| Native ongetekend productie-AAB | [CI-/AAB-inspectie](deploy-evidence/complete-native-ci-2026-11-23.json) | **PASS**, 20 runtime-WebPs met bronhashes gelijk, ELF-/bundle-alignment en statische Hermes-/contenttokens; geen toesteltest, signing of Play-upload |
-| Gezamenlijke app-/rechtenaudit | [Bewijs](deploy-evidence/complete-activated-2026-11-23.json) | Beide services gezond op exacte SHA, gekoppelde app/runtimeconfiguratie en vorige readercombinatie behouden |
-| Publieke staging | [HTTP/TLS](deploy-evidence/complete-staging-public-2026-11-23.json), [browser](deploy-evidence/complete-staging-browser-2026-11-23.json) | **23 HTTP/TLS- en 1817 browsercontroles PASS**; geen echte Auth-/mailhandelingen |
-| Bestaande omgevingen/routing | [Voorcontrole](deploy-evidence/complete-host-before-2026-11-23.json), [eindaudit](deploy-evidence/complete-activated-2026-11-23.json), [routing](deploy-evidence/complete-routing-2026-11-23.json) | Zes bestaande services, gedeelde configuratie, stagingproxy en standaard-hostantwoorden behouden; productie publiek uit |
+| Controle | Resultaat / bewijs |
+| --- | --- |
+| Schone volledige lokale webbuild | **PASS, 52,734 s**; Node 24.18.0 / pnpm 11.25.0 / Next 16.3.4; [rapport](deploy-evidence/birth-local-validation-2026-11-23.json) |
+| Browser | **76 unieke checks PASS**, inclusief nieuwe aanmaak/bewerking, legacy/import, profielen 5/7/9, verjaardag/foreground, handmatige reset en routebehoud; [rapport](deploy-evidence/birth-web-browser-2026-11-23.json) |
+| Backend | Volledige regressies plus 30 JS/PostgreSQL DOB-gevallen, 22 API-gevallen en privacycatalogus-upgrade; [contract](KINDPROFIEL-GEBOORTEDATUM-CONTRACT.md) |
+| Native | TypeScript, runtime, Metro-export, Kotlin, lint en echte releasebuild PASS; [ondertekende AAB](deploy-evidence/birth-native-signed-2026-11-23.json), [inhoud](deploy-evidence/birth-native-content-2026-11-23.json) |
+| Hosted databases | Beide 14 juiste migraties; eerdere twaalf, accounts, gezins-/juridische gegevens en 26 releases behouden; vijftien pure validatorgevallen per project PASS |
+| Publieke staging | Echte HTTPS-/asset-/anonieme browserchecks plus afzonderlijke volledig onderschepte synthetische ouderflow PASS; [rapport](deploy-evidence/birth-staging-browser-2026-11-23.json) |
+| Host | Exacte app-/configuratiecombinaties, loopbackhealth, gescheiden rechten en behoud overige services/runners/proxy; [voorcontrole](deploy-evidence/birth-host-before-2026-11-23.json), [eindcontrole](deploy-evidence/birth-host-after-2026-11-23.json) |
 
-| Stap | Run | Resultaat |
-| --- | --- | --- |
-| Verplichte web-CI `verify` | [45084662737](https://github.com/fabelpad/platform/actions/runs/45084662737) | **SUCCESS** op `ec82395ba57904302bc4a93e71e5dba63def2950` |
-| Verplichte `Native Android-controles` | [45084662867](https://github.com/fabelpad/platform/actions/runs/45084662867) | **SUCCESS** op `ec82395ba57904302bc4a93e71e5dba63def2950` |
-| Stagingkandidaat | [45085866014](https://github.com/fabelpad/platform/actions/runs/45085866014) | **SUCCESS** op `ec82395ba57904302bc4a93e71e5dba63def2950` |
-| Stagingactivering | [45086062913](https://github.com/fabelpad/platform/actions/runs/45086062913) | **SUCCESS** op `ec82395ba57904302bc4a93e71e5dba63def2950` |
-| Productiekandidaat | [45086060176](https://github.com/fabelpad/platform/actions/runs/45086060176) | **SUCCESS** op `ec82395ba57904302bc4a93e71e5dba63def2950` |
-| Productieactivering | [45086241991](https://github.com/fabelpad/platform/actions/runs/45086241991) | **SUCCESS** op `ec82395ba57904302bc4a93e71e5dba63def2950` |
+| Stap | Geslaagde run op deze app-SHA |
+| --- | --- |
+| Web-CI | [45090519395](https://github.com/fabelpad/platform/actions/runs/45090519395) |
+| Native Android-controles | [45090519222](https://github.com/fabelpad/platform/actions/runs/45090519222) |
+| Stagingkandidaat | [45092314545](https://github.com/fabelpad/platform/actions/runs/45092314545) |
+| Stagingactivering | [45092641979](https://github.com/fabelpad/platform/actions/runs/45092641979) |
+| Productiekandidaat | [45092530884](https://github.com/fabelpad/platform/actions/runs/45092530884) |
+| Productieactivering | [45092968383](https://github.com/fabelpad/platform/actions/runs/45092968383) |
 
-## Eigen omgevingen en release-identiteit
+## Omgevingen
 
 | Onderdeel | Staging | Production |
 | --- | --- | --- |
 | GitHub environment | `staging` | `production` |
 | Supabase-account / project | fabelpad / `tlwfpivafcokcjyjwgmq` | Duindorpdoet / `aptprpkosqctwrzeetgs` |
-| App-origin | `https://staging.fabelpad.nl` | `https://fabelpad.nl` |
-| Eigen doel / runner | `fabelpad-vps08-staging`, ID 21 | `fabelpad-vps08-production`, ID 22 |
-| Appservice / loopback | `fabelpad-vps08-staging.service`, `127.0.0.1:4188` | `fabelpad-vps08-production.service`, `127.0.0.1:4189` |
-| Actieve kandidaat | `ec82395ba57904302bc4a93e71e5dba63def2950-45085866014-1` | `ec82395ba57904302bc4a93e71e5dba63def2950-45086060176-1` |
-| Configuratie-ID | `complete-20261123-stg` | `complete-20261123-prd` |
-| Artefact-SHA-256 | `fe475181d48b5231652212ec6f2b54a72e458e4accb0f5528f66c13587e3066b` | `51c661f8781967064ec25991442f03b70d263d10bc49d749d1938e2c44ef0f59` |
-| Runtimeconfiguratie-SHA-256 | `c4ddef2350d174daee33787fede61307741a7b104e4412395d5a27365290d842` | `83ffbd21e60be511fd75a777ade86b6845242dc3f731c34a5af1991e1e70c7c7` |
-| Actief releasepad | `/srv/sites/fabelpad-vps08-staging/releases/ec82395ba57904302bc4a93e71e5dba63def2950-45085866014-1` | `/srv/sites/fabelpad-vps08-production/releases/ec82395ba57904302bc4a93e71e5dba63def2950-45086060176-1` |
-| Vorige kandidaat | `96ef208439a8b4af1dca985ed7192fb286686b13-45080430787-1` | `96ef208439a8b4af1dca985ed7192fb286686b13-45080609989-1` |
-| Vorige configuratie-ID | `reader-20261122-stg` | `reader-20261122-prd` |
-| Publieke HTTPS | Actief; `noindex, nofollow, noarchive` | Niet geactiveerd |
+| Service / poort | `fabelpad-vps08-staging.service` / 4188 | `fabelpad-vps08-production.service` / 4189 |
+| Runner | ID 21, `fabelpad-vps08-staging` | ID 22, `fabelpad-vps08-production` |
+| Actieve kandidaat | `228d951ac0db0bac03c7a74c9d67a8c547b005fa-45092314545-1` | `228d951ac0db0bac03c7a74c9d67a8c547b005fa-45092530884-1` |
+| Configuratie-ID | `birth-20261123-stg` | `birth-20261123-prd` |
+| Artefact-SHA-256 | `b07d197382bf0bed1ffdb6d4bc9b65c9c53157edccff2d9ea1912e14e5027c77` | `16c2f747d5eec6e2dd5f317dad1285ac5ef0c52ca0347444893ecbe836177436` |
+| Runtimeconfiguratie-SHA-256 | `db4e247fec947b0aca635e73a4d0cd3ff602a5852f4700b2ba61609c872514ec` | `2d131808af41676b4cc5c66d4a226291154c26f2f116e7db02c3059ff790e268` |
+| Vorige kandidaat | `ec82395ba57904302bc4a93e71e5dba63def2950-45085866014-1` | `ec82395ba57904302bc4a93e71e5dba63def2950-45086060176-1` |
+| Vorige configuratie | `complete-20261123-stg` | `complete-20261123-prd` |
+| Publieke HTTPS | Actief, noindex | Niet geactiveerd |
 
-Ieder environment houdt uitsluitend `FABELPAD_APP_ORIGIN`, `FABELPAD_DATA_MODE`, `NEXT_PUBLIC_SUPABASE_URL` en `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`. Er zijn geen variabelen/secrets toegevoegd. Runner-, build- en apprechten blijven gescheiden; de twaalf root-owned adapters per doel, eigen locks en concurrency blijven behouden.
+De releasepaden zijn `/srv/sites/fabelpad-vps08-staging/releases/KANDIDAAT` en `/srv/sites/fabelpad-vps08-production/releases/KANDIDAAT`. App en de bijbehorende versiegebonden runtimeconfiguratie blijven gekoppeld. Beide environments houden uitsluitend `FABELPAD_APP_ORIGIN`, `FABELPAD_DATA_MODE`, `NEXT_PUBLIC_SUPABASE_URL` en `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`. Er zijn geen GitHub-variabelen, secrets of environments toegevoegd.
 
-## Databases, authenticatie en privacy
+## Database, privacy en mail
 
-Beide eigen databases hebben **12 migraties en 26 releases**. De dertien oude releasepayloads zijn bytegelijk behouden en dertien nieuwe releases bevatten alle drie niveaus. Staging behoudt **1 Auth-gebruiker / 1 gezin**, production **0 / 0**; gezins-/Auth-gegevens zijn niet herschreven en er zijn geen gebruikers aangemaakt. De nieuwe optionele profielvelden hebben dezelfde scope, toestemming, CAS en verwijderroute als bestaande leesvoortgang. Bewijs: [staging](deploy-evidence/complete-database-staging-2026-11-23.json) en [production](deploy-evidence/complete-database-production-2026-11-23.json); [Supabase-contract](../supabase/README.md).
+Beide projecten hebben de additieve migraties `20261123002951_child_birth_date_reading_profile.sql` en `20261123003259_child_birth_date_privacy_information.sql`. Geen gezin is herschreven; er zijn geen gebruikers of geboortedatums verzonnen. Staging behoudt één gebruiker/gezin/aanvaarding/toestemming; production nul. Beide behouden 26 verhaalreleases. [Stagingbewijs](deploy-evidence/birth-database-staging-2026-11-23.json), [productiebewijs](deploy-evidence/birth-database-production-2026-11-23.json).
 
-Voorwaarden blijven `2026-11-22`, privacy `2026-11-22.1`. Eenmalige ouderverklaring bij registratie, echte sessie-/beheercontrole en afzonderlijke toestemming per online kinderprofiel blijven behouden. Auth-mail blijft **Supabase Custom SMTP → Resend** met zes cijfers; activeer geen Send Email Hook. De afzonderlijke API-servicemail wordt beheerd via `/studio/email`, templates via `/studio/email/templates`; een werkende SMTP-koppeling bewijst geen API- of inboxacceptatie.
+Voorwaarden blijven `2026-11-22`; actuele privacy is **`2026-11-23`**, inclusief geboortedatum en automatische indeling. De oorspronkelijke documenten blijven bytegelijk beschikbaar. Bestaande ouders herhalen hun 18+/ouderverklaring niet. Online toegang, afzonderlijke profieltoestemming, RLS, CAS en volledige profielverwijdering behouden hun werking. Auth-mail blijft Supabase Custom SMTP → Resend met zes cijfers; geen hook-, Auth-, mail- of Vault-wijzigingen uitgevoerd. Applicatiemail blijft afzonderlijk beheerbaar via `/studio/email` en `/studio/email/templates`.
 
-De bestaande lifecycle behoudt **7 dagen** voor onafgeronde onboarding, **30 dagen** voor vrijwillige verwijdering en **210 dagen** voor minimaal gehashte wisbewijzen. **Automatische 90-dageninactiviteitswissing blijft uit** totdat waarschuwingen en overgang zijn geaccepteerd. Back-ups maximaal **180 dagen** en gewone Stackmail-support maximaal **12 maanden na afsluiting** blijven bevestigd beleid; externe opschoning en een echte herstelproef worden niet als appcron geclaimd.
+Bestaande retentie blijft behouden: zeven dagen onafgeronde onboarding, dertig dagen vrijwillige accountverwijdering en 210 dagen minimaal gehasht wisbewijs. Automatische inactiviteitswissing blijft uit. Back-ups maximaal 180 dagen; gewone Stackmail-support maximaal twaalf maanden na afsluiting. Externe mailbox-/back-upopschoning is geen appcron.
 
-## Gebruik, herstel en acceptatiegrenzen
+## Android, gebruik en herstel
 
-Ververs staging eenmaal. Maak geen bestaand account of profiel opnieuw aan en wis geen browsergegevens voor deze integratie. Nieuwe echte OTP-/Google-registratie, API-mailbezorging en de volledige ouderflow blijven afzonderlijke interactieve acceptatie. De publieke productieroute vereist de bestaande aparte vrijgave en haar eigen acceptatie.
+De gratis lokale React Native-app is aangeleverd als **ondertekende 1.0.1 (2), `nl.fabelpad.app`**. AAB **38.917.985 bytes**, SHA-256 `6e32d9faed68febb783e9a0c2a0a2683cd418858fbc7af3e78ca539bea9de746`. Twintig runtimebeelden, native datumkiezer, signing en alle 44 ELF-/bundle-/APK-alignments zijn gecontroleerd. De Android-profielen zijn lokaal en gebruiken geen Supabase-account. De spraakengine ontvangt een generieke naam; geen kindnaam of geboortedatum.
 
-De vorige procesgezonde combinatie is bron `96ef208439a8b4af1dca985ed7192fb286686b13`: staging `96ef208439a8b4af1dca985ed7192fb286686b13-45080430787-1` met `reader-20261122-stg`, production `96ef208439a8b4af1dca985ed7192fb286686b13-45080609989-1` met `reader-20261122-prd`. App en bijbehorende runtimeconfiguratie blijven samen behouden. Er is geen live rollback uitgevoerd.
+Ververs staging om de nieuwe client te laden; wis geen bestaande profielen of browsergegevens. Voeg ontbrekende geboortedatums in de ouderinstellingen toe. Bestaande verhalen blijven intussen leesbaar.
 
-Een kale terugkeer naar deze oude app is **geen functioneel veilige gezinsherstelroute zodra nieuwe velden zijn opgeslagen**: haar oude TypeScript-validator weigert `prefs.readingLevel`, `lastCompletedPicks` en `lastCompletedContentVersion`. Houd de additieve databasemigratie en alle onveranderlijke releases staan. Gebruik voor ouder-/gezinssynchronisatie een herstelbuild met compatibele validatie of een gecontroleerde vooruitreparatie; test bestaande snapshots en de volledige gebruikersflow vóór verkeer terugkeert. Verwijder geen nieuwe voorkeuren of routegeschiedenis om de oude validator te laten passen. Een health 200 bewijst uitsluitend procesliveness. Zonder vorige gezonde combinatie stopt een mislukte eerste installatie alleen de eigen app en verwijdert zij de eigen `current`-verwijzing.
+De vorige procesgezonde app/configuratiecombinaties blijven behouden. Een kale approllback naar `ec82395...` is **geen functioneel veilige herstelroute**: oude clients kennen `birthDate`/`readingLevelOverride` en privacyversie 23 niet. Houd de additieve database en historische documenten in stand en gebruik een compatibele herstelbuild of vooruitreparatie. Verwijder geen profielvelden om oude code passend te maken. Activatie en herstel gebruiken hetzelfde eigen activatielock; er is geen live rollback uitgevoerd. Zie de [releaseprocedure](DG-VPS-08-TWEE-OMGEVINGEN.md) en het [profielcontract](KINDPROFIEL-GEBOORTEDATUM-CONTRACT.md).
 
-Alle CI-, build- en activeringsclaims horen bij de bovenstaande applicatiecommit. Een latere documentatiecommit wordt niet als opnieuw gebouwd, getest of geactiveerd voorgesteld. Health heeft scope `process-liveness-only`, backend `configured-unverified`. Er is geen echte OTP-/Google-aanmelding, mailbezorging, native toestel-/emulatortest, TalkBack-/systeemlettertest, signing of Google Play-upload uitgevoerd. Een synthetische spraakstem bewijst geen hoorbare apparaatstem. De ongebruikte toegangsgrens heeft uitsluitend bronreview: de huidige App geeft geen `previewLimit` door.
-
-Zie [release- en herstelprocedure](DG-VPS-08-TWEE-OMGEVINGEN.md), [gegevensstromen](PRIVACY-DATASTROMEN.md) en [supportprocedure](PRIVACY-SUPPORT-RUNBOOK.md). Hersteld verkeer vereist volledige dekking van latere verwijderingen en intrekkingen vanuit actuele afgeschermde informatie buiten het teruggezette domein, of het herstelpunt wordt geweigerd. De eerdere [readerrelease](deploy-evidence/reader-release-2026-11-22.json), [registratierelease](deploy-evidence/registration-release-2026-11-22.json) en oudere releasebewijzen blijven historische momentopnamen.
+Alle build-/CI-/activeringsclaims horen bij de bovenstaande applicatiecommit. Latere documentatiecommits zijn geen opnieuw gebouwde app. Health is `process-liveness-only`, backend `configured-unverified`. De browserouderflow gebruikt onderschepte API's; echte OTP-/Google-login, hosted profielopslag en mailbezorging zijn niet als getest geclaimd. Er is geen Android-toestel-/emulatortest, TalkBack-acceptatie of Google Play-upload uitgevoerd. Publieke productie-HTTPS, Play-account/testgate, Store-assets, toestelacceptatie en Cloud-/Play-inrichting blijven afzonderlijke stappen in het actuele invulblad en het Android-uploadverslag.
