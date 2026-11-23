@@ -53,7 +53,7 @@ class Smoke:
     @staticmethod
     def find(root, label, contains=False):
         for node in root.iter('node'):
-            values = [node.get('text', ''), node.get('content-desc', '')]
+            values = [node.get('text', ''), node.get('content-desc', ''), node.get('resource-id', '')]
             if not any(label in value if contains else label == value for value in values):
                 continue
             numbers = list(map(int, re.findall(r'-?\d+', node.get('bounds', ''))))
@@ -79,7 +79,8 @@ class Smoke:
 
     def reach(self, label, contains=False, scroll=0):
         for attempt in range(scroll + 1):
-            found = self.find(self.tree(), label, contains)
+            root = self.tree()
+            found = self.find(root, label, contains)
             if found:
                 node, (left, top, right, bottom) = found
                 width, height = self.viewport()
@@ -87,9 +88,8 @@ class Smoke:
                     assert node.get('enabled', 'true') == 'true', f'Native control disabled: {label}'
                     return node, (left, top, right, bottom)
             if attempt < scroll:
-                width, height = self.viewport()
-                self.adb('shell', 'input', 'swipe', str(width // 2), str(int(height * .76)),
-                         str(width // 2), str(int(height * .3)), '300')
+                if not self.swipe_scroll_view(root):
+                    break
         raise AssertionError(f'Native action not reachable: {label}')
 
     def tap(self, label, contains=False, scroll=0):
@@ -108,11 +108,26 @@ class Smoke:
         self.adb('shell', 'input', 'keyevent', 'KEYCODE_BACK')
         time.sleep(.5)
 
+    def swipe_scroll_view(self, root, towards_top=False):
+        # Use the real viewport: fixed tabs occupy much of a short landscape
+        # screen, so a percentage of the whole display can hit the tabbar.
+        views = [node for node in root.iter('node')
+                 if node.get('class') == 'android.widget.ScrollView'
+                 and node.get('scrollable') == 'true']
+        if not views:
+            return False  # A fully visible native panel does not need scrolling.
+        left, top, right, bottom = map(int, re.findall(r'\d+', views[0].get('bounds', '')))
+        x = (left + right) // 2
+        low, high = int(top + (bottom-top)*.8), int(top + (bottom-top)*.2)
+        start, end = (high, low) if towards_top else (low, high)
+        self.adb('shell', 'input', 'swipe', str(x), str(start), str(x), str(end), '300')
+        return True
+
     def top(self):
-        width, height = self.viewport()
+        root = self.tree()
         for _ in range(4):
-            self.adb('shell', 'input', 'swipe', str(width // 2), str(int(height * .3)),
-                     str(width // 2), str(int(height * .8)), '250')
+            if not self.swipe_scroll_view(root, towards_top=True):
+                break
 
     def capture(self, name):
         self.tree(f'{name}.xml')
@@ -125,8 +140,9 @@ class Smoke:
         (self.output / 'report.json').write_text(json.dumps(self.report, ensure_ascii=False, indent=2) + '\n')
         print(f'PASS {name}', flush=True)
 
-    def launch(self):
-        self.adb('shell', 'am', 'start', '-W', '-S', '-n', f'{self.args.package}/.MainActivity', timeout=90)
+    def launch(self, cold=True):
+        flags = ['-S'] if cold else []
+        self.adb('shell', 'am', 'start', '-W', *flags, '-n', f'{self.args.package}/.MainActivity', timeout=90)
         self.wait('Ontdek')
 
     def unlock(self):
@@ -253,7 +269,7 @@ class Smoke:
         self.wait('Kindprofielen')
         self.passed('cold restart retains local profile and Back returns to parent overview')
         self.adb('shell', 'input', 'keyevent', 'KEYCODE_HOME')
-        self.launch()
+        self.launch(cold=False)
         self.tap('Ouders')
         self.wait('Geboortejaar van de ouder')
         self.passed('resume requires the same parent gate')
@@ -288,7 +304,8 @@ class Smoke:
         self.passed('open parent screen relocks after the real five-minute session')
         self.unlock()
         self.tap('Alle gegevens op dit apparaat wissen', scroll=6)
-        self.wait('Alles wissen')
+        self.wait('Alle lokale gegevens wissen?')
+        self.wait('android:id/button1')
         self.back()
         self.wait('Alle gegevens op dit apparaat wissen')
         self.tap('Wie speelt?')
@@ -297,7 +314,8 @@ class Smoke:
         self.wait('Kindprofielen')
         self.passed('Back dismisses local wipe confirmation without deleting the profile')
         self.tap('Alle gegevens op dit apparaat wissen', scroll=6)
-        self.tap('Alles wissen')
+        self.wait('Alle lokale gegevens wissen?')
+        self.tap('android:id/button1')
         self.wait('Waar gaan we', contains=True)
         self.tap('Wie speelt?')
         assert not any('UXKind' in label for label in self.labels(self.tree())), 'Confirmed device wipe retained the synthetic profile'
