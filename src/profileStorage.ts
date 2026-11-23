@@ -1,4 +1,4 @@
-import { STORY_IDS } from './storyCatalog';
+import { STORY_IDS, isOnlineStoryId } from './storyCatalog';
 import { isReadingLevel, type ReadingLevel } from './readingLevel';
 import { isValidBirthDate } from './profileReading';
 
@@ -8,6 +8,18 @@ export type FamilySnapshot = { schemaVersion: 1; family: Family; data: Record<st
 export const MAX_CHILDREN = 5;
 export const CHILD_FIELDS: readonly string[] = ['favorites', 'started', 'completed', 'prefs', ...STORY_IDS.map(id => `story-${id}`), 'memory'];
 
+const validChildField=(field:string)=>CHILD_FIELDS.includes(field)||(field.startsWith('story-')&&isOnlineStoryId(field.slice(6)));
+export function currentContentOwner():string|null {
+ const prefix='fabelpad-scope-';if(!scope.startsWith(prefix))return null;
+ const value=decodeURIComponent(scope.slice(prefix.length));return /^parent:[a-f0-9-]{36}$/iu.test(value)?value.slice(7):null;
+}
+export function childFields(childId:string):string[] {
+ const prefix=physical(childKey(childId,'')),fields=new Set(CHILD_FIELDS);
+ const add=(key:string)=>{if(key.startsWith(prefix)){const field=key.slice(prefix.length);if(validChildField(field)&&fields.size<106)fields.add(field);}};
+ for(const key of memory.keys())add(key);
+ try{for(let index=0;index<window.localStorage.length;index++){const key=window.localStorage.key(index);if(key)add(key);}}catch{/* Session data remains available. */}
+ return [...fields];
+}
 const FAMILY_KEY = 'fabelpad-family';
 const WORLD_IDS = STORY_IDS;
 const IMPORT_OWNER_KEY = 'fabelpad-device-import-owner';
@@ -65,7 +77,7 @@ export function isFamilySnapshot(value: unknown): value is FamilySnapshot {
       child.id !== family.children[index].id || child.name !== family.children[index].name || child.avatar !== family.children[index].avatar ||
       ('birthDate' in child && child.birthDate !== family.children[index].birthDate) || ('readingLevelOverride' in child && child.readingLevelOverride !== family.children[index].readingLevelOverride))) return false;
   const childIds = new Set(family.children.map(child => child.id));
-  return Object.entries(value.data).every(([id, fields]) => childIds.has(id) && record(fields) && Object.keys(fields).every(field => (CHILD_FIELDS as readonly string[]).includes(field)));
+  return Object.entries(value.data).every(([id, fields]) => childIds.has(id) && record(fields) && Object.keys(fields).every(field => validChildField(field)));
 }
 
 /** Account caches never fall back to the old, unclaimed device profiles. */
@@ -84,7 +96,7 @@ export function readChild<T>(childId: string, field: string, fallback: T): T {
   return value as T;
 }
 export function saveChild(childId: string, field: string, value: unknown): boolean {
-  if (!(CHILD_FIELDS as readonly string[]).includes(field)) return false;
+  if (!validChildField(field)) return false;
   try { setRaw(childKey(childId, field), JSON.stringify(value)); return !volatileKeys.has(physical(childKey(childId, field))); } catch { return false; }
 }
 export function createChild(name: string, avatar: number, birthDate?: string): ChildProfile {
@@ -122,7 +134,7 @@ function snapshotWithFamily(family: Family): FamilySnapshot {
   const data: FamilySnapshot['data'] = {};
   for (const child of family.children) {
     data[child.id] = {};
-    for (const field of CHILD_FIELDS) { const value = parse(childKey(child.id, field)); if (value !== null) data[child.id][field] = value; }
+    for (const field of childFields(child.id)) { const value = parse(childKey(child.id, field)); if (value !== null) data[child.id][field] = value; }
   }
   return { schemaVersion: 1, family: { ...family, activeId: family.children[0].id }, data };
 }
@@ -137,13 +149,13 @@ export function hydrateSnapshot(snapshot: FamilySnapshot): void {
   try {
     const current = normalizeFamily(parse(FAMILY_KEY));
     const retained = new Set(snapshot.family.children.map(child => child.id));
-    for (const child of current?.children || []) if (!retained.has(child.id)) for (const field of CHILD_FIELDS) {
+    for (const child of current?.children || []) if (!retained.has(child.id)) for (const field of childFields(child.id)) {
       const key = physical(childKey(child.id, field)); memory.delete(key); volatileKeys.delete(key);
       try { window.localStorage.removeItem(key); } catch { memory.set(key, 'null'); volatileKeys.add(key); }
     }
     const activeId = current && snapshot.family.children.some(child => child.id === current.activeId) ? current.activeId : snapshot.family.activeId;
     saveFamily({ ...snapshot.family, activeId });
-    for (const child of snapshot.family.children) for (const field of CHILD_FIELDS) {
+    for (const child of snapshot.family.children) for (const field of new Set([...childFields(child.id),...Object.keys(snapshot.data[child.id]??{})])) {
       const value = snapshot.data[child.id]?.[field];
       // Explicit null prevents stale account-local records reappearing after refresh.
       setRaw(childKey(child.id, field), JSON.stringify(value ?? null));

@@ -84,13 +84,15 @@ try {
   legacy.data = { [children[0].id]: { favorites: ['station'], started: ['dream', 'toy'], 'story-dream': { picks: [0, 1], updatedAt: 1 } } };
   assert.equal(validation.validateFamilySnapshot(legacy).ok, true, 'Existing three-story accounts must stay valid');
   for (const mutate of [
-    value => { value.data[children[0].id].favorites = ['unknown-world']; },
-    value => { value.data[children[0].id]['story-unknown-world'] = { picks: [], updatedAt: 1 }; },
-    value => { value.data[children[0].id].memory.encounters[0].worldId = 'unknown-world'; },
+    value => { value.data[children[0].id].favorites = ['../unknown-world']; },
+    value => { value.data[children[0].id]['story-../unknown-world'] = { picks: [], updatedAt: 1 }; },
+    value => { value.data[children[0].id].memory.encounters[0].worldId = '../unknown-world'; },
     value => { value.data[children[0].id].memory.openThreads.push(clone(value.data[children[0].id].memory.openThreads[0])); },
   ]) {
     const malformed = clone(snapshot); mutate(malformed);
-    assert.equal(validation.validateFamilySnapshot(malformed).ok, false, 'Unknown or duplicate content must be rejected');
+    assert.equal(validation.validateFamilySnapshot(malformed).ok, false, 'Malformed or duplicate content must be rejected');
   }
+  const online=clone(legacy);online.data[children[0].id]['story-new-premium']={picks:[1],updatedAt:1,storyId:'new-premium',contentVersion:'1234567890abcdef'};online.data[children[0].id].started.push('new-premium');
+  assert.equal(validation.validateFamilySnapshot(online).ok,true,'Future protected catalog stories can preserve progress without shipping texts');profiles.setStorageScope('parent:online-test');profiles.hydrateSnapshot(online);assert.deepEqual(profiles.exportSnapshot().data[children[0].id]['story-new-premium'],online.data[children[0].id]['story-new-premium']);
   console.log(`Catalog storage checks passed: 13 stories / 416 routes, actual keepsakes and recognition, 13 open threads, legacy compatibility, isolated accounts/children and all fields round-trip. Five-child request: ${bytes} bytes / ${validation.MAX_FAMILY_BYTES}.`);
 } finally { await rm(temp, { recursive: true, force: true }); }

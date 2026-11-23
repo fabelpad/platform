@@ -1,0 +1,12 @@
+{
+  "terms": {
+    "version": "2026-11-23.1",
+    "filename": "algemene-voorwaarden.md",
+    "sha256": "c06a6a1724a8e504b9691132685f093d50a76a5a79edeeadb28de973e76ef083"
+  },
+  "privacy": {
+    "version": "2026-11-23.1",
+    "filename": "privacyverklaring.md",
+    "sha256": "9978e5f47fc6588724cb67d32a253cb53541b51b1614d545b278db4c0510aca6"
+  }
+}

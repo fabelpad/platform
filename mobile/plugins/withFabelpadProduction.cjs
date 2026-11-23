@@ -4,16 +4,21 @@ const SIGNING_START = '// BEGIN FABELPAD PRODUCTION SIGNING';
 const SIGNING_END = '// END FABELPAD PRODUCTION SIGNING';
 
 module.exports = function withFabelpadProduction(config) {
-  if (config.extra?.variant !== 'production') return config;
+  if (!['production', 'connected'].includes(config.extra?.variant)) return config;
   config = withAndroidManifest(config, value => {
     const application = value.modResults.manifest.application[0];
     application.$['android:allowBackup'] = 'false';
     application.$['android:usesCleartextTraffic'] = 'false';
     const metadata = application['meta-data'] ||= [];
     for (const [name, entry] of Object.entries({
-      'nl.fabelpad.variant': 'production',
+      'nl.fabelpad.variant': config.extra.variant,
       'nl.fabelpad.privacyUrl': config.extra.privacyUrl || '',
       'nl.fabelpad.supportUrl': config.extra.supportUrl || '',
+      'nl.fabelpad.backendOrigin': config.extra.backendOrigin || '',
+      'nl.fabelpad.environment': config.extra.environment || '',
+      'nl.fabelpad.deleteAccountUrl': config.extra.deleteAccountUrl || '',
+      'nl.fabelpad.supabaseUrl': config.extra.supabaseUrl || '',
+      'nl.fabelpad.supabaseKey': config.extra.supabaseKey || '',
     })) {
       const existing = metadata.find(item => item.$['android:name'] === name);
       if (existing) existing.$['android:value'] = entry;

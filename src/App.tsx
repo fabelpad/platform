@@ -67,7 +67,7 @@ export default function App({ initialStory, initialPage, forceEmpty = false, onR
   const today = useAmsterdamDate();
   const [, editorialChanged] = useState(0);
   const [cloudMetadata, setCloudMetadata] = useState<Record<string, { title: string; description: string; image: string }>>({});
-  const worlds = baseWorlds.map(world => ({ ...world, ...(cloudContent ? cloudMetadata[world.id] : getPublishedMetadata(world.id)) }));
+  const worlds = [...baseWorlds.map(world => ({ ...world, ...(cloudContent ? cloudMetadata[world.id] : getPublishedMetadata(world.id)) })),...(cloudContent?Object.entries(cloudMetadata).filter(([id])=>!baseWorlds.some(w=>w.id===id)).map(([id,metadata])=>({...baseWorlds[0],...metadata,id,subtitle:'Een nieuw avontuur',stamp:metadata.title,isNew:true})):[])];
   useEffect(() => { if (!cloudContent) return subscribeEditorial(() => editorialChanged(value => value + 1)); }, [cloudContent]);
   useEffect(() => {
     if (!cloudContent) return;

@@ -43,7 +43,7 @@ function fixture(options={}){
   async authExists(id){events.push(['authExists',id]);return exists;},
  };
  const fetcher=async(url,init)=>{assert.equal(url,'https://api.resend.com/emails');sends.push({headers:structuredClone(init.headers),body:JSON.parse(init.body)});if(options.providerFails)return Response.json({private:'secret-and-recipient'},{status:503});return Response.json({id:'synthetic-provider-id'});};
- return {handler:createLifecycleWorker({...environment,...options.environment},{backend,fetch:fetcher}),backend,events,sends,frozen};
+ return {handler:createLifecycleWorker({...environment,...options.environment},{backend,fetch:fetcher,afterAuthorized:options.afterAuthorized}),backend,events,sends,frozen};
 }
 test('worker rejects missing/malformed proof without DB work, reusable bearer and other methods',async()=>{
  const app=fixture();assert.equal((await app.handler(req({}))).status,401);assert.equal(app.events.length,0);
@@ -117,4 +117,17 @@ test('service adapter pins provider origin, RPC allowlist, Storage method and id
  assert.equal(calls[1].init.method,'DELETE');assert.deepEqual(JSON.parse(calls[1].init.body),{prefixes:['a.png']});assert.equal(calls[2].init.method,'DELETE');assert.equal(calls[3].init.method,'GET');assert.ok(calls.every(c=>c.url.startsWith('https://tlwfpivafcokcjyjwgmq.supabase.co/')));
  await assert.rejects(backend.rpc('execute_arbitrary_sql',{}),/Maintenance backend unavailable/);
  const absent=createLifecycleSupabaseBackend({SUPABASE_URL:'https://tlwfpivafcokcjyjwgmq.supabase.co',SUPABASE_SERVICE_ROLE_KEY:'synthetic-service-only'},async()=>new Response(null,{status:404}));await absent.deleteAuth(PARENT);assert.equal(await absent.authExists(PARENT),false);
+});
+test('billing extension runs only after an accepted one-use proof and the exact hosted target',async()=>{
+ const hosted={SUPABASE_URL:'https://aptprpkosqctwrzeetgs.supabase.co',FABELPAD_APP_ORIGIN:'https://fabelpad.nl'};
+ for(const options of [{denied:true,environment:hosted},{environment:{...hosted,FABELPAD_APP_ORIGIN:'https://staging.fabelpad.nl'}}]){
+  let ticks=0;const app=fixture({...options,afterAuthorized:async()=>{ticks++;}});
+  assert.ok((await app.handler(req())).status>=400);assert.equal(ticks,0);assert.equal(app.events.some(e=>e[0]==='claim_lifecycle_jobs'),false);
+ }
+ let atHook=[];let app;app=fixture({environment:hosted,afterAuthorized:async()=>{atHook=app.events.map(e=>e[0]);}});
+ assert.equal((await app.handler(req())).status,200);assert.deepEqual(atHook,['verify_lifecycle_worker_request']);
+});
+test('a deferred billing extension leaves lifecycle processing functional and reports its failure safely',async()=>{
+ const app=fixture({environment:{SUPABASE_URL:'https://aptprpkosqctwrzeetgs.supabase.co',FABELPAD_APP_ORIGIN:'https://fabelpad.nl'},afterAuthorized:async()=>{throw new Error('private provider diagnostic');}});
+ assert.deepEqual(await(await app.handler(req())).json(),{completed:1,deferred:0,billingDeferred:true});assert.equal(app.sends.length,1);
 });

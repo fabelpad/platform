@@ -1,3 +1,5 @@
+import { isStoryId } from './storyCatalog';
+import { saveProtectedContent,readProtectedContent,clearProtectedContent,protectedContentContext,protectedContentContextIsCurrent } from './protectedContentCache';
 import { canonicalContentJson } from '../lib/contentHash';
 import { getScene, getEnding } from './storyData';
 import { worlds } from './worlds';
@@ -9,6 +11,7 @@ import { personalizeStoryText } from './storyPersonalization';
 const memoryReleases = new Map<string, ContentRelease>();
 const key = (id: string, version: string) => `fabelpad-content-v1:${id}:${version}`;
 export function cacheRelease(release: ContentRelease): boolean {
+  if(release.access){void saveProtectedContent(release);return false;}
   memoryReleases.set(key(release.storyId, release.contentVersion), release);
   try { localStorage.setItem(key(release.storyId, release.contentVersion), JSON.stringify(release)); return true; } catch { return false; }
 }
@@ -41,29 +44,28 @@ export async function localRelease(id: string, editorial = false, includeReading
   return { storyId: id, contentVersion, publishedAt: publication?.publishedAt ?? null, bundled: true, ...payload };
 }
 export async function loadContentRelease(id: string, version: string | undefined, cloud: boolean): Promise<ContentRelease> {
-  if (version) { const stored = cached(id, version); if (stored) return stored; }
-  const bundled = await localRelease(id);
-  if (version === bundled.contentVersion) { cacheRelease(bundled); return bundled; }
-  // Keep the previous canonical release available even when storage was full
-  // during the old visit. Reading views do not rewrite its version or choices.
-  if (version) {
-    const legacy = await localRelease(id, false, false);
-    if (version === legacy.contentVersion) { cacheRelease(legacy); return legacy; }
+ if(cloud){
+  const context=await protectedContentContext();
+  const current=async()=>{if(!await protectedContentContextIsCurrent(context))throw new Error('De gezinsaanmelding is gewijzigd. Open het verhaal opnieuw.');};
+  let response:Response;
+  try{response=await fetch(`/api/content/${encodeURIComponent(id)}${version?`?version=${encodeURIComponent(version)}`:''}`,{cache:'no-store',signal:AbortSignal.timeout(15_000)});}catch{
+   await current();
+   const stored=await readProtectedContent(id,version);if(stored){await current();return stored;}
+   throw new Error('Maak verbinding om jullie toegang en deze verhaalversie te controleren. Je voortgang blijft bewaard.');
   }
-  if (!cloud) {
-    const editorial = await localRelease(id, true);
-    if (!version || version === editorial.contentVersion) { cacheRelease(editorial); return editorial; }
-  }
-  try {
-    const response = await fetch(`/api/content/${encodeURIComponent(id)}${version ? `?version=${encodeURIComponent(version)}` : ''}`, { cache: 'no-store' });
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.message || 'Deze verhaalversie kan niet worden geopend. Je keuzes blijven bewaard.');
-    const release = data.release as ContentRelease;
-    if (release.storyId !== id || (version && release.contentVersion !== version)) throw new Error('De verhaalversie komt niet overeen. Je avontuur is niet veranderd.');
-    cacheRelease(release); return release;
-  } catch (error) {
-    if (version === bundled.contentVersion || !version) { cacheRelease(bundled); return bundled; }
-    throw error;
-  }
+  const data=await response.json();
+  await current();
+  if(!response.ok){if([401,403,410].includes(response.status)&&context.owner)await clearProtectedContent(context.owner);throw new Error(data.message||'Deze verhaalversie kan niet worden geopend. Je keuzes blijven bewaard.');}
+  const release=data.release as ContentRelease;
+  if(release?.storyId!==id||(version&&release.contentVersion!==version)||!['full','preview'].includes(release.access??''))throw new Error('De verhaalversie komt niet overeen. Je avontuur is niet veranderd.');
+  await saveProtectedContent(release,context);await current();return release;
+ }
+ if(!isStoryId(id))throw new Error('Dit online verhaal is niet meegeleverd op dit apparaat.');
+ if(version){const stored=cached(id,version);if(stored&&!stored.access)return stored;}
+ const bundled=await localRelease(id);
+ if(version===bundled.contentVersion){cacheRelease(bundled);return bundled;}
+ if(version){const legacy=await localRelease(id,false,false);if(version===legacy.contentVersion){cacheRelease(legacy);return legacy;}}
+ const editorial=await localRelease(id,true);if(!version||version===editorial.contentVersion){cacheRelease(editorial);return editorial;}
+ throw new Error('Deze verhaalversie is niet op dit apparaat beschikbaar. Je keuzes blijven bewaard.');
 }
 export const personalText = personalizeStoryText;

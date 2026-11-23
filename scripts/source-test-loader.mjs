@@ -32,9 +32,11 @@ export async function compileSource(sourceURL, temporaryDir) {
     try {
       const lineage = new Set(ancestors); lineage.add(sourcePath);
       let code = ts.transpileModule(await readFile(sourcePath, 'utf8'), { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext } }).outputText;
+      code=code.replace(/(['"])@supabase\/supabase-js\1/gu,JSON.stringify(import.meta.resolve('@supabase/supabase-js')));
       const imports = [...code.matchAll(/(?:from\s*|import\s*)['"]([^'"]+)['"]/g)].map(match => match[1]).filter(specifier => specifier.startsWith('.'));
       for (const specifier of new Set(imports)) {
         const dependencyURL = new URL(specifier, input);
+        if(dependencyURL.pathname.endsWith('.json')) { const data=JSON.parse(await readFile(dependencyURL,'utf8'));const jsonPath=path.join(directory,createHash('sha256').update(dependencyURL.href).digest('hex').slice(0,16)+'.mjs');await mkdir(directory,{recursive:true});await writeFile(jsonPath,'export default '+JSON.stringify(data)+';\n');code=code.replaceAll(`'${specifier}'`,JSON.stringify(pathToFileURL(jsonPath).href)).replaceAll(`"${specifier}"`,JSON.stringify(pathToFileURL(jsonPath).href));continue;}
         if (!/\.(?:[cm]?tsx?|jsx?)$/.test(dependencyURL.pathname)) dependencyURL.pathname += '.ts';
         const compiled = pathToFileURL(await build(dependencyURL, lineage));
         compiled.search = dependencyURL.search;

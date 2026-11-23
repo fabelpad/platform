@@ -1,3 +1,4 @@
+import { isStoryId } from './storyCatalog';
 import { canonicalContentJson } from '../lib/contentHash';
 import { getReadingEnding, getReadingScene } from './storyReadingLevels';
 import { READING_LEVELS } from './readingLevel';
@@ -37,6 +38,7 @@ export function bundledReadingLevels(storyId: string): ReadingVariants {
  */
 export function readingLevelsForRelease(release: { storyId: string; scenes: ReadingContent['scenes']; endings: ReadingContent['endings']; readingLevels?: ReadingVariants }): ReadingVariants | undefined {
   if (release.readingLevels) return release.readingLevels;
+  if (!isStoryId(release.storyId)) return undefined;
   if (compatible.has(release)) return compatible.get(release);
   const variants = bundledReadingLevels(release.storyId);
   const same = canonicalContentJson({ scenes: release.scenes, endings: release.endings }) === canonicalContentJson(variants['9plus']);

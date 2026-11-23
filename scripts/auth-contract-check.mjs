@@ -10,6 +10,7 @@ import { compileSource } from './source-test-loader.mjs';
 // Cookies use a request-local Next adapter; no network or real accounts are used.
 const root = new URL('../', import.meta.url);
 const temp = await mkdtemp(join(tmpdir(), 'fabelpad-auth-contract-'));
+const { TERMS_VERSION, PRIVACY_VERSION } = await import(await compileSource(new URL('../lib/legal/documents.ts', import.meta.url), temp));
 const originalEnvironment = { ...process.env }, originalFetch = globalThis.fetch;
 const contextKey = Symbol.for('fabelpad.auth.contract.cookies');
 const originalContext = globalThis[contextKey];
@@ -18,7 +19,7 @@ let lifecycleState = 'active';
 let registrationProofs = new Map();
 let completionUnavailable = false;
 const hash = value => createHash('sha256').update(value).digest('hex');
-const lifecycle = () => ({ state: lifecycleState, termsVersion: '2026-11-22', privacyVersion: '2026-11-23', acceptedTermsVersion: lifecycleState === 'onboarding' ? null : '2026-11-22', shownPrivacyVersion: '2026-11-23', lastActivityAt: null, deletionDeadline: lifecycleState === 'deletion_pending' ? '2026-12-22T00:00:00Z' : null, consents: [] });
+const lifecycle = () => ({ state: lifecycleState, termsVersion: TERMS_VERSION, privacyVersion: PRIVACY_VERSION, acceptedTermsVersion: lifecycleState === 'onboarding' ? null : TERMS_VERSION, shownPrivacyVersion: PRIVACY_VERSION, lastActivityAt: null, deletionDeadline: lifecycleState === 'deletion_pending' ? '2026-12-22T00:00:00Z' : null, consents: [] });
 let checks = 0;
 const parent = { id: '00000000-0000-4000-8000-000000000101', email: 'parent@example.test', aud: 'authenticated', role: 'authenticated', email_confirmed_at: '2026-01-01T00:00:00Z', is_anonymous: false, user_metadata: { full_name: 'Testouder', admin: true, role: 'admin' } };
 const json = (body, status = 200) => Response.json(body, { status });
@@ -50,7 +51,7 @@ try {
   await writeFile(new URL(registrationURL), (await readFile(new URL(registrationURL), 'utf8')).replace("'next/headers'", JSON.stringify(fakeHeaders.href)));
   const serverCode = (await readFile(new URL(serverURL), 'utf8'))
     .replace("'next/headers'", JSON.stringify(fakeHeaders.href))
-    .replace("'@supabase/ssr'", JSON.stringify(import.meta.resolve('@supabase/ssr')));
+    .replace("'@supabase/ssr'", JSON.stringify(import.meta.resolve('@supabase/ssr'))).replace("'@supabase/supabase-js'", JSON.stringify(import.meta.resolve('@supabase/supabase-js')));
   await writeFile(new URL(serverURL), serverCode);
   const { authMutation, authSession } = await import(authURL);
   const { createSupabaseServerClient, getVerifiedParent } = await import(serverURL);
@@ -67,7 +68,7 @@ try {
     if (url.pathname === '/rest/v1/rpc/begin_parent_registration') {
       assert.match(item.body.p_nonce_hash, /^[a-f0-9]{64}$/);
       assert.equal(item.body.p_parent_declaration, true); assert.equal(item.body.p_accept_terms, true);
-      assert.equal(item.body.p_terms_version, '2026-11-22'); assert.equal(item.body.p_privacy_version, '2026-11-23');
+      assert.equal(item.body.p_terms_version, TERMS_VERSION); assert.equal(item.body.p_privacy_version, PRIVACY_VERSION);
       if (item.body.p_channel === 'google') assert.equal(item.body.p_email_hash, null);
       else assert.match(item.body.p_email_hash, /^[a-f0-9]{64}$/);
       registrationProofs.set(item.body.p_nonce_hash, { ...item.body });
@@ -100,15 +101,15 @@ try {
   // before Auth is allowed to create even an unconfirmed OTP identity.
   for (const body of [
     { email: parent.email, intent: 'register' },
-    { email: parent.email, intent: 'register', parentDeclaration: true, acceptTerms: true, termsVersion: '2026-11-22', privacyVersion: '2026-11-22.1' },
-    { email: parent.email, intent: 'register', parentDeclaration: true, acceptTerms: false, termsVersion: '2026-11-22', privacyVersion: '2026-11-23' },
-    { email: parent.email, intent: 'register', parentDeclaration: true, acceptTerms: true, termsVersion: 'obsolete', privacyVersion: '2026-11-23' },
+    { email: parent.email, intent: 'register', parentDeclaration: true, acceptTerms: true, termsVersion: TERMS_VERSION, privacyVersion: '2026-11-22.1' },
+    { email: parent.email, intent: 'register', parentDeclaration: true, acceptTerms: false, termsVersion: TERMS_VERSION, privacyVersion: PRIVACY_VERSION },
+    { email: parent.email, intent: 'register', parentDeclaration: true, acceptTerms: true, termsVersion: 'obsolete', privacyVersion: PRIVACY_VERSION },
   ]) { reset(); response = await authMutation(request(body), 'otp'); assert.ok([409, 422].includes(response.status)); assert.equal(requests.length, 0); checks++; }
   reset(); handler = item => { assert.equal(item.url.pathname, '/auth/v1/otp'); assert.equal(item.body.create_user, true); return json({}); };
-  response = await authMutation(request({ email: parent.email, intent: 'register', parentDeclaration: true, acceptTerms: true, termsVersion: '2026-11-22', privacyVersion: '2026-11-23' }), 'otp');
+  response = await authMutation(request({ email: parent.email, intent: 'register', parentDeclaration: true, acceptTerms: true, termsVersion: TERMS_VERSION, privacyVersion: PRIVACY_VERSION }), 'otp');
   assert.equal(response.status, 200); checks++;
 
-  const declarations = { intent: 'register', parentDeclaration: true, acceptTerms: true, termsVersion: '2026-11-22', privacyVersion: '2026-11-23' };
+  const declarations = { intent: 'register', parentDeclaration: true, acceptTerms: true, termsVersion: TERMS_VERSION, privacyVersion: PRIVACY_VERSION };
   const proofCookie = () => [...jar].find(([name]) => name === '__Host-fabelpad-registration')?.[1];
   const ordinaryAuth = item => {
     if (item.url.pathname === '/auth/v1/otp') return json({});

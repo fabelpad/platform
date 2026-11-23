@@ -1,3 +1,4 @@
+import { currentLegalVersions } from '../legal-fixture.mjs';
 import assert from 'node:assert/strict';
 import { readFile, readdir, mkdtemp, rm } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -63,8 +64,9 @@ try {
   await db.query('insert into auth.users(id,email) values($1,$2)',[unconfirmed,'unconfirmed@example.test']);
   await db.query('insert into public.content_admins(user_id) values($1),($2),($3),($4)',[administrator,otherAdministrator,anonymous,unconfirmed]);
 
+  const legal = await currentLegalVersions(db);
   for (const id of [administrator,otherAdministrator,parent]) {
-    await identity(id); await rpc('complete_parent_onboarding',['2026-11-22','2026-11-23',true,true]);
+    await identity(id); await rpc('complete_parent_onboarding',[legal.terms,legal.privacy,true,true]);
   }
   await db.exec('reset role');
 

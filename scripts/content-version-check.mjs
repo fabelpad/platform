@@ -47,6 +47,8 @@ try {
   assert.equal(fresh.contentVersion,current.contentVersion,'New demo adventures choose the current local publication.');
   assert.equal((await content.loadContentRelease('dream',current.contentVersion,false)).contentVersion,current.contentVersion,'Blocked cache keeps a usable same-session content copy.');
   await assert.rejects(content.loadContentRelease('dream','0000000000000000',false),'Unknown old editions are never silently replaced.');
+  await assert.rejects(content.loadContentRelease('dream',original.contentVersion,true),/Maak verbinding/u,'Online content cannot fall back to a public bundle without a validated family lease.');
+  globalThis.fetch=async()=>Response.json({release:{...original,access:'full',offlineUntil:new Date(Date.now()+60000).toISOString()}});
   const cloud = await content.loadContentRelease('dream',original.contentVersion,true);
   assert.equal(cloud.scenes['0'].text,original.scenes['0'].text,'Cloud fallback never uses a local demo publication.');
   profiles.setStorageScope('prototype-demo');

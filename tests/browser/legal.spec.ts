@@ -27,15 +27,15 @@ test('legal pages are public, readable on a phone and match their versioned down
     expect(createHash('sha256').update(await response.body()).digest('hex')).toBe(entry.sha256);
     expect(entry.version).toBe('2026-11-22');
   }
-  const latestManifest = await (await request.get('/legal/2026-11-23/manifest.json')).json();
-  expect(Object.keys(latestManifest)).toEqual(['privacy']);
-  const currentDownload = await request.get('/legal/2026-11-23/privacyverklaring.md');
+  const latestManifest = await (await request.get('/legal/2026-11-23.1/manifest.json')).json();
+  expect(Object.keys(latestManifest)).toEqual(['terms', 'privacy']);
+  const currentDownload = await request.get('/legal/2026-11-23.1/privacyverklaring.md');
   expect(currentDownload.status()).toBe(200);
   expect(createHash('sha256').update(await currentDownload.body()).digest('hex')).toBe(latestManifest.privacy.sha256);
-  expect(latestManifest.privacy.version).toBe('2026-11-23');
+  expect(latestManifest.privacy.version).toBe('2026-11-23.1');
   await page.goto('/privacyverklaring');
-  await expect(page.getByText('Versie 2026-11-23', { exact: true })).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Deze versie als tekst bewaren' })).toHaveAttribute('href', '/legal/2026-11-23/privacyverklaring.md');
+  await expect(page.getByText('Versie 2026-11-23.1', { exact: true })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Deze versie als tekst bewaren' })).toHaveAttribute('href', '/legal/2026-11-23.1/privacyverklaring.md');
   await expect(page.getByRole('main')).toContainText('Stackmail');
   await expect(page.getByRole('main')).toContainText('geboortedatum');
   await expect(page.getByRole('main')).toContainText('uiterlijk na 180 dagen');
@@ -62,12 +62,12 @@ test('historical privacy links preserve exact old bytes and reject ambiguous ver
     const intermediateDocument = await request.get(intermediate.headers().location);
     expect(intermediateDocument.status()).toBe(200);
     expect(createHash('sha256').update(await intermediateDocument.body()).digest('hex')).toBe('c3f6186be703dda5320b70227070fea79e395eac225dbbbde0420913c57727e4');
-    const current = await request.get(`${route}?versie=2026-11-23`);
+    const current = await request.get(`${route}?versie=2026-11-23.1`);
     expect(current.status()).toBe(200);
     expect(current.headers()['content-type']).toContain('text/html');
-    await page.goto(`${route}?versie=2026-11-23`);
-    await expect(page.getByText('Versie 2026-11-23', { exact: true })).toBeVisible();
-    await expect(page.getByRole('link', { name: 'Deze versie als tekst bewaren' })).toHaveAttribute('href', '/legal/2026-11-23/privacyverklaring.md');
+    await page.goto(`${route}?versie=2026-11-23.1`);
+    await expect(page.getByText('Versie 2026-11-23.1', { exact: true })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Deze versie als tekst bewaren' })).toHaveAttribute('href', '/legal/2026-11-23.1/privacyverklaring.md');
     expect((await request.get(`${route}?versie=not-a-version`)).status()).toBe(404);
     expect((await request.get(`${route}?versie=2026-11-22&versie=2026-11-22.1`)).status()).toBe(404);
   }

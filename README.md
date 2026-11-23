@@ -8,6 +8,8 @@ Webstatus **23 november 2026, Europe/Amsterdam**: **[staging.fabelpad.nl](https:
 
 Nederlandstalige interactieve verhalenwereld voor kinderen en hun ouders. De webdienst gebruikt Next.js en bevat daarnaast een afzonderlijke Expo/React Native-app.
 
+De abonnementenuitbreiding voegt **Beheer → Abonnementen & betalingen**, Founders, kortingscodes, Mollie op het web en een afzonderlijke gekoppelde Android-variant met Google Play Billing toe. Alle vier de betaalschakelaars beginnen uit. Webgebruik op Apple-apparaten gebruikt dezelfde Mollie-route. Kortingscodes ondersteunen percentage of bedrag, per betaling of per maand, en een aantal kalendermaanden of onbeperkte duur. De bestaande lokale Android-bundels blijven bruikbaar. Zie [de beheerhandleiding](docs/BETALINGEN-BEHEER.md) voor inrichting, providerproeven en resterende Console-stappen. Code en lokale tests bewijzen op zichzelf geen live betaalroute of storepublicatie.
+
 ## Lokaal starten
 
 Gebruik Node **24.18.0** en pnpm **11.25.0**.

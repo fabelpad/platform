@@ -9,6 +9,7 @@ export default async function Page({ searchParams }: {
   const version = (await searchParams).versie;
   if (version === '2026-11-22') redirect('/legal/2026-11-22/privacyverklaring.md');
   if (version === '2026-11-22.1') redirect('/legal/2026-11-22.1/privacyverklaring.md');
+  if (version === '2026-11-23') redirect('/legal/2026-11-23/privacyverklaring.md');
   if (version !== undefined && version !== PRIVACY_VERSION) notFound();
   return <PrivacyPage />;
 }

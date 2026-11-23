@@ -12,7 +12,9 @@ elif [[ $# != 0 ]]; then echo 'Gebruik: native-build-production.sh [--unsigned-c
 : "${ANDROID_HOME:?Stel ANDROID_HOME in op de gecontroleerde Android SDK.}"
 : "${FABELPAD_ANDROID_VERSION_CODE:?Kies een nieuwe ongebruikte positieve Play-versiecode.}"
 export PATH="${JAVA_HOME}/bin:${ANDROID_HOME}/platform-tools:${PATH}"
-export FABELPAD_VARIANT=production FABELPAD_UNSIGNED_CHECK="${task_unsigned}" CI=1 CMAKE_BUILD_PARALLEL_LEVEL=1
+task_variant="${FABELPAD_VARIANT:-production}"
+[[ "${task_variant}" == production || "${task_variant}" == connected ]] || { echo 'De productiebuild accepteert uitsluitend production of connected.' >&2; exit 64; }
+export FABELPAD_VARIANT="${task_variant}" FABELPAD_UNSIGNED_CHECK="${task_unsigned}" CI=1 CMAKE_BUILD_PARALLEL_LEVEL=1
 export FABELPAD_ANDROID_PACKAGE="${FABELPAD_ANDROID_PACKAGE:-nl.fabelpad.app}"
 export FABELPAD_ANDROID_VERSION_NAME="${FABELPAD_ANDROID_VERSION_NAME:-$(node -p 'require(process.argv[1]).version' "${task_root}/mobile/package.json")}"
 export FABELPAD_BUILD_SOURCE_SHA="$(git -C "${task_root}" rev-parse HEAD)"
@@ -59,7 +61,8 @@ if [[ -n "${JAVA_TOOLCHAIN_17:-}" ]]; then task_java_args+=("-Porg.gradle.java.i
   -Pandroid.enableMinifyInReleaseBuilds=true -Pandroid.enableShrinkResourcesInReleaseBuilds=true \
   "${task_java_args[@]}"
 task_suffix=''
-if [[ "${task_unsigned}" == true ]]; then task_suffix='-unsigned'; fi
+if [[ "${task_variant}" == connected ]]; then task_suffix='-connected'; fi
+if [[ "${task_unsigned}" == true ]]; then task_suffix="${task_suffix}-unsigned"; fi
 mkdir -p "${task_root}/artifacts/native"
 cp app/build/outputs/bundle/release/app-release.aab "${task_root}/artifacts/native/fabelpad-production${task_suffix}.aab"
 cd "${task_root}"

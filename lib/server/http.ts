@@ -3,7 +3,7 @@ import { AccountDeletedError } from '../supabase/errors';
 export { safeNext } from '../authNavigation';
 
 export function privateJson(body: unknown, status = 200, extra: Record<string, string> = {}): Response {
-  return Response.json(body, { status, headers: { 'Cache-Control': 'private, no-store', Vary: 'Cookie', 'X-Content-Type-Options': 'nosniff', ...extra } });
+  return Response.json(body, { status, headers: { 'Cache-Control': 'private, no-store', Vary: 'Cookie, Authorization', 'X-Content-Type-Options': 'nosniff', ...extra } });
 }
 export class RequestError extends Error {
   constructor(readonly status: number, readonly code: string, message = code) { super(message); }

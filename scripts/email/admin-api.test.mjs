@@ -21,7 +21,7 @@ test('mail BFF verifies real Auth/DB grants and never exposes provider secrets',
     const fakeHeaders = pathToFileURL(join(temp, 'headers.mjs'));
     await writeFile(fakeHeaders, 'export async function cookies() { return globalThis[Symbol.for("fabelpad.email.api.cookies")]; }');
     const serverURL = await compileSource(new URL('../../lib/supabase/server.ts', import.meta.url), temp);
-    await writeFile(new URL(serverURL), (await readFile(new URL(serverURL), 'utf8')).replace("'next/headers'", JSON.stringify(fakeHeaders.href)).replace("'@supabase/ssr'", JSON.stringify(import.meta.resolve('@supabase/ssr'))));
+    await writeFile(new URL(serverURL), (await readFile(new URL(serverURL), 'utf8')).replace("'next/headers'", JSON.stringify(fakeHeaders.href)).replace("'@supabase/ssr'", JSON.stringify(import.meta.resolve('@supabase/ssr'))).replace("'@supabase/supabase-js'", JSON.stringify(import.meta.resolve('@supabase/supabase-js'))));
     const apiURL = await compileSource(new URL('../../lib/server/email.ts', import.meta.url), temp);
     const { emailAdminRequest } = await import(apiURL);
     const { createSupabaseServerClient } = await import(serverURL);

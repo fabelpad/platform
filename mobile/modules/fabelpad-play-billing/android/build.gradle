@@ -1,0 +1,24 @@
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+group = 'nl.fabelpad.billing'
+version = '1.0.0'
+
+def fabelpadConnected = System.getenv('FABELPAD_VARIANT') == 'connected'
+android {
+  namespace 'nl.fabelpad.billing'
+  defaultConfig {
+    versionCode 1
+    versionName '1.0.0'
+    if (fabelpadConnected) consumerProguardFiles 'consumer-rules.pro'
+  }
+  if (fabelpadConnected) sourceSets.main.java.srcDirs += ['src/connected/java']
+}
+
+// The original local production build has neither this dependency nor its
+// BILLING/network permissions. Do not replace with an unbounded version range.
+dependencies {
+  if (fabelpadConnected) implementation 'com.android.billingclient:billing:9.1.0'
+}

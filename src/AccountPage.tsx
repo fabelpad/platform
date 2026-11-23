@@ -6,6 +6,7 @@ import { safeNext } from '../lib/authNavigation';
 import type { ParentAccountStatus } from '../lib/parentAccount';
 import { parentNeedsOnboarding } from '../lib/parentAccount';
 import LegalFooter from './LegalFooter';
+import FoundersOffer from './FoundersOffer';
 import { TERMS_VERSION, PRIVACY_VERSION } from '../lib/legal/documents';
 import { clearParentDeviceData } from './profileStorage';
 
@@ -21,7 +22,7 @@ export async function readAccountSession(response: Response): Promise<AccountSes
   return result;
 }
 export function PageShell({ children, adminNavigation = false }: { children: ReactNode; adminNavigation?: boolean }) {
-  return <div className="simple-page"><header><a href="/" aria-label="Fabelpad startpagina"><img src="/brand/logo.webp" alt="Fabelpad" /></a><nav aria-label="Hoofdnavigatie"><a href="/lezen">Probeer de verhalen</a><a href="/gezin">Mijn gezin</a><a href="/profiel/account">Profiel → Account</a><a href="/support">Hulp</a>{adminNavigation && <><a href="/studio">Beheer</a><a href="/studio/privacy">Privacyverzoeken</a></>}</nav></header><main>{children}</main><LegalFooter /></div>;
+  return <div className="simple-page"><header><a href="/" aria-label="Fabelpad startpagina"><img src="/brand/logo.webp" alt="Fabelpad" /></a><nav aria-label="Hoofdnavigatie"><a href="/lezen">Probeer de verhalen</a><a href="/gezin">Mijn gezin</a><a href="/profiel/account">Profiel → Account</a><a href="/profiel/abonnement">Abonnement</a><a href="/support">Hulp</a>{adminNavigation && <><a href="/studio">Beheer</a><a href="/studio/premium">Online verhalen</a><a href="/studio/privacy">Privacyverzoeken</a><a href="/studio/betalingen">Abonnementen &amp; betalingen</a></>}</nav></header><main>{children}</main><LegalFooter /></div>;
 }
 export async function accountRequest(path: string, body: unknown = {}, parentId?: string) {
   const response = await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json', ...(parentId ? { 'X-Fabelpad-Parent': parentId } : {}) }, body: JSON.stringify(body) });
@@ -50,6 +51,7 @@ export function LoginPage() {
     fetch('/api/auth/session', { cache: 'no-store' }).then(readAccountSession).then(data => { if (active) setSession(data); }).catch(error => { if (active) setNotice(error.message?.includes('verwijderd') ? error.message : 'De accountverbinding is nu niet bereikbaar. Je kunt wel zonder account verder lezen.'); });
     const params = new URLSearchParams(location.search);
     setNext(safeNext(params.get('next')));
+    if(params.get('intent')==='register'&&params.get('reauth')!=='1')setMode('register');
     setReauthenticate(params.get('reauth') === '1');
     if (params.has('error')) setNotice('Inloggen is niet voltooid. Probeer het opnieuw vanuit dit scherm.');
     void fetch('/api/legal/documents', { cache: 'no-store' }).then(r => r.ok ? r.json() : null).then(data => { if (active && typeof data?.termsVersion === 'string' && typeof data?.privacyVersion === 'string') setDocuments({ termsVersion: data.termsVersion, privacyVersion: data.privacyVersion }); }).catch(() => { /* Server also validates the embedded versions before registration. */ });
@@ -78,7 +80,7 @@ export function LoginPage() {
       {pendingDeletion ? <><p>Je account staat stil vanwege een verwijderaanvraag. Inloggen herstelt je account niet.</p><a className="account-primary" href="/profiel/account">Bekijk de verwijderstatus</a></> : <a className="account-primary" href={parentNeedsOnboarding(session.lifecycle) ? '/onboarding' : '/gezin'}>{parentNeedsOnboarding(session.lifecycle) ? 'Rond je ouderaccount af' : 'Open jullie gezinsomgeving'}</a>}
       {session.admin && <p><a href="/studio">Open de verhalenstudio</a></p>}
     </> : session?.configured ? <>
-      {!sent && <div className="account-mode" role="group" aria-label="Inloggen of een ouderaccount maken"><button type="button" className="account-secondary" aria-pressed={mode === 'login'} disabled={busy} onClick={() => { setMode('login'); setResumeRegistration(false); setNotice(''); }}>Inloggen</button><button type="button" className="account-secondary" aria-pressed={mode === 'register'} disabled={busy || reauthenticate} onClick={() => { setMode('register'); setResumeRegistration(false); setAdult(false); setTerms(false); setNotice(''); }}>Ouderaccount maken</button></div>}
+      {mode==='register'&&!sent&&<FoundersOffer/>}{!sent && <div className="account-mode" role="group" aria-label="Inloggen of een ouderaccount maken"><button type="button" className="account-secondary" aria-pressed={mode === 'login'} disabled={busy} onClick={() => { setMode('login'); setResumeRegistration(false); setNotice(''); }}>Inloggen</button><button type="button" className="account-secondary" aria-pressed={mode === 'register'} disabled={busy || reauthenticate} onClick={() => { setMode('register'); setResumeRegistration(false); setAdult(false); setTerms(false); setNotice(''); }}>Ouderaccount maken</button></div>}
       {!sent && session.registration?.channel === 'otp' && <p><button type="button" className="account-secondary" disabled={busy} onClick={() => { setMode('login'); setResumeRegistration(true); setNotice('Vul hetzelfde e-mailadres in om je eerdere registratiekeuzes veilig af te ronden.'); }}>Registratie hervatten met e-mailcode</button></p>}
       {!sent && session.registration?.channel === 'google' && session.providers?.google && <p><button type="button" className="google-signin-button" disabled={busy} onClick={() => { void google(true); }}><img src="/brand/google-g.svg" width="20" height="20" alt="" />Registratie hervatten met Google</button></p>}
       {mode === 'register' && !sent && <div><label className="account-check"><input type="checkbox" checked={adult} onChange={e => setAdult(e.target.checked)} /><span>Ik ben 18 jaar of ouder en maak dit account aan als ouder met gezag of voogd.</span></label><label className="account-check"><input type="checkbox" checked={terms} onChange={e => setTerms(e.target.checked)} /><span>Ik ga akkoord met de <a href={`/algemene-voorwaarden?versie=${encodeURIComponent(documents.termsVersion)}`} target="_blank" rel="noopener">algemene voorwaarden van Fabelpad</a> (versie {documents.termsVersion}).</span></label><p className="account-legal-note">Lees in de <a href={`/privacyverklaring?versie=${encodeURIComponent(documents.privacyVersion)}`}>privacyverklaring</a> hoe DG Webservices met jouw gegevens en die van je kind omgaat.</p></div>}

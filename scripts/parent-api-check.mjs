@@ -8,10 +8,11 @@ import { compileSource } from './source-test-loader.mjs';
 // Actual parent route handlers + installed SSR/Auth SDK; no real users, mail or network.
 const root = new URL('../', import.meta.url);
 const temporary = await mkdtemp(join(tmpdir(), 'fabelpad-parent-api-'));
+const { TERMS_VERSION, PRIVACY_VERSION } = await import(await compileSource(new URL('../lib/legal/documents.ts', import.meta.url), temporary));
 const beforeEnvironment = { ...process.env }, beforeFetch = globalThis.fetch;
 const cookieKey = Symbol.for('fabelpad.parent.api.cookies'), beforeCookies = globalThis[cookieKey];
 const parent = { id: '00000000-0000-4000-8000-000000000151', email: 'parent@example.test', email_confirmed_at: '2026-11-22T12:00:00Z', aud: 'authenticated', role: 'authenticated', is_anonymous: false, user_metadata: { role: 'admin' } };
-const active = { state: 'active', termsVersion: '2026-11-22', privacyVersion: '2026-11-22.1', acceptedTermsVersion: '2026-11-22', shownPrivacyVersion: '2026-11-22.1', lastActivityAt: '2026-11-22T12:00:00Z', deletionDeadline: null, consents: [] };
+const active = { state: 'active', termsVersion: TERMS_VERSION, privacyVersion: PRIVACY_VERSION, acceptedTermsVersion: TERMS_VERSION, shownPrivacyVersion: PRIVACY_VERSION, lastActivityAt: '2026-11-22T12:00:00Z', deletionDeadline: null, consents: [] };
 const deadlineMinute = '2026-12-22T12:00:00Z';
 const confirmedDeletion = { confirm: true, expectedDeadlineMinute: deadlineMinute };
 const json = (body, status = 200) => Response.json(body, { status, headers: { 'X-Supabase-Api-Version': '2024-01-01' } });
@@ -28,7 +29,7 @@ try {
   const parentURL = await compileSource(new URL('lib/server/parent.ts', root), temporary);
   const deletionURL = await compileSource(new URL('app/api/parent/deletion/route.ts', root), temporary);
   const serverURL = await compileSource(new URL('lib/supabase/server.ts', root), temporary);
-  await writeFile(new URL(serverURL), (await readFile(new URL(serverURL), 'utf8')).replace("'next/headers'", JSON.stringify(fakeHeaders.href)).replace("'@supabase/ssr'", JSON.stringify(import.meta.resolve('@supabase/ssr'))));
+  await writeFile(new URL(serverURL), (await readFile(new URL(serverURL), 'utf8')).replace("'next/headers'", JSON.stringify(fakeHeaders.href)).replace("'@supabase/ssr'", JSON.stringify(import.meta.resolve('@supabase/ssr'))).replace("'@supabase/supabase-js'", JSON.stringify(import.meta.resolve('@supabase/supabase-js'))));
   const { parentRequest } = await import(parentURL);
   const deletionRoute = await import(deletionURL);
   const { createSupabaseServerClient } = await import(serverURL);
@@ -52,7 +53,7 @@ try {
     const incoming = request(body, headers, method);
     const response = operation === 'deletion' ? await deletionRoute[method === 'GET' ? 'GET' : 'POST'](incoming) : await parentRequest(incoming, operation);
     const value = await response.json();
-    assert.equal(response.headers.get('cache-control'), 'private, no-store'); assert.equal(response.headers.get('vary'), 'Cookie');
+    assert.equal(response.headers.get('cache-control'), 'private, no-store'); assert.equal(response.headers.get('vary'), 'Cookie, Authorization');
     assert.equal(JSON.stringify(value).includes('synthetic-private'), false); assert.equal(JSON.stringify(value).includes('access_token'), false); assert.equal(JSON.stringify(value).includes('synthetic-parent-refresh'), false);
     checks++; return { response, value };
   };
@@ -72,8 +73,8 @@ try {
   }
   await reset(); result = await outcome('deletion', { confirm: true }, { origin: 'https://attacker.example.test' }); assert.equal(result.response.status, 403); assert.equal(requests.length, 0);
   for (const [operation, body] of [
-    ['onboarding', { parentDeclaration: true, acceptTerms: false, termsVersion: '2026-11-22', privacyVersion: '2026-11-22.1' }],
-    ['onboarding', { parentDeclaration: true, acceptTerms: true, termsVersion: '2026-11-22', privacyVersion: '2026-11-22.1', parentId: 'other-parent' }],
+    ['onboarding', { parentDeclaration: true, acceptTerms: false, termsVersion: TERMS_VERSION, privacyVersion: PRIVACY_VERSION }],
+    ['onboarding', { parentDeclaration: true, acceptTerms: true, termsVersion: TERMS_VERSION, privacyVersion: PRIVACY_VERSION, parentId: 'other-parent' }],
     ['consent', { profileId: 'child-one', consent: true, guardianDeclaration: false }],
     ['consent', { profileId: '../foreign', consent: true, guardianDeclaration: true }],
     ['deletion', { confirm: true, parentId: 'other-parent' }], ['restore', { confirmRestore: false }],
@@ -87,7 +88,7 @@ try {
   await reset(); rpc = entry => { assert.equal(entry.path, '/rest/v1/rpc/get_account_lifecycle'); return json(active); };
   result = await outcome('status', undefined, {}, 'GET'); assert.equal(result.response.status, 200); assert.deepEqual(result.value, active);
   await reset(); rpc = entry => { assert.equal(entry.path, '/rest/v1/rpc/complete_parent_onboarding'); assert.equal(entry.body.p_parent_declaration, true); assert.equal(entry.body.p_accept_terms, true); return json({ message: 'document_version_changed', code: '22023', details: 'synthetic-private-sql' }, 400); };
-  result = await outcome('onboarding', { parentDeclaration: true, acceptTerms: true, termsVersion: 'obsolete', privacyVersion: '2026-11-22.1' }); assert.equal(result.response.status, 409); assert.equal(result.value.error, 'document_version_changed');
+  result = await outcome('onboarding', { parentDeclaration: true, acceptTerms: true, termsVersion: 'obsolete', privacyVersion: PRIVACY_VERSION }); assert.equal(result.response.status, 409); assert.equal(result.value.error, 'document_version_changed');
   for (const [operation, body, error, expectedStatus, expectedCode] of [
     ['deletion', confirmedDeletion, { code: '28000', message: 'synthetic-private-session-diagnostic' }, 428, 'fresh_auth_required'],
     ['deletion', confirmedDeletion, { code: 'P0001', message: 'deletion_preview_expired' }, 409, 'deletion_preview_expired'],
@@ -106,6 +107,9 @@ try {
     await reset(); authFailure = failure; result = await outcome('status', undefined, {}, 'GET'); assert.equal(result.response.status, status); assert.equal(result.value.error, code); assert.equal(requests.filter(item => item.path.includes('/rpc/')).length, 0);
     assert.equal(result.value.cleanupParentId, failure === 'user_not_found' ? parent.id : undefined, 'Only confirmed deletion may carry a device-cleanup hint');
   }
+  await reset({authenticated:false});rpc=entry=>{assert.equal(entry.path,'/rest/v1/rpc/get_account_lifecycle');return json(active);};
+  result=await outcome('status',undefined,{Authorization:`Bearer ${jwt}`},'GET');assert.equal(result.response.status,200);assert.ok(requests.some(r=>r.path==='/auth/v1/user'),'Native bearer always contacts Auth');assert.equal(jar.size,0,'Native authorization never sets cookie sessions');
+  await reset({authenticated:false});authFailure='bad_jwt';result=await outcome('status',undefined,{Authorization:`Bearer ${jwt}`},'GET');assert.equal(result.response.status,401);assert.equal(requests.filter(r=>r.path.includes('/rpc/')).length,0);
   console.log(`Parent API checks passed: ${checks} isolated SDK scenarios, owner binding, declarations, version conflicts, consent, fresh authentication, deletion transactions and safe error/purge signals.`);
 } finally {
   globalThis.fetch = beforeFetch;

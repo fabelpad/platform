@@ -2,6 +2,7 @@ import { renderServiceEmail, type EmailEnvironment, type RenderedEmail } from '.
 import { formatEmailSender } from '../email/auth-hook.ts';
 import { sendFabelpadEmail } from '../email/resend.ts';
 import { parseEmailSettings, parseResendApiKey, DEFAULT_EMAIL_SETTINGS } from '../email/settings.ts';
+import { resolveHostedEmailTarget } from '../email/hosted-target.ts';
 
 type Environment = Record<string, string | undefined>;
 type Job = { id: string; leaseId: string; parentId: string; kind: string; payload: Record<string, unknown> };
@@ -29,7 +30,7 @@ function messageFor(context: Context, siteUrl: string, environment: EmailEnviron
     `Je account staat meteen stil. Op ${deadline(context.payload.deadline)} verwijderen we het account en alle bijbehorende online kinderprofielen, voortgang en voorkeuren.`,
     'Wil je dit ongedaan maken? Open de beveiligde herstelroute, log opnieuw in als ouder en bevestig daar uitdrukkelijk dat je het account wilt herstellen. Alleen inloggen of de app opnieuw installeren herstelt niets. Herstellen kan uitsluitend vóór de genoemde datum en tijd.',
     'Wil je gegevens eerder laten wissen of heb je hulp nodig? Mail support@fabelpad.nl. Een verzoek volgens de AVG kent geen vaste wachttijd van 30 dagen.',
-    'Er zijn momenteel geen betaalde abonnementen. Herstel start nooit automatisch een betaling of verlenging.',
+    'Bij een lopend abonnement starten we ook de stop van toekomstige automatische verlengingen bij de betaalprovider. De actuele bevestiging en toepasselijke terugbetaling worden afzonderlijk verwerkt. Herstel start nooit automatisch een betaling of verlenging. Mail support@fabelpad.nl bij vragen over een betaling.',
   ], action: { label: 'Bekijk de beveiligde herstelroute', path: restore } }, brand);
   if (context.kind === 'account_restored') return renderServiceEmail({ kind: 'service-notice', subject: 'Je Fabelpad-account is hersteld', title: 'Je account is weer beschikbaar', paragraphs: [
     'Je hebt de verwijdering van je account uitdrukkelijk geannuleerd.',
@@ -40,7 +41,7 @@ function messageFor(context: Context, siteUrl: string, environment: EmailEnviron
     'We hebben al een tijd geen bewust gebruik van je gezinsaccount geregistreerd.',
     `Als niemand in het gezin Fabelpad vóór ${deadline(context.payload.deadline)} bewust gebruikt, verwijderen we op dat moment het gezinsaccount met alle online kinderprofielen, voortgang en voorkeuren. Daarna is herstel niet mogelijk; er volgt geen extra wachttijd van 30 dagen.`,
     'Je voorkomt dit door vóór die datum in het oudergedeelte in te loggen en Fabelpad te gebruiken, of door echt verder te lezen onder een gekoppeld online kinderprofiel. Offline leesactiviteit telt alleen mee als deze vóór de deadline bij Fabelpad is gesynchroniseerd. Alleen deze e-mail openen of automatische achtergrondverversing telt niet mee.',
-    'Er zijn momenteel geen betaalde abonnementen. Lees de voorwaarden voor de bescherming die geldt wanneer later betaalde toegang wordt aangeboden.',
+    'Een betaling, abonnement of gratis Founders-recht houdt een ongebruikt account niet actief. Bij verwijdering stoppen we toekomstige automatische verlengingen bij de provider en verwerken we een toepasselijke terugbetaling voor vooruitbetaalde toegang volgens de voorwaarden. Een Founders-recht eindigt bij accountverwijdering.',
     'Staat hier inmiddels recent gebruik tegenover? Dan vervalt deze waarschuwing automatisch. Mail support@fabelpad.nl als je hulp nodig hebt.',
   ], action: { label: 'Open Fabelpad als ouder', path: '/profiel/account' } }, brand);
   throw new Error('configuration_unavailable');
@@ -55,7 +56,7 @@ function frozenDelivery(value: unknown): Delivery {
  * The signing key stays in Vault; a service-only verifier consumes each proof. No user identity, recipient, clock or delete target is
  * accepted from HTTP. Jobs, deadlines and deletion scopes come from PostgreSQL.
  */
-export function createLifecycleWorker(environment: Environment, dependencies: { backend: LifecycleBackend; fetch?: typeof fetch }): (request: Request) => Promise<Response> {
+export function createLifecycleWorker(environment: Environment, dependencies: { backend: LifecycleBackend; fetch?: typeof fetch; afterAuthorized?: () => Promise<unknown> }): (request: Request) => Promise<Response> {
   const backend = dependencies.backend, fetcher = dependencies.fetch ?? fetch;
   const respond = (body: object, status = 200) => Response.json(body, { status, headers: { 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' } });
   return async request => {
@@ -84,6 +85,13 @@ export function createLifecycleWorker(environment: Environment, dependencies: { 
       if (!await backend.rpc<boolean>('verify_lifecycle_worker_request',{p_nonce:proof.nonce,p_issued_at:proof.issuedAt,p_signature:proof.signature})) return respond({error:'not_authenticated'},401);
       const siteUrl = environment.FABELPAD_APP_ORIGIN ?? '', stage = environment.FABELPAD_ENVIRONMENT;
       if (!['production', 'staging'].includes(stage ?? '') || !/^https:\/\/[^/]+$/u.test(siteUrl)) return respond({ error: 'configuration_unavailable' }, 503);
+      let billingDeferred = false;
+      if (dependencies.afterAuthorized) {
+        if (!resolveHostedEmailTarget(environment)) return respond({ error: 'configuration_unavailable' }, 503);
+        // The existing nonce is already consumed and hosting identity checked.
+        // Billing failures retain their jobs and do not drop lifecycle work.
+        try { await dependencies.afterAuthorized(); } catch { billingDeferred = true; }
+      }
       const jobs = await backend.rpc<Job[]>('claim_lifecycle_jobs', { p_limit: 3 });
       if (!Array.isArray(jobs) || jobs.length > 3 || jobs.some(job => !uuid(job.id) || !uuid(job.leaseId) || !uuid(job.parentId) || !kinds.includes(job.kind))) throw new Error();
       let completed = 0, deferred = 0;
@@ -139,7 +147,7 @@ export function createLifecycleWorker(environment: Environment, dependencies: { 
           deferred++;
         }
       }
-      return respond({ completed, deferred });
+      return respond({ completed, deferred, ...(billingDeferred ? { billingDeferred: true } : {}) });
     } catch { return respond({ error: 'maintenance_unavailable' }, 503); }
   };
 }

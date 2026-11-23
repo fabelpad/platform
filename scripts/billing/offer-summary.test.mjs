@@ -1,0 +1,7 @@
+import {test,after} from 'node:test';import assert from 'node:assert/strict';import {mkdtemp,rm} from 'node:fs/promises';import {join} from 'node:path';import {tmpdir} from 'node:os';import {compileSource} from '../source-test-loader.mjs';
+const temp=await mkdtemp(join(tmpdir(),'fabelpad-offer-summary-'));after(()=>rm(temp,{recursive:true,force:true}));const{renewalPriceSchedule}=await import(await compileSource(new URL('../../lib/billing/offer-summary.ts',import.meta.url),temp));
+const quote={period:'month',baseAmountCents:499,amountCents:249,gift:false,couponSnapshot:{kind:'percentage',value:50,amountBasis:'period',durationMonths:3}};
+test('three month discount discloses the next two discounted renewals then full price',()=>assert.deepEqual(renewalPriceSchedule(quote),[{amountCents:249,payments:2},{amountCents:499,payments:null}]));
+test('annual eighteen month percentage coupon discloses proportional second year',()=>assert.deepEqual(renewalPriceSchedule({...quote,period:'year',baseAmountCents:3999,amountCents:2999,couponSnapshot:{...quote.couponSnapshot,value:25,durationMonths:18}}),[{amountCents:3499,payments:1},{amountCents:3999,payments:null}]));
+test('perpetual monthly amount coupon never falsely announces full price',()=>assert.deepEqual(renewalPriceSchedule({...quote,amountCents:299,couponSnapshot:{kind:'amount',value:200,amountBasis:'month',durationMonths:null}}),[{amountCents:299,payments:null}]));
+test('gift code has no renewal or payment schedule',()=>assert.deepEqual(renewalPriceSchedule({...quote,gift:true}),[]));

@@ -21,7 +21,7 @@ try {
   assert.equal(privateSpeechText('A.* koos een pad. A.* vond een boek.', 'A.*'), 'Avonturier koos een pad. Avonturier vond een boek.', 'Names are literal text, not regular expressions.');
   assert.equal(privateSpeechText('Een onveranderd verhaal.', ''), 'Een onveranderd verhaal.');
   const { LEGAL_DOCUMENTS, TERMS_VERSION, PRIVACY_VERSION } = await import(await compileSource(new URL('../lib/legal/documents.ts', import.meta.url), temporary));
-  assert.equal(TERMS_VERSION, '2026-11-22'); assert.equal(PRIVACY_VERSION, '2026-11-23');
+  assert.equal(TERMS_VERSION, '2026-11-23.1'); assert.equal(PRIVACY_VERSION, '2026-11-23.1');
   for (const document of Object.values(LEGAL_DOCUMENTS)) {
     assert.match(document.sha256, /^[a-f0-9]{64}$/);
     const file = await readFile(new URL(`../public${document.downloadUrl}`, import.meta.url));
@@ -44,8 +44,9 @@ try {
   assert.equal(createHash('sha256').update(await readFile(new URL('../public/legal/2026-11-22.1/privacyverklaring.md', import.meta.url))).digest('hex'), 'c3f6186be703dda5320b70227070fea79e395eac225dbbbde0420913c57727e4');
   const privacyText = await readFile(new URL(`../public${LEGAL_DOCUMENTS.privacy.downloadUrl}`, import.meta.url), 'utf8');
   for (const fact of ['Stackmail', 'maximaal twaalf maanden na afsluiting', 'uiterlijk na 180 dagen', 'geen bewaartermijn voor actieve account- of kindgegevens', 'maximaal 210 dagen', 'staat momenteel uit', 'voordat de herstelde omgeving gebruikersverkeer ontvangt', 'aantoonbaar nodig', 'periodieke herbeoordeling', 'geboortedatum als kalenderdatum', 'handmatige leesniveauvoorkeur', '1 maart']) assert.ok(privacyText.includes(fact), `Current privacy text includes the confirmed safeguard: ${fact}`);
-  const latestManifest = JSON.parse(await readFile(new URL('../public/legal/2026-11-23/manifest.json', import.meta.url), 'utf8'));
-  assert.deepEqual(Object.keys(latestManifest), ['privacy'], 'A new privacy version must not silently revise the terms version.');
+  assert.equal(createHash('sha256').update(await readFile(new URL('../public/legal/2026-11-23/privacyverklaring.md', import.meta.url))).digest('hex'), 'f108fc40b0aa5fc3d99c754eb71abacd234c05b4611c383c40a8a0b3505539e3');
+  const latestManifest = JSON.parse(await readFile(new URL('../public/legal/2026-11-23.1/manifest.json', import.meta.url), 'utf8'));
+  assert.deepEqual(Object.keys(latestManifest), ['terms', 'privacy'], 'Billing updates explicitly version both offered documents.');
   assert.equal(latestManifest.privacy.version, PRIVACY_VERSION);
   assert.equal(latestManifest.privacy.sha256, LEGAL_DOCUMENTS.privacy.sha256);
   const checked = spawnSync(process.execPath, ['scripts/legal-documents.mjs', '--check'], { cwd: new URL('../', import.meta.url), encoding: 'utf8' });
@@ -68,6 +69,6 @@ try {
   assert.notEqual(rejected.status, 0, 'The generator must refuse to overwrite conflicting existing downloads.');
   assert.match(rejected.stderr, /Historische juridische download wijkt af|Juridische weergave en download verschillen/);
   assert.equal(await readFile(path.join(fixture, 'lib/legal/documentHashes.ts'), 'utf8'), sentinel);
-  await assert.rejects(readFile(path.join(fixture, 'public/legal/2026-11-23/privacyverklaring.md')), { code: 'ENOENT' }, 'A failed preflight creates no partial new privacy version.');
+  await assert.rejects(readFile(path.join(fixture, 'public/legal/2026-11-23.1/privacyverklaring.md')), { code: 'ENOENT' }, 'A failed preflight creates no partial new privacy version.');
   console.log('Juridische versies/hashes, onveranderde historische downloads, veilige generator, actuele privacytermijnen en offline webvoorlezen: gerichte controles geslaagd.');
 } finally { await rm(temporary, { recursive: true, force: true }); }

@@ -9,7 +9,7 @@ import { storyPlayArt } from './storyPlayArt';
 import { readingLevelsForRelease } from './contentReadingLevels';
 import { readChild, saveChild } from './profileStorage';
 import { backfillStoryMemory, continuityGreeting, getStoryMemory, openStoryThread, recordStoryProgress } from './storyMemory';
-import { isStoryId, STORY_PARTS } from './storyCatalog';
+import { isStoryId, isOnlineStoryId, STORY_PARTS } from './storyCatalog';
 import { worlds } from './worlds';
 import { loadContentRelease, personalText } from './contentClient';
 import type { ContentRelease } from '../lib/server/content';
@@ -36,14 +36,22 @@ function loadPicks(profileId: string, world: string): number[] {
 export default function StoryReader({ profileId, worldId, childName, muted, reducedMotion, textSize, readingLevel, cloudContent = false, previewLimit, onRequestParents, onClose, onComplete }: Props) {
   const systemReducedMotion = useReducedMotion();
   const calmMotion = reducedMotion || systemReducedMotion === true;
-  const world = isStoryId(worldId) ? worldId : 'station';
+  const world = (cloudContent ? isOnlineStoryId(worldId) : isStoryId(worldId)) ? worldId : 'station';
   const [saved] = useState(() => readChild<Saved | null>(profileId, `story-${world}`, null));
   const [release, setRelease] = useState<ContentRelease | null>(null);
   const [releaseError, setReleaseError] = useState('');
   const [durable, setDurable] = useState(false);
   const revision = useRef(saved?.revision || 0);
-  const metadata = { ...worlds.find(item => item.id === world)!, ...release?.metadata };
-  useEffect(() => { let active = true; loadContentRelease(world, saved?.contentVersion, cloudContent).then(value => { if (active) setRelease(value); }).catch(error => { if (active) setReleaseError(error.message || 'Dit verhaal kan nu niet worden geopend. Je keuzes blijven bewaard.'); }); return () => { active = false; }; }, [world, saved?.contentVersion, cloudContent]);
+  const metadata = { ...(worlds.find(item => item.id === world)??worlds[0]), ...release?.metadata };
+  useEffect(() => { let active=true;const load=()=>{void loadContentRelease(world,saved?.contentVersion,cloudContent).then(value=>{if(active){setRelease(value);setReleaseError('');}}).catch(error=>{if(active){setRelease(null);setReleaseError(error.message||'Dit verhaal kan nu niet worden geopend. Je keuzes blijven bewaard.');}});};const focus=()=>{if(cloudContent&&document.visibilityState==='visible')load();};load();window.addEventListener('focus',focus);document.addEventListener('visibilitychange',focus);return()=>{active=false;window.removeEventListener('focus',focus);document.removeEventListener('visibilitychange',focus);};},[world,saved?.contentVersion,cloudContent]);
+  useEffect(()=>{
+    if(!cloudContent||!release?.offlineUntil)return;
+    const remaining=Date.parse(release.offlineUntil)-Date.now();
+    const timer=setTimeout(()=>{setRelease(null);setReleaseError('Maak verbinding om jullie toegang opnieuw te controleren. Je leesplek blijft bewaard.');},Math.max(0,remaining));
+    const revoked=()=>{setRelease(null);setReleaseError('De toegang tot dit gezin is ingetrokken. Je kunt terug naar het oudergedeelte.');};
+    window.addEventListener('fabelpad-parent-data-cleared',revoked);
+    return()=>{clearTimeout(timer);window.removeEventListener('fabelpad-parent-data-cleared',revoked);};
+  },[cloudContent,release]);
   const [picks, setPicks] = useState(() => loadPicks(profileId, world));
   const [lastCompletedPicks, setLastCompletedPicks] = useState<number[] | undefined>(() => {
     const route = saved?.lastCompletedPicks ?? saved?.picks;
@@ -56,7 +64,7 @@ export default function StoryReader({ profileId, worldId, childName, muted, redu
   const [modePageMinHeight, setModePageMinHeight] = useState(0);
   const [closing, setClosing] = useState(false);
   const closeRequested = useRef(false);
-  const [greeting, setGreeting] = useState(() => continuityGreeting(getStoryMemory(profileId), world, childName));
+  const [greeting, setGreeting] = useState(() => (isStoryId(world)?continuityGreeting(getStoryMemory(profileId), world, childName):null));
   const dialogRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const pageRef = useRef<HTMLDivElement>(null);
@@ -70,18 +78,19 @@ export default function StoryReader({ profileId, worldId, childName, muted, redu
   const closeRef = useRef(onClose);
   closeRef.current = requestClose;
   const complete = picks.length === TOTAL;
-  const accessLocked = previewLimit !== undefined && picks.length >= previewLimit;
+  const limit=release?.access==='preview'?1:previewLimit;
+  const accessLocked = limit !== undefined && picks.length >= limit;
   const band = isReadingLevel(readingLevel) ? readingLevel : DEFAULT_READING_LEVEL;
   const levelContent = release ? readingLevelsForRelease(release)?.[band] : undefined;
   const canPlay = !accessLocked && !complete && !replayRoute;
   const specialPlay = world === 'station' && picks.length < 2;
   const showPlay = canPlay && playEnabled && !closing;
-  const rawEnding = (levelContent?.endings ?? release?.endings)?.[picks.join('')] || getEnding(world, picks, childName);
+  const rawEnding = (levelContent?.endings ?? release?.endings)?.[picks.join('')] || (!cloudContent&&isStoryId(world)?getEnding(world,picks,childName):{title:'',text:'',keepsake:''});
   const ending = { ...rawEnding, title: personalText(rawEnding.title, childName), text: personalText(rawEnding.text, childName), keepsake: personalText(rawEnding.keepsake, childName) };
   const sceneStep = Math.min(picks.length, TOTAL - 1);
-  const originalScene = (levelContent?.scenes ?? release?.scenes)?.[picks.slice(0, sceneStep).join('')] || getScene(world, sceneStep, picks, childName);
+  const originalScene = (levelContent?.scenes ?? release?.scenes)?.[picks.slice(0, sceneStep).join('')] || (!cloudContent&&isStoryId(world)?getScene(world,sceneStep,picks,childName):{title:'',text:'',choices:[]});
   const scene = { ...originalScene, title: personalText(originalScene.title, childName), text: personalText(originalScene.text, childName), choices: originalScene.choices.map(choice => ({...choice,label:personalText(choice.label,childName),hint:personalText(choice.hint,childName)})) };
-  const playArt = storyPlayArt[world] ?? { image: metadata.image, imageAlt: metadata.imageAlt };
+  const playArt = (isStoryId(world)?storyPlayArt[world]:undefined) ?? { image: metadata.image, imageAlt: metadata.imageAlt };
   const visibleGreeting = greeting && band === 'under6' ? `Welkom terug, ${childName}!` : greeting;
   const [localVoice, setLocalVoice] = useState<SpeechSynthesisVoice | null>(null);
   const speechAvailable = localVoice !== null;
@@ -114,8 +123,8 @@ export default function StoryReader({ profileId, worldId, childName, muted, redu
 
   useEffect(() => {
     const memory = backfillStoryMemory(profileId, childName);
-    setGreeting(continuityGreeting(memory, world, childName));
-    openStoryThread(profileId, world, picks);
+    setGreeting(isStoryId(world)?continuityGreeting(memory, world, childName):null);
+    if(isStoryId(world))openStoryThread(profileId, world, picks);
     // A visit must not re-date old choices. Only choose() records a new event.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profileId, world, childName]);
@@ -186,7 +195,7 @@ export default function StoryReader({ profileId, worldId, childName, muted, redu
       const completedRoute = next.length === TOTAL ? next : lastCompletedPicks;
       if (next.length === TOTAL) { setLastCompletedPicks(next); lastCompletedVersion.current = release.contentVersion; }
       setDurable(saveChild(profileId, `story-${world}`, { picks: next, ...(completedRoute ? { lastCompletedPicks: completedRoute, lastCompletedContentVersion: lastCompletedVersion.current ?? release.contentVersion } : {}), updatedAt: Date.now(), storyId: world, contentVersion: release.contentVersion, revision: revision.current }));
-      recordStoryProgress(profileId, world, next, childName);
+      if(isStoryId(world))recordStoryProgress(profileId, world, next, childName);
     }
     voiceToken.current += 1; if (speechAvailable) window.speechSynthesis.cancel(); setVoiceState('idle');
     setModePageMinHeight(0);
@@ -200,10 +209,10 @@ export default function StoryReader({ profileId, worldId, childName, muted, redu
     focusNextScene.current = true;
     setModePageMinHeight(0);
     setReplayRoute(route ?? null);
-    setGreeting(route ? null : continuityGreeting(getStoryMemory(profileId), world, childName));
+    setGreeting(route ? null : (isStoryId(world)?continuityGreeting(getStoryMemory(profileId), world, childName):null));
     currentPicks.current = [];
     if (!route) {
-      openStoryThread(profileId, world, []);
+      if(isStoryId(world))openStoryThread(profileId, world, []);
       revision.current += 1;
       setDurable(saveChild(profileId, `story-${world}`, { picks: [], ...(lastCompletedPicks ? { lastCompletedPicks, lastCompletedContentVersion: lastCompletedVersion.current ?? release.contentVersion } : {}), updatedAt: Date.now(), storyId: world, contentVersion: release.contentVersion, revision: revision.current }));
     }
@@ -273,7 +282,7 @@ export default function StoryReader({ profileId, worldId, childName, muted, redu
           <div className="reader-progress-row"><span>{complete ? 'Jouw avontuur is compleet' : `Deel ${picks.length + 1} van ${TOTAL}`}</span><div className="reader-progress-dots" aria-label={`${Math.min(picks.length + 1, TOTAL)} van ${TOTAL} delen`}>{Array.from({ length: TOTAL }, (_, i) => <i key={i} className={i <= picks.length ? 'is-active' : ''} />)}</div></div>
           {!accessLocked && !levelContent && <p className="reader-level-note">Deze bewaarde verhaalversie gebruikt de oorspronkelijke tekst.</p>}
           {visibleGreeting && !complete && <div className="reader-continuity"><Sparkles size={17} /><span>{visibleGreeting}</span></div>}
-          {accessLocked ? <div className="reader-access-gate"><Sparkles size={34} /><span className="reader-eyebrow">ER WACHT NOG EEN HELE WERELD</span><h2 ref={sceneHeadingRef} tabIndex={-1}>Samen een nieuw<br />pad ontdekken?</h2><p>{previewLimit === 1 ? 'Je eerste deel is uit. Je keuze en je plek blijven bewaard.' : 'Dit verhaal hoort bij het gezinspakket.'} Vraag een grote avonturier om samen te kijken.</p><button className="reader-primary" onClick={() => { requestClose(); onRequestParents?.(); }}>Even voor de ouders <ArrowRight size={17} /></button><button className="reader-restart" onClick={requestClose}>Terug naar de verhalen</button><small>Voorbeeld van gratis toegang · er wordt niets gekocht.</small></div> :
+          {accessLocked ? <div className="reader-access-gate"><Sparkles size={34} /><span className="reader-eyebrow">ER WACHT NOG EEN HELE WERELD</span><h2 ref={sceneHeadingRef} tabIndex={-1}>Samen een nieuw<br />pad ontdekken?</h2><p>{limit === 1 ? 'Je eerste deel is uit. Je keuze en je plek blijven bewaard.' : 'Dit verhaal hoort bij het gezinspakket.'} Vraag een grote avonturier om samen te kijken.</p><button className="reader-primary" onClick={() => { requestClose(); onRequestParents?.(); }}>Even voor de ouders <ArrowRight size={17} /></button><button className="reader-restart" onClick={requestClose}>Terug naar de verhalen</button><small>Je leesplek blijft bewaard.</small></div> :
             <motion.div className="reader-scene" key={picks.length} initial={{ opacity: 0, y: calmMotion ? 0 : 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: calmMotion ? 0 : .2 }}>
               {complete && <div className="reader-ending-icon"><Check size={27} /></div>}
               <p className="reader-eyebrow">{complete ? 'Een einde dat jij hebt gekozen' : picks.length === 0 ? 'Er was eens…' : 'En toen…'}</p>

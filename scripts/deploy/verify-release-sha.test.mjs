@@ -1,6 +1,19 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { githubApi, validateReleaseSha, validateWorkflowContext, verifyActivationEnvironment, verifyGitHubRelease, verifyRelease, verifyManualDispatch, verifyUnchangedManualDispatch } from './verify-release-sha.mjs';
+import { readFileSync } from 'node:fs';
+import { requiredWorkflows, githubApi, validateReleaseSha, validateWorkflowContext, verifyActivationEnvironment, verifyGitHubRelease, verifyRelease, verifyManualDispatch, verifyUnchangedManualDispatch } from './verify-release-sha.mjs';
+
+test('real workflow step names remain compatible with the installed release guard and include billing', () => {
+  for (const workflow of requiredWorkflows) {
+    const source=readFileSync(new URL(`../../.github/workflows/${workflow.file}`,import.meta.url),'utf8');
+    const names=[...source.matchAll(/^\s*- name: (.+)$/gmu)].map(match=>match[1]);
+    for(const name of workflow.steps)assert.equal(names.filter(value=>value===name).length,1,`${workflow.file}: ${name}`);
+  }
+  const verify=readFileSync(new URL('../../.github/workflows/verify.yml',import.meta.url),'utf8');
+  const build=readFileSync(new URL('../local-build.sh',import.meta.url),'utf8');
+  assert.match(verify,/run: bash scripts\/local-build\.sh/u);
+  assert.match(build,/^pnpm check:billing$/mu);
+});
 
 const sha = 'a'.repeat(40);
 const mainSha = 'b'.repeat(40);

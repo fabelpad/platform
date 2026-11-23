@@ -9,7 +9,7 @@ const A='11111111-1111-4111-8111-111111111111', B='22222222-2222-4222-8222-22222
 const SESSION='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const PREVIEW='66666666-6666-4666-8666-666666666666';
 let clock='2026-11-22T12:00:00.000Z';let id=0;
-let currentPrivacyVersion='2026-11-22';
+let currentPrivacyVersion='2026-11-22',currentTermsVersion='2026-11-22';
 const event=()=>`bbbbbbbb-bbbb-4bbb-8bbb-${String(++id).padStart(12,'0')}`;
 const fixture=(ids=['child-a'])=>({schemaVersion:1,family:{version:1,children:ids.map((id,i)=>({id,name:'Bijnaam',avatar:i%4,birthDate:'2019-05-14'})),activeId:ids[0]??''},data:Object.fromEntries(ids.map(id=>[id,{favorites:['station'],prefs:{muted:false,calm:true}}]))});
 const owner=async()=>db.exec('reset role');
@@ -21,7 +21,7 @@ async function identity(actor,{fresh=true,session=true,anonymous=false,method='o
 async function service(){await owner();await db.query("select set_config('request.jwt.claims','{}',false)");await db.exec('set role service_role');}
 async function rpc(name,args=[]){return(await db.query(`select public.${name}(${args.map((_,i)=>'$'+(i+1)).join(',')}) as result`,args)).rows[0].result;}
 async function denied(name,args=[],code='42501'){await assert.rejects(rpc(name,args),e=>e.code===code);}
-const onboard=()=>rpc('complete_parent_onboarding',['2026-11-22',currentPrivacyVersion,true,true]);
+const onboard=()=>rpc('complete_parent_onboarding',[currentTermsVersion,currentPrivacyVersion,true,true]);
 const save=(rev,snapshot)=>rpc('save_family_snapshot',[rev,JSON.stringify(snapshot)]);
 const consent=id=>rpc('consent_child_profile',[id,true,true]);
 async function checkErasureRetentionUpgrade(sql){
@@ -115,6 +115,7 @@ try{
  }
  const legalCatalog=(await db.query('select kind,version,sha256,document_text from private.legal_document_versions order by kind,version')).rows;
  currentPrivacyVersion=legalCatalog.filter(document=>document.kind==='privacy').at(-1).version;
+ currentTermsVersion=legalCatalog.filter(document=>document.kind==='terms').at(-1).version;
  for(const stored of legalCatalog) {
   const file=stored.kind==='terms'?'algemene-voorwaarden.md':'privacyverklaring.md';
   const actual=await readFile(new URL('../public/legal/'+stored.version+'/'+file,import.meta.url),'utf8');
@@ -136,7 +137,7 @@ try{
  await identity(PREVIEW);await denied('preview_account_deletion');await onboard();
  await identity(PREVIEW,{fresh:false});await denied('preview_account_deletion',[],'28000');await denied('request_account_deletion',['2026-12-22T12:00:00Z'],'28000');
  await owner();await db.query('delete from auth.sessions where user_id=$1',[PREVIEW]);await identity(PREVIEW,{session:false});await denied('preview_account_deletion');
- await owner();await db.query("update private.account_lifecycle set terms_version='old-fixture' where parent_id=$1",[PREVIEW]);await identity(PREVIEW);await denied('preview_account_deletion');await owner();await db.query("update private.account_lifecycle set terms_version='2026-11-22' where parent_id=$1",[PREVIEW]);
+ await owner();await db.query("update private.account_lifecycle set terms_version='old-fixture' where parent_id=$1",[PREVIEW]);await identity(PREVIEW);await denied('preview_account_deletion');await owner();await db.query("update private.account_lifecycle set terms_version=$2 where parent_id=$1",[PREVIEW,currentTermsVersion]);
  await tick('2026-11-22T12:00:59.900Z');await identity(PREVIEW);
  // Include a pending warning so a failed confirmation proves cancellation is
  // rolled back together with the account, outbox insert and revoked sessions.
@@ -169,13 +170,13 @@ try{
  const initialLifecycle=await rpc('get_account_lifecycle');assert.equal(initialLifecycle.state,'onboarding');assert.equal(initialLifecycle.privacyVersion,currentPrivacyVersion,'RPC and latest immutable privacy catalog agree');
  await denied('save_family_snapshot',[0,JSON.stringify(fixture())]);
  await denied('complete_parent_onboarding',['wrong',currentPrivacyVersion,true,true],'22023');
- await denied('complete_parent_onboarding',['2026-11-22',currentPrivacyVersion,false,true],'22023');
- await denied('complete_parent_onboarding',['2026-11-22',currentPrivacyVersion,true,false],'22023');
+ await denied('complete_parent_onboarding',[currentTermsVersion,currentPrivacyVersion,false,true],'22023');
+ await denied('complete_parent_onboarding',[currentTermsVersion,currentPrivacyVersion,true,false],'22023');
  if(currentPrivacyVersion!=='2026-11-22')await denied('complete_parent_onboarding',['2026-11-22','2026-11-22',true,true],'22023');
  await denied('consent_child_profile',['child-a',true,true]);
  await assert.rejects(db.exec("update private.account_lifecycle set state='active'"),e=>e.code==='42501');
- const accepted=await rpc('complete_parent_onboarding',['2026-11-22',currentPrivacyVersion,true,true,'google']);
- assert.equal(accepted.state,'active');assert.equal(accepted.acceptedTermsVersion,'2026-11-22');assert.equal(accepted.shownPrivacyVersion,currentPrivacyVersion);
+ const accepted=await rpc('complete_parent_onboarding',[currentTermsVersion,currentPrivacyVersion,true,true,'google']);
+ assert.equal(accepted.state,'active');assert.equal(accepted.acceptedTermsVersion,currentTermsVersion);assert.equal(accepted.shownPrivacyVersion,currentPrivacyVersion);
  await owner();let row=(await db.query('select * from private.parent_acceptances where parent_id=$1',[A])).rows[0];assert.equal(row.signup_channel,'otp','Editable channel cannot forge OAuth evidence');assert.equal(new Date(row.accepted_at).toISOString(),clock);assert.equal(row.privacy_version,currentPrivacyVersion);assert.equal(row.privacy_sha256,legalCatalog.find(document=>document.kind==='privacy'&&document.version===currentPrivacyVersion).sha256);
  await identity(A);await onboard();await owner();assert.equal((await db.query('select count(*)::int n from private.parent_acceptances where parent_id=$1',[A])).rows[0].n,1,'Acceptance retry is idempotent, never retroactive');
  await identity(ADMIN);await denied('save_content_draft',['station',0,'{"metadata":{},"chapters":{}}']);await denied('get_email_settings');await onboard();assert.equal((await rpc('get_email_settings')).revision,0);

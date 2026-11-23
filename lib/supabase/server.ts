@@ -1,5 +1,5 @@
 import { createServerClient } from '@supabase/ssr';
-import type { SupabaseClient } from '@supabase/supabase-js';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
 import type { ParentIdentity } from '../parentIdentity';
 import { BackendConfigurationError, getSupabaseConfig } from './config';
@@ -22,10 +22,28 @@ export async function createSupabaseServerClient() {
   });
 }
 
+const requestTokens = new WeakMap<SupabaseClient, string>();
+/** Native requests carry an Auth token, cookie requests use the existing SSR
+ * session. A token is verified through getUser(token) before any family RPC. */
+export async function createSupabaseRequestClient(request: Request): Promise<SupabaseClient> {
+  const authorization = request.headers.get('authorization');
+  if (authorization === null) return createSupabaseServerClient();
+  const config = getSupabaseConfig();
+  if (!config) throw new BackendConfigurationError();
+  if (!/^Bearer [A-Za-z0-9_.-]{20,16384}$/u.test(authorization)) throw new Error('Invalid authentication');
+  const token = authorization.slice(7);
+  const client = createClient(config.url, config.publishableKey, {
+    global: { headers: { Authorization: `Bearer ${token}` } },
+    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+  });
+  requestTokens.set(client, token);
+  return client;
+}
+
 export async function getVerifiedParent(client?: SupabaseClient): Promise<ParentIdentity | null> {
   const supabase = client ?? await createSupabaseServerClient();
   // getUser contacts Auth and verifies the cookie. getSession alone is not authorization.
-  const { data: { user }, error } = await supabase.auth.getUser();
+  const { data: { user }, error } = await supabase.auth.getUser(requestTokens.get(supabase));
   if (error) {
     if (error.code === 'user_not_found') {
       // Auth has definitively rejected the deleted identity. The cookie token's
@@ -34,7 +52,7 @@ export async function getVerifiedParent(client?: SupabaseClient): Promise<Parent
       let cleanupParentId: string | undefined;
       try {
         const { data: { session } } = await supabase.auth.getSession();
-        const token = session?.access_token;
+        const token = requestTokens.get(supabase) ?? session?.access_token;
         if (token && token.length <= 8192 && token.split('.').length === 3) {
           const claims = JSON.parse(Buffer.from(token.split('.')[1], 'base64url').toString('utf8'));
           if (typeof claims.sub === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu.test(claims.sub)) cleanupParentId = claims.sub;

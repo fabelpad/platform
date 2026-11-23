@@ -1,4 +1,4 @@
-import { STORY_IDS, MEMORY_ENCOUNTERS, MEMORY_ITEMS, MEMORY_THREADS, MEMORY_EVENTS } from '../src/storyCatalog';
+import { STORY_IDS, MEMORY_ENCOUNTERS, MEMORY_ITEMS, MEMORY_THREADS, MEMORY_EVENTS, isOnlineStoryId } from '../src/storyCatalog';
 import { isReadingLevel } from '../src/readingLevel';
 import type { ReadingLevel } from '../src/readingLevel';
 import { isValidBirthDate } from '../src/profileReading';
@@ -30,7 +30,7 @@ function text(value: unknown, max: number, allowEmpty = false): value is string 
 function integer(value: unknown, min: number, max: number): value is number {
   return typeof value === 'number' && Number.isSafeInteger(value) && value >= min && value <= max;
 }
-function world(value: unknown): value is WorldId { return typeof value === 'string' && (WORLD_IDS as readonly string[]).includes(value); }
+function world(value: unknown): value is WorldId { return isOnlineStoryId(value); }
 function isoDate(value: unknown): boolean {
   return typeof value === 'string' && value.length <= 30 && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/.test(value) && Number.isFinite(Date.parse(value));
 }
@@ -69,7 +69,7 @@ function memory(value: unknown): boolean {
       world(entry.worldId) && (entry.kind === 'choice' || entry.kind === 'ending') && text(entry.label, 220) && text(entry.detail, 600, true) && isoDate(entry.recordedAt) && source(entry.source));
 }
 function worldList(value: unknown): boolean {
-  return Array.isArray(value) && value.length <= WORLD_IDS.length && value.every(world) && new Set(value).size === value.length;
+  return Array.isArray(value) && value.length <= 100 && value.every(world) && new Set(value).size === value.length;
 }
 function childField(field: string, value: unknown): boolean {
   if (field === 'favorites' || field === 'started') return worldList(value);
@@ -104,7 +104,7 @@ export function validateFamilySnapshot(value: unknown): SnapshotValidation {
   if (typeof family.activeId !== 'string' || !ids.has(family.activeId)) return invalid('Het actieve kindprofiel bestaat niet in dit gezin.');
   if (!object(value.data) || Object.keys(value.data).some(id => !ids.has(id))) return invalid('Verhaalgegevens horen bij een ander kindprofiel.');
   for (const fields of Object.values(value.data)) {
-    if (!object(fields) || !keys(fields, CHILD_FIELDS, [])) return invalid('Een kindomgeving bevat onbekende gegevens.');
+    if (!object(fields) || Object.keys(fields).length > 106 || Object.keys(fields).some(field => !CHILD_FIELDS.includes(field) && !(field.startsWith('story-') && isOnlineStoryId(field.slice(6))))) return invalid('Een kindomgeving bevat onbekende gegevens.');
     for (const [field, record] of Object.entries(fields)) if (!childField(field, record)) return invalid('Een verhaalrecord bevat ongeldige gegevens.');
   }
   return { ok: true, snapshot: value as FamilySnapshot };
