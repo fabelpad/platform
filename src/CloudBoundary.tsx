@@ -73,32 +73,42 @@ export default function CloudBoundary({ parent, children, accountOnly = false }:
   const activeClient = useRef<FamilySyncClient | null>(null);
   const openingOperation = useRef<object | null>(null);
   const onboardingInitialized = useRef(false);
+  const hasConfirmedFamily = useRef(false);
   const pendingSetup = useRef<{ snapshot: FamilySnapshot; fromLegacy: boolean } | null>(null);
   const conflictCard = useRef<HTMLDivElement>(null);
+
+  function clearOnboardingDraft() {
+    pendingSetup.current = null; openingOperation.current = null; newSnapshot.current = null; onboardingInitialized.current = false;
+    setLegacy(null); setOnboardingFlow('new'); setOpening(false); setSetupPending(false);
+    setNewChildName(''); setNewChildBirthDate(''); setPermissions({}); setNewPermission(false); setOnboardingNotice('');
+  }
 
   useEffect(() => {
     const token = ++generation.current;
     setGuest(false); setPhase('loading'); setState(INITIAL);
     setNewChildName(''); setNewChildBirthDate(''); setPermissions({}); setNewPermission(false);
     setLegacy(null); setOnboardingFlow('new'); setOpening(false); setSetupPending(false); setOnboardingNotice('');
-    newSnapshot.current = null; openingOperation.current = null; pendingSetup.current = null; onboardingInitialized.current = false; activeClient.current = null;
+    newSnapshot.current = null; openingOperation.current = null; pendingSetup.current = null; onboardingInitialized.current = false; hasConfirmedFamily.current = false; activeClient.current = null;
     if (!parent) { setStorageScope('guest'); setClient(null); setPhase('login'); return; }
     const current = () => generation.current === token && currentParent.current === parent.id;
     setStorageScope(`parent:${parent.id}`);
     const nextClient = new FamilySyncClient(parent.id, { canApplyRemote: () => !document.querySelector('[role="dialog"]'), onMerged(snapshot) { if (current()) hydrateSnapshot(snapshot); }, onRemote(snapshot) {
       if (!current()) return;
-      if (snapshot && snapshot.family.children.length > 0) { openingOperation.current = null; setOpening(false); hydrateSnapshot(snapshot); setEpoch(value => value + 1); setPhase('ready'); }
+      if (snapshot && snapshot.family.children.length > 0) {
+        if (!nextClient.getState().dirty) { hasConfirmedFamily.current = true; clearOnboardingDraft(); markImportPending(parent.id, null); }
+        openingOperation.current = null; setOpening(false); hydrateSnapshot(snapshot); setEpoch(value => value + 1); setPhase('ready');
+      }
       else if (accountOnly) { setLegacy(null); setPhase('ready'); }
       else {
         // An explicit conflict choice can discard an unresolved setup in favor
         // of the confirmed empty family. A dirty draft is never discarded here.
         if (pendingSetup.current && !nextClient.getState().dirty) {
-          pendingSetup.current = null; openingOperation.current = null; newSnapshot.current = null;
-          setOpening(false); setSetupPending(false); setNewChildName(''); setNewChildBirthDate(''); setPermissions({}); setNewPermission(false); setOnboardingNotice('');
-          markImportPending(parent.id, null); onboardingInitialized.current = false;
+          clearOnboardingDraft(); markImportPending(parent.id, null);
         }
         // A refreshed empty family must not replace an unfinished import form.
-        if (!onboardingInitialized.current) { const source = legacySnapshotForParent(parent.id, true); setLegacy(source); setOnboardingFlow(source ? 'import' : 'new'); onboardingInitialized.current = true; }
+        // After a confirmed family, withdrawing the last child starts a new
+        // explicit setup; never resurrect that completed device import or ID.
+        if (!onboardingInitialized.current) { const source = hasConfirmedFamily.current ? null : legacySnapshotForParent(parent.id, true); setLegacy(source); setOnboardingFlow(source ? 'import' : 'new'); onboardingInitialized.current = true; }
         setPhase('onboarding');
       }
     } });
@@ -123,7 +133,7 @@ export default function CloudBoundary({ parent, children, accountOnly = false }:
       // A retried PUT can finish on focus/online without onRemote firing. Adopt
       // that confirmed family before another onboarding snapshot can replace it.
       if (next.phase === 'saved' && !next.dirty && next.snapshot?.family.children.length && pendingSetup.current) {
-        pendingSetup.current = null; openingOperation.current = null; markImportPending(parent.id, null); setOpening(false); setSetupPending(false); hydrateSnapshot(next.snapshot); setEpoch(value => value + 1); setPhase('ready');
+        hasConfirmedFamily.current = true; clearOnboardingDraft(); markImportPending(parent.id, null); hydrateSnapshot(next.snapshot); setEpoch(value => value + 1); setPhase('ready');
       }
     });
     const stopStorage = subscribeStorage(snapshot => { if (generation.current === token) nextClient.enqueue(snapshot); });
@@ -178,7 +188,7 @@ export default function CloudBoundary({ parent, children, accountOnly = false }:
       await operationClient.flush();
       if (!current()) return;
       if (operationClient.getState().phase !== 'saved') { setOnboardingNotice('Toestemming is bewaard, maar het profiel is nog niet veilig opgeslagen. Probeer het opnieuw.'); return; }
-      if (pendingSetup.current) { pendingSetup.current = null; setSetupPending(false); setEpoch(value => value + 1); setPhase('ready'); }
+      if (pendingSetup.current) { hasConfirmedFamily.current = true; clearOnboardingDraft(); markImportPending(owner, null); setEpoch(value => value + 1); setPhase('ready'); }
     } catch (error) { if (current()) setOnboardingNotice((error as Error).message); }
     finally { if (current()) { openingOperation.current = null; setOpening(false); } }
   }
