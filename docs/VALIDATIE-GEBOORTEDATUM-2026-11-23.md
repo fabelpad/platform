@@ -1,3 +1,5 @@
+> Aanvullende publieke vrijgave om 02:14 UTC: productie is inmiddels bereikbaar via https://fabelpad.nl en de privacy-URL is gecontroleerd. Zie [publieke productieacceptatie](PRODUCTIE-LIVE-2026-11-23.md). De onderstaande oorspronkelijke build-/appactiveringscontrole beschrijft de toestand vóór die afzonderlijke routingvrijgave.
+
 # Geboortedatum en automatisch leesniveau — 23 november 2026
 
 ## Gedrag

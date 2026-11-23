@@ -1,3 +1,5 @@
+> **Publieke productie, 23 november 2026:** https://fabelpad.nl en https://fabelpad.nl/privacy zijn inmiddels actief met geldig HTTPS en zonder login gecontroleerd. Zie [live-acceptatie](PRODUCTIE-LIVE-2026-11-23.md) en het [actuele invulblad](GOOGLE-PLAY-INVULBLAD-PRODUCTIE.md). De eerdere hostingblokkades hieronder zijn historisch.
+
 > **Actuele bundel, 23 november 2026:** Fabelpad **1.0.1 (2)** is ondertekend en gecontroleerd. Gebruik het [actuele bouw-/uploadverslag](ANDROID-PRODUCTIE-1.0.1.md) en de bijbehorende bestanden. De versie-, hash- en bereikbaarheidsgegevens hieronder beschrijven de eerdere voorbereiding van 18 november.
 
 # Fabelpad — productie-AAB, Play App Signing en automatische updates

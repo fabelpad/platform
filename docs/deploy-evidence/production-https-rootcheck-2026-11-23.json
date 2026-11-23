@@ -1,0 +1,131 @@
+{
+  "checkedAt": "2026-11-23T02:14:37.548759+00:00",
+  "origin": "https://fabelpad.nl",
+  "tlsVerified": true,
+  "tls": {
+    "version": "TLSv1.3",
+    "notBefore": "Nov 23 01:15:44 2026 GMT",
+    "notAfter": "Feb 21 01:15:43 2027 GMT",
+    "san": [
+      [
+        "DNS",
+        "fabelpad.nl"
+      ]
+    ],
+    "issuer": [
+      [
+        [
+          "countryName",
+          "US"
+        ]
+      ],
+      [
+        [
+          "organizationName",
+          "Let's Encrypt"
+        ]
+      ],
+      [
+        [
+          "commonName",
+          "YE1"
+        ]
+      ]
+    ]
+  },
+  "http": [
+    {
+      "path": "/",
+      "status": 200,
+      "finalUrl": "https://fabelpad.nl/",
+      "contentType": "text/html; charset=utf-8",
+      "referrerPolicy": "no-referrer",
+      "nosniff": "nosniff"
+    },
+    {
+      "path": "/api/health",
+      "status": 200,
+      "finalUrl": "https://fabelpad.nl/api/health",
+      "contentType": "application/json",
+      "referrerPolicy": "no-referrer",
+      "nosniff": "nosniff",
+      "health": {
+        "ok": true,
+        "service": "fabelpad",
+        "runtime": "nextjs-node",
+        "environment": "production",
+        "revision": "228d951ac0db0bac03c7a74c9d67a8c547b005fa",
+        "scope": "process-liveness-only",
+        "backend": "configured-unverified"
+      }
+    },
+    {
+      "path": "/privacy",
+      "status": 200,
+      "finalUrl": "https://fabelpad.nl/privacy",
+      "contentType": "text/html; charset=utf-8",
+      "referrerPolicy": "no-referrer",
+      "nosniff": "nosniff"
+    },
+    {
+      "path": "/privacyverklaring",
+      "status": 200,
+      "finalUrl": "https://fabelpad.nl/privacyverklaring",
+      "contentType": "text/html; charset=utf-8",
+      "referrerPolicy": "no-referrer",
+      "nosniff": "nosniff"
+    },
+    {
+      "path": "/algemene-voorwaarden",
+      "status": 200,
+      "finalUrl": "https://fabelpad.nl/algemene-voorwaarden",
+      "contentType": "text/html; charset=utf-8",
+      "referrerPolicy": "no-referrer",
+      "nosniff": "nosniff"
+    },
+    {
+      "path": "/account-verwijderen",
+      "status": 200,
+      "finalUrl": "https://fabelpad.nl/account-verwijderen",
+      "contentType": "text/html; charset=utf-8",
+      "referrerPolicy": "no-referrer",
+      "nosniff": "nosniff"
+    },
+    {
+      "path": "/privacyverzoek",
+      "status": 200,
+      "finalUrl": "https://fabelpad.nl/privacyverzoek",
+      "contentType": "text/html; charset=utf-8",
+      "referrerPolicy": "no-referrer",
+      "nosniff": "nosniff"
+    },
+    {
+      "path": "/support",
+      "status": 200,
+      "finalUrl": "https://fabelpad.nl/support",
+      "contentType": "text/html; charset=utf-8",
+      "referrerPolicy": "no-referrer",
+      "nosniff": "nosniff"
+    },
+    {
+      "path": "/bedrijfsgegevens",
+      "status": 200,
+      "finalUrl": "https://fabelpad.nl/bedrijfsgegevens",
+      "contentType": "text/html; charset=utf-8",
+      "referrerPolicy": "no-referrer",
+      "nosniff": "nosniff"
+    },
+    {
+      "path": "/api/auth/session",
+      "status": 200,
+      "finalUrl": "https://fabelpad.nl/api/auth/session",
+      "contentType": "application/json",
+      "referrerPolicy": "no-referrer",
+      "nosniff": "nosniff"
+    },
+    {
+      "path": "/api/family",
+      "status": 401
+    }
+  ]
+}

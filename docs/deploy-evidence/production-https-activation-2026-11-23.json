@@ -1,0 +1,459 @@
+{
+  "operation": "production public HTTPS activation",
+  "host": "dg-vps-08",
+  "machineId": "05db94b99eca4c3d815f6585ef8ed517",
+  "expectedApplicationSha": "228d951ac0db0bac03c7a74c9d67a8c547b005fa",
+  "existingAppRebuiltOrRestarted": false,
+  "dnsChanged": false,
+  "databaseChanged": false,
+  "playUploadPerformed": false,
+  "checks": [
+    "fresh composite Caddy configuration valid",
+    "installed complete Caddy configuration valid",
+    "all existing service states and PIDs unchanged",
+    "both releases and loopback health unchanged",
+    "all existing proxy file hashes unchanged",
+    "only own production snippet added"
+  ],
+  "before": {
+    "checkedAt": "2026-11-23T02:14:10.128444+00:00",
+    "services": {
+      "fabelpad-vps08-staging": {
+        "MainPID": "522504",
+        "LoadState": "loaded",
+        "ActiveState": "active",
+        "SubState": "running",
+        "UnitFileState": "enabled",
+        "ActiveEnterTimestamp": "Mon 2026-11-23 02:07:20 CET"
+      },
+      "fabelpad-vps08-production": {
+        "MainPID": "523989",
+        "LoadState": "loaded",
+        "ActiveState": "active",
+        "SubState": "running",
+        "UnitFileState": "enabled",
+        "ActiveEnterTimestamp": "Mon 2026-11-23 02:10:43 CET"
+      },
+      "fabelpad-vps08-staging-runner": {
+        "MainPID": "366130",
+        "LoadState": "loaded",
+        "ActiveState": "active",
+        "SubState": "running",
+        "UnitFileState": "enabled",
+        "ActiveEnterTimestamp": "Sun 2026-11-22 19:47:08 CET"
+      },
+      "fabelpad-vps08-production-runner": {
+        "MainPID": "366141",
+        "LoadState": "loaded",
+        "ActiveState": "active",
+        "SubState": "running",
+        "UnitFileState": "enabled",
+        "ActiveEnterTimestamp": "Sun 2026-11-22 19:47:08 CET"
+      },
+      "caddy": {
+        "MainPID": "4564",
+        "LoadState": "loaded",
+        "ActiveState": "active",
+        "SubState": "running",
+        "UnitFileState": "enabled",
+        "ActiveEnterTimestamp": "Fri 2026-11-20 18:03:07 CET"
+      },
+      "ssh": {
+        "MainPID": "1016",
+        "LoadState": "loaded",
+        "ActiveState": "active",
+        "SubState": "running",
+        "UnitFileState": "disabled",
+        "ActiveEnterTimestamp": "Fri 2026-11-20 16:31:24 CET"
+      },
+      "tailscaled": {
+        "MainPID": "1876",
+        "LoadState": "loaded",
+        "ActiveState": "active",
+        "SubState": "running",
+        "UnitFileState": "enabled",
+        "ActiveEnterTimestamp": "Fri 2026-11-20 16:50:13 CET"
+      },
+      "castiq-staging": {
+        "MainPID": "0",
+        "LoadState": "loaded",
+        "ActiveState": "inactive",
+        "SubState": "dead",
+        "UnitFileState": "disabled",
+        "ActiveEnterTimestamp": ""
+      },
+      "castiq-staging-runner": {
+        "MainPID": "29204",
+        "LoadState": "loaded",
+        "ActiveState": "active",
+        "SubState": "running",
+        "UnitFileState": "disabled",
+        "ActiveEnterTimestamp": "Fri 2026-11-20 19:37:42 CET"
+      },
+      "castiq-staging-worker": {
+        "MainPID": "0",
+        "LoadState": "loaded",
+        "ActiveState": "inactive",
+        "SubState": "dead",
+        "UnitFileState": "disabled",
+        "ActiveEnterTimestamp": ""
+      }
+    },
+    "caddyHashes": {
+      "/etc/caddy/sites/castiq-vps08-staging.caddy": "d080c4fd10730a6ff47bfb922990aae9e773a0b60d9f6d32280a57ef47fcc9eb",
+      "/etc/caddy/sites/fabelpad-vps08-staging.caddy": "ba6facd1a010dab378eeb170cbaf26b2969c38f4fbfd735269a873280d039acb",
+      "/etc/caddy/Caddyfile": "3acfe7107fb2f3ec21e3c0292daf2725be21b79c707a41394c848b1ee3aeefab"
+    },
+    "releases": {
+      "staging": {
+        "current": "releases/228d951ac0db0bac03c7a74c9d67a8c547b005fa-45092314545-1",
+        "previous": "releases/ec82395ba57904302bc4a93e71e5dba63def2950-45085866014-1",
+        "manifest": {
+          "version": 1,
+          "id": "228d951ac0db0bac03c7a74c9d67a8c547b005fa-45092314545-1",
+          "siteId": "fabelpad-vps08-staging",
+          "repository": "fabelpad/platform",
+          "branch": "main",
+          "hostname": "dg-vps-08",
+          "machineId": "05db94b99eca4c3d815f6585ef8ed517",
+          "environment": "staging",
+          "sha": "228d951ac0db0bac03c7a74c9d67a8c547b005fa",
+          "configId": "birth-20261123-stg",
+          "buildConfigDigest": "1363f9f0862687420de4d7ef81e36fb5eb3b5db23dd85634c6b7b540eceff8f8",
+          "artifactDigest": "b07d197382bf0bed1ffdb6d4bc9b65c9c53157edccff2d9ea1912e14e5027c77",
+          "runId": "45092314545",
+          "runAttempt": "1",
+          "ciRunId": "45090519395",
+          "ciRunAttempt": "1",
+          "ciJobId": "137418779038",
+          "nodeVersion": "24.18.0",
+          "pnpmVersion": "11.25.0",
+          "lockfileDigest": "cf8799688c1989c15abcace1299d6029741962fd7cbfb074989e5ee0efc29e0f",
+          "buildCommand": "pnpm build",
+          "startCommand": "pnpm start",
+          "builtAt": "2026-11-23T01:04:48.958Z",
+          "ciChecks": [
+            {
+              "workflow": "verify.yml",
+              "workflowId": 407614165,
+              "runId": 45090519395,
+              "runAttempt": 1,
+              "jobId": 137418779038
+            },
+            {
+              "workflow": "fabelpad-android-ci.yml",
+              "workflowId": 423177291,
+              "runId": 45090519222,
+              "runAttempt": 1,
+              "jobId": 137418778115
+            }
+          ],
+          "workflowSha": "228d951ac0db0bac03c7a74c9d67a8c547b005fa",
+          "workflowJobId": 137424501399,
+          "sealedAt": "2026-11-23T01:04:58.562Z",
+          "runtimeConfigDigest": "db4e247fec947b0aca635e73a4d0cd3ff602a5852f4700b2ba61609c872514ec",
+          "preparedAt": "2026-11-23T01:07:13.181Z"
+        },
+        "health": {
+          "status": 200,
+          "data": {
+            "ok": true,
+            "service": "fabelpad",
+            "runtime": "nextjs-node",
+            "environment": "staging",
+            "revision": "228d951ac0db0bac03c7a74c9d67a8c547b005fa",
+            "scope": "process-liveness-only",
+            "backend": "configured-unverified"
+          }
+        }
+      },
+      "production": {
+        "current": "releases/228d951ac0db0bac03c7a74c9d67a8c547b005fa-45092530884-1",
+        "previous": "releases/ec82395ba57904302bc4a93e71e5dba63def2950-45086060176-1",
+        "manifest": {
+          "version": 1,
+          "id": "228d951ac0db0bac03c7a74c9d67a8c547b005fa-45092530884-1",
+          "siteId": "fabelpad-vps08-production",
+          "repository": "fabelpad/platform",
+          "branch": "main",
+          "hostname": "dg-vps-08",
+          "machineId": "05db94b99eca4c3d815f6585ef8ed517",
+          "environment": "production",
+          "sha": "228d951ac0db0bac03c7a74c9d67a8c547b005fa",
+          "configId": "birth-20261123-prd",
+          "buildConfigDigest": "ff7a65cc96d14e0cbafe45ebc5d50a4272576db33fde27eeacf94737fb748f9d",
+          "artifactDigest": "16c2f747d5eec6e2dd5f317dad1285ac5ef0c52ca0347444893ecbe836177436",
+          "runId": "45092530884",
+          "runAttempt": "1",
+          "ciRunId": "45090519395",
+          "ciRunAttempt": "1",
+          "ciJobId": "137418779038",
+          "nodeVersion": "24.18.0",
+          "pnpmVersion": "11.25.0",
+          "lockfileDigest": "cf8799688c1989c15abcace1299d6029741962fd7cbfb074989e5ee0efc29e0f",
+          "buildCommand": "pnpm build",
+          "startCommand": "pnpm start",
+          "builtAt": "2026-11-23T01:07:01.750Z",
+          "ciChecks": [
+            {
+              "workflow": "verify.yml",
+              "workflowId": 407614165,
+              "runId": 45090519395,
+              "runAttempt": 1,
+              "jobId": 137418779038
+            },
+            {
+              "workflow": "fabelpad-android-ci.yml",
+              "workflowId": 423177291,
+              "runId": 45090519222,
+              "runAttempt": 1,
+              "jobId": 137418778115
+            }
+          ],
+          "workflowSha": "228d951ac0db0bac03c7a74c9d67a8c547b005fa",
+          "workflowJobId": 137425174925,
+          "sealedAt": "2026-11-23T01:07:11.356Z",
+          "runtimeConfigDigest": "2d131808af41676b4cc5c66d4a226291154c26f2f116e7db02c3059ff790e268",
+          "preparedAt": "2026-11-23T01:10:34.977Z"
+        },
+        "health": {
+          "status": 200,
+          "data": {
+            "ok": true,
+            "service": "fabelpad",
+            "runtime": "nextjs-node",
+            "environment": "production",
+            "revision": "228d951ac0db0bac03c7a74c9d67a8c547b005fa",
+            "scope": "process-liveness-only",
+            "backend": "configured-unverified"
+          }
+        }
+      }
+    }
+  },
+  "verifiedDnsA": [
+    "204.168.128.28"
+  ],
+  "preparedRouteSha256": "c98bf166a14b46b23c3141e55d7476d0eda44c7142bf5153de0c785aca546a9b",
+  "validationFile": "/etc/dg-webservices/fabelpad-vps08-production/prepared/production-https-20261123-validation.Caddyfile",
+  "after": {
+    "checkedAt": "2026-11-23T02:14:10.874114+00:00",
+    "services": {
+      "fabelpad-vps08-staging": {
+        "MainPID": "522504",
+        "LoadState": "loaded",
+        "ActiveState": "active",
+        "SubState": "running",
+        "UnitFileState": "enabled",
+        "ActiveEnterTimestamp": "Mon 2026-11-23 02:07:20 CET"
+      },
+      "fabelpad-vps08-production": {
+        "MainPID": "523989",
+        "LoadState": "loaded",
+        "ActiveState": "active",
+        "SubState": "running",
+        "UnitFileState": "enabled",
+        "ActiveEnterTimestamp": "Mon 2026-11-23 02:10:43 CET"
+      },
+      "fabelpad-vps08-staging-runner": {
+        "MainPID": "366130",
+        "LoadState": "loaded",
+        "ActiveState": "active",
+        "SubState": "running",
+        "UnitFileState": "enabled",
+        "ActiveEnterTimestamp": "Sun 2026-11-22 19:47:08 CET"
+      },
+      "fabelpad-vps08-production-runner": {
+        "MainPID": "366141",
+        "LoadState": "loaded",
+        "ActiveState": "active",
+        "SubState": "running",
+        "UnitFileState": "enabled",
+        "ActiveEnterTimestamp": "Sun 2026-11-22 19:47:08 CET"
+      },
+      "caddy": {
+        "MainPID": "4564",
+        "LoadState": "loaded",
+        "ActiveState": "active",
+        "SubState": "running",
+        "UnitFileState": "enabled",
+        "ActiveEnterTimestamp": "Fri 2026-11-20 18:03:07 CET"
+      },
+      "ssh": {
+        "MainPID": "1016",
+        "LoadState": "loaded",
+        "ActiveState": "active",
+        "SubState": "running",
+        "UnitFileState": "disabled",
+        "ActiveEnterTimestamp": "Fri 2026-11-20 16:31:24 CET"
+      },
+      "tailscaled": {
+        "MainPID": "1876",
+        "LoadState": "loaded",
+        "ActiveState": "active",
+        "SubState": "running",
+        "UnitFileState": "enabled",
+        "ActiveEnterTimestamp": "Fri 2026-11-20 16:50:13 CET"
+      },
+      "castiq-staging": {
+        "MainPID": "0",
+        "LoadState": "loaded",
+        "ActiveState": "inactive",
+        "SubState": "dead",
+        "UnitFileState": "disabled",
+        "ActiveEnterTimestamp": ""
+      },
+      "castiq-staging-runner": {
+        "MainPID": "29204",
+        "LoadState": "loaded",
+        "ActiveState": "active",
+        "SubState": "running",
+        "UnitFileState": "disabled",
+        "ActiveEnterTimestamp": "Fri 2026-11-20 19:37:42 CET"
+      },
+      "castiq-staging-worker": {
+        "MainPID": "0",
+        "LoadState": "loaded",
+        "ActiveState": "inactive",
+        "SubState": "dead",
+        "UnitFileState": "disabled",
+        "ActiveEnterTimestamp": ""
+      }
+    },
+    "caddyHashes": {
+      "/etc/caddy/sites/castiq-vps08-staging.caddy": "d080c4fd10730a6ff47bfb922990aae9e773a0b60d9f6d32280a57ef47fcc9eb",
+      "/etc/caddy/sites/fabelpad-vps08-production.caddy": "c98bf166a14b46b23c3141e55d7476d0eda44c7142bf5153de0c785aca546a9b",
+      "/etc/caddy/sites/fabelpad-vps08-staging.caddy": "ba6facd1a010dab378eeb170cbaf26b2969c38f4fbfd735269a873280d039acb",
+      "/etc/caddy/Caddyfile": "3acfe7107fb2f3ec21e3c0292daf2725be21b79c707a41394c848b1ee3aeefab"
+    },
+    "releases": {
+      "staging": {
+        "current": "releases/228d951ac0db0bac03c7a74c9d67a8c547b005fa-45092314545-1",
+        "previous": "releases/ec82395ba57904302bc4a93e71e5dba63def2950-45085866014-1",
+        "manifest": {
+          "version": 1,
+          "id": "228d951ac0db0bac03c7a74c9d67a8c547b005fa-45092314545-1",
+          "siteId": "fabelpad-vps08-staging",
+          "repository": "fabelpad/platform",
+          "branch": "main",
+          "hostname": "dg-vps-08",
+          "machineId": "05db94b99eca4c3d815f6585ef8ed517",
+          "environment": "staging",
+          "sha": "228d951ac0db0bac03c7a74c9d67a8c547b005fa",
+          "configId": "birth-20261123-stg",
+          "buildConfigDigest": "1363f9f0862687420de4d7ef81e36fb5eb3b5db23dd85634c6b7b540eceff8f8",
+          "artifactDigest": "b07d197382bf0bed1ffdb6d4bc9b65c9c53157edccff2d9ea1912e14e5027c77",
+          "runId": "45092314545",
+          "runAttempt": "1",
+          "ciRunId": "45090519395",
+          "ciRunAttempt": "1",
+          "ciJobId": "137418779038",
+          "nodeVersion": "24.18.0",
+          "pnpmVersion": "11.25.0",
+          "lockfileDigest": "cf8799688c1989c15abcace1299d6029741962fd7cbfb074989e5ee0efc29e0f",
+          "buildCommand": "pnpm build",
+          "startCommand": "pnpm start",
+          "builtAt": "2026-11-23T01:04:48.958Z",
+          "ciChecks": [
+            {
+              "workflow": "verify.yml",
+              "workflowId": 407614165,
+              "runId": 45090519395,
+              "runAttempt": 1,
+              "jobId": 137418779038
+            },
+            {
+              "workflow": "fabelpad-android-ci.yml",
+              "workflowId": 423177291,
+              "runId": 45090519222,
+              "runAttempt": 1,
+              "jobId": 137418778115
+            }
+          ],
+          "workflowSha": "228d951ac0db0bac03c7a74c9d67a8c547b005fa",
+          "workflowJobId": 137424501399,
+          "sealedAt": "2026-11-23T01:04:58.562Z",
+          "runtimeConfigDigest": "db4e247fec947b0aca635e73a4d0cd3ff602a5852f4700b2ba61609c872514ec",
+          "preparedAt": "2026-11-23T01:07:13.181Z"
+        },
+        "health": {
+          "status": 200,
+          "data": {
+            "ok": true,
+            "service": "fabelpad",
+            "runtime": "nextjs-node",
+            "environment": "staging",
+            "revision": "228d951ac0db0bac03c7a74c9d67a8c547b005fa",
+            "scope": "process-liveness-only",
+            "backend": "configured-unverified"
+          }
+        }
+      },
+      "production": {
+        "current": "releases/228d951ac0db0bac03c7a74c9d67a8c547b005fa-45092530884-1",
+        "previous": "releases/ec82395ba57904302bc4a93e71e5dba63def2950-45086060176-1",
+        "manifest": {
+          "version": 1,
+          "id": "228d951ac0db0bac03c7a74c9d67a8c547b005fa-45092530884-1",
+          "siteId": "fabelpad-vps08-production",
+          "repository": "fabelpad/platform",
+          "branch": "main",
+          "hostname": "dg-vps-08",
+          "machineId": "05db94b99eca4c3d815f6585ef8ed517",
+          "environment": "production",
+          "sha": "228d951ac0db0bac03c7a74c9d67a8c547b005fa",
+          "configId": "birth-20261123-prd",
+          "buildConfigDigest": "ff7a65cc96d14e0cbafe45ebc5d50a4272576db33fde27eeacf94737fb748f9d",
+          "artifactDigest": "16c2f747d5eec6e2dd5f317dad1285ac5ef0c52ca0347444893ecbe836177436",
+          "runId": "45092530884",
+          "runAttempt": "1",
+          "ciRunId": "45090519395",
+          "ciRunAttempt": "1",
+          "ciJobId": "137418779038",
+          "nodeVersion": "24.18.0",
+          "pnpmVersion": "11.25.0",
+          "lockfileDigest": "cf8799688c1989c15abcace1299d6029741962fd7cbfb074989e5ee0efc29e0f",
+          "buildCommand": "pnpm build",
+          "startCommand": "pnpm start",
+          "builtAt": "2026-11-23T01:07:01.750Z",
+          "ciChecks": [
+            {
+              "workflow": "verify.yml",
+              "workflowId": 407614165,
+              "runId": 45090519395,
+              "runAttempt": 1,
+              "jobId": 137418779038
+            },
+            {
+              "workflow": "fabelpad-android-ci.yml",
+              "workflowId": 423177291,
+              "runId": 45090519222,
+              "runAttempt": 1,
+              "jobId": 137418778115
+            }
+          ],
+          "workflowSha": "228d951ac0db0bac03c7a74c9d67a8c547b005fa",
+          "workflowJobId": 137425174925,
+          "sealedAt": "2026-11-23T01:07:11.356Z",
+          "runtimeConfigDigest": "2d131808af41676b4cc5c66d4a226291154c26f2f116e7db02c3059ff790e268",
+          "preparedAt": "2026-11-23T01:10:34.977Z"
+        },
+        "health": {
+          "status": 200,
+          "data": {
+            "ok": true,
+            "service": "fabelpad",
+            "runtime": "nextjs-node",
+            "environment": "production",
+            "revision": "228d951ac0db0bac03c7a74c9d67a8c547b005fa",
+            "scope": "process-liveness-only",
+            "backend": "configured-unverified"
+          }
+        }
+      }
+    }
+  },
+  "newRoute": "/etc/caddy/sites/fabelpad-vps08-production.caddy",
+  "status": "activated_pending_public_acceptance",
+  "finishedAt": "2026-11-23T02:14:10.874189+00:00"
+}

@@ -2,7 +2,7 @@
 
 Controledatum: **23 november 2026, Europe/Amsterdam**. Appbron **`228d951ac0db0bac03c7a74c9d67a8c547b005fa`**, repository `fabelpad/platform`, integratiebranch `main`. Beide kandidaatbouwen en activeringen zijn geslaagd. Zie het [releasebewijs](deploy-evidence/birth-release-2026-11-23.json), de [profielvalidatie](VALIDATIE-GEBOORTEDATUM-2026-11-23.md) en de [ondertekende Android-bouw](ANDROID-PRODUCTIE-1.0.1.md).
 
-**Staging is bereikbaar op https://staging.fabelpad.nl. De bestaande productie-installatie draait op haar eigen loopbackpoort; publieke productie-HTTPS blijft uit.** Bestaande accounts, verkeer, proxy, DNS, runners en overige services zijn behouden.
+**Staging en productie zijn publiek bereikbaar via HTTPS: https://staging.fabelpad.nl en https://fabelpad.nl.** De eigenaar heeft de publieke productievrijgave op 23 november expliciet opgedragen. Alleen de eigen voorbereide productiesnippet is toegevoegd; DNS, bestaande proxysnippets, releases, accounts, runners en alle service-PID’s zijn behouden. De publieke privacy-URL https://fabelpad.nl/privacy geeft HTTP 200 zonder login. Zie [uitvoering en acceptatie](PRODUCTIE-LIVE-2026-11-23.md).
 
 ## Geboortedatum en leesniveau
 
@@ -47,7 +47,7 @@ Alle dertien avonturen behouden vijf hoofdstukken, twee keuzes en de 65 speelpre
 | Runtimeconfiguratie-SHA-256 | `db4e247fec947b0aca635e73a4d0cd3ff602a5852f4700b2ba61609c872514ec` | `2d131808af41676b4cc5c66d4a226291154c26f2f116e7db02c3059ff790e268` |
 | Vorige kandidaat | `ec82395ba57904302bc4a93e71e5dba63def2950-45085866014-1` | `ec82395ba57904302bc4a93e71e5dba63def2950-45086060176-1` |
 | Vorige configuratie | `complete-20261123-stg` | `complete-20261123-prd` |
-| Publieke HTTPS | Actief, noindex | Niet geactiveerd |
+| Publieke HTTPS | Actief, noindex | **Actief**, geldig certificaat voor `fabelpad.nl` |
 
 De releasepaden zijn `/srv/sites/fabelpad-vps08-staging/releases/KANDIDAAT` en `/srv/sites/fabelpad-vps08-production/releases/KANDIDAAT`. App en de bijbehorende versiegebonden runtimeconfiguratie blijven gekoppeld. Beide environments houden uitsluitend `FABELPAD_APP_ORIGIN`, `FABELPAD_DATA_MODE`, `NEXT_PUBLIC_SUPABASE_URL` en `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`. Er zijn geen GitHub-variabelen, secrets of environments toegevoegd.
 
@@ -63,8 +63,8 @@ Bestaande retentie blijft behouden: zeven dagen onafgeronde onboarding, dertig d
 
 De gratis lokale React Native-app is aangeleverd als **ondertekende 1.0.1 (2), `nl.fabelpad.app`**. AAB **38.917.985 bytes**, SHA-256 `6e32d9faed68febb783e9a0c2a0a2683cd418858fbc7af3e78ca539bea9de746`. Twintig runtimebeelden, native datumkiezer, signing en alle 44 ELF-/bundle-/APK-alignments zijn gecontroleerd. De Android-profielen zijn lokaal en gebruiken geen Supabase-account. De spraakengine ontvangt een generieke naam; geen kindnaam of geboortedatum.
 
-Ververs staging om de nieuwe client te laden; wis geen bestaande profielen of browsergegevens. Voeg ontbrekende geboortedatums in de ouderinstellingen toe. Bestaande verhalen blijven intussen leesbaar.
+Ververs de gebruikte omgeving om de nieuwe client te laden; wis geen bestaande profielen of browsergegevens. Voeg ontbrekende geboortedatums in de ouderinstellingen toe. Bestaande verhalen blijven intussen leesbaar.
 
 De vorige procesgezonde app/configuratiecombinaties blijven behouden. Een kale approllback naar `ec82395...` is **geen functioneel veilige herstelroute**: oude clients kennen `birthDate`/`readingLevelOverride` en privacyversie 23 niet. Houd de additieve database en historische documenten in stand en gebruik een compatibele herstelbuild of vooruitreparatie. Verwijder geen profielvelden om oude code passend te maken. Activatie en herstel gebruiken hetzelfde eigen activatielock; er is geen live rollback uitgevoerd. Zie de [releaseprocedure](DG-VPS-08-TWEE-OMGEVINGEN.md) en het [profielcontract](KINDPROFIEL-GEBOORTEDATUM-CONTRACT.md).
 
-Alle build-/CI-/activeringsclaims horen bij de bovenstaande applicatiecommit. Latere documentatiecommits zijn geen opnieuw gebouwde app. Health is `process-liveness-only`, backend `configured-unverified`. De browserouderflow gebruikt onderschepte API's; echte OTP-/Google-login, hosted profielopslag en mailbezorging zijn niet als getest geclaimd. Er is geen Android-toestel-/emulatortest, TalkBack-acceptatie of Google Play-upload uitgevoerd. Publieke productie-HTTPS, Play-account/testgate, Store-assets, toestelacceptatie en Cloud-/Play-inrichting blijven afzonderlijke stappen in het actuele invulblad en het Android-uploadverslag.
+Alle build-/CI-/activeringsclaims horen bij de bovenstaande applicatiecommit. Latere documentatiecommits zijn geen opnieuw gebouwde app. Health is `process-liveness-only`, backend `configured-unverified`. De browserouderflow gebruikt onderschepte API's; echte OTP-/Google-login, hosted profielopslag en mailbezorging zijn niet als getest geclaimd. Er is geen Android-toestel-/emulatortest, TalkBack-acceptatie of Google Play-upload uitgevoerd. Publieke productie-HTTPS en de privacybereikbaarheid zijn inmiddels afgerond en onafhankelijk gecontroleerd. Play-account/testgate, Store-assets, toestelacceptatie en Cloud-/Play-inrichting blijven afzonderlijke stappen in het [actuele invulblad](GOOGLE-PLAY-INVULBLAD-PRODUCTIE.md) en het Android-uploadverslag.
