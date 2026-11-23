@@ -14,7 +14,7 @@ const source: FamilySnapshot = {
 };
 const prefix = `fabelpad-scope-${encodeURIComponent(`parent:${parent.id}`)}::`;
 
-function fixture() { return { snapshot: null as FamilySnapshot | null, revision: 0, uploads: [] as FamilySnapshot[], consents: [] as string[], reads: 0, emptySnapshot: false, failPut: false, loseResponse: false, conflicts: 0, blocked: false, holdConsent: null as Promise<void> | null }; }
+function fixture() { return { snapshot: null as FamilySnapshot | null, revision: 0, uploads: [] as FamilySnapshot[], consents: [] as string[], withdrawn: [] as string[], rejectedConsents: 0, reads: 0, emptySnapshot: false, failPut: false, loseResponse: false, conflicts: 0, blocked: false, holdConsent: null as Promise<void> | null }; }
 async function mock(page: Page, state: ReturnType<typeof fixture>, local: FamilySnapshot | null = source) {
   if (local) await page.addInitScript(snapshot => {
     if (localStorage.getItem('fabelpad-family')) return;
@@ -25,7 +25,16 @@ async function mock(page: Page, state: ReturnType<typeof fixture>, local: Family
   await page.route('**/api/parent/status', route => route.fulfill({ json: active }));
   await page.route('**/api/parent/activity', route => route.fulfill({ json: { ok: true } }));
   await page.route('**/api/parent/consent', async route => {
-    state.consents.push(route.request().postDataJSON().profileId);
+    const id = route.request().postDataJSON().profileId as string;
+    if (route.request().method() === 'DELETE') {
+      state.withdrawn.push(id);
+      const children = state.snapshot!.family.children.filter(child => child.id !== id);
+      state.snapshot = { ...state.snapshot!, family: { ...state.snapshot!.family, children, activeId: children[0]?.id ?? '' }, data: Object.fromEntries(Object.entries(state.snapshot!.data).filter(([key]) => key !== id)) };
+      state.revision++;
+      return route.fulfill({ json: active });
+    }
+    if (state.withdrawn.includes(id)) { state.rejectedConsents++; return route.fulfill({ status: 403, json: { error: 'profile_withdrawn', message: 'Een ingetrokken profiel kan niet opnieuw worden gebruikt.' } }); }
+    state.consents.push(id);
     if (state.holdConsent) await state.holdConsent;
     await route.fulfill({ json: active });
   });
@@ -64,6 +73,42 @@ for (const width of [320, 390]) test(`used Avonturier has one editable profile f
   expect(state.snapshot!.family.children[0]).toEqual({ ...source.family.children[0], name: 'Lotte', birthDate: '2020-02-29' });
   expect(state.snapshot!.data).toEqual(source.data);
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem('fabelpad-family')!))).toEqual(source.family);
+});
+
+for (const initialFlow of ['import', 'new'] as const) test(`a completed ${initialFlow} starts a fresh consent and profile ID after withdrawing the last child without remounting`, async ({ page }) => {
+  const state = fixture(); const local = structuredClone(source); local.family.children[0].birthDate = '2019-11-23';
+  await mock(page, state, initialFlow === 'import' ? local : null); await page.goto('/gezin');
+  const documentToken = await page.evaluate(() => { const token = crypto.randomUUID(); Object.assign(window, { profileSetupDocument: token }); return token; });
+  if (initialFlow === 'import') {
+    await expect(page.locator('#import-used-adventurer-birth-date')).toHaveValue('2019-11-23');
+    await page.locator('#import-used-adventurer-name').fill('Noor'); await page.getByRole('checkbox').check();
+    await page.getByRole('button', { name: 'Deze profielen online bewaren', exact: true }).click();
+  } else {
+    await page.locator('#onboarding-child-name').fill('Noor'); await page.locator('#onboarding-child-birth-date').fill('2019-11-23');
+    await page.getByRole('checkbox').check(); await page.getByRole('button', { name: 'Nieuw kindprofiel bewaren', exact: true }).click();
+  }
+  await expect(page.locator('.world-card')).toHaveCount(13);
+  const firstId = state.snapshot!.family.children[0].id;
+  await page.getByRole('button', { name: 'Voor ouders', exact: true }).first().click();
+  await page.locator('#parent-answer').fill('12'); await page.getByRole('button', { name: 'Naar het ouderhoekje' }).click();
+  await page.getByRole('button', { name: 'Bewerken', exact: true }).click();
+  await page.getByRole('button', { name: 'Toestemming intrekken', exact: true }).click();
+  await page.getByRole('button', { name: 'Trek toestemming in en wis dit profiel', exact: true }).click();
+  await expect(page.locator('#onboarding-child-name')).toBeVisible();
+  await expect(page.locator('#onboarding-child-name')).toHaveValue(''); await expect(page.locator('#onboarding-child-birth-date')).toHaveValue('');
+  await expect(page.getByRole('checkbox')).not.toBeChecked(); await expect(page.getByRole('radio')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Nieuw kindprofiel bewaren', exact: true })).toBeDisabled();
+  expect(state.snapshot!.family.children).toEqual([]); expect(state.uploads).toHaveLength(1); expect(state.consents).toEqual([firstId]);
+  expect(await page.evaluate(() => (window as Window & { profileSetupDocument?: string }).profileSetupDocument)).toBe(documentToken);
+  const reads = state.reads; await page.evaluate(() => window.dispatchEvent(new Event('focus'))); await expect.poll(() => state.reads).toBeGreaterThan(reads);
+  await expect(page.locator('#onboarding-child-name')).toHaveValue(''); await expect(page.getByRole('checkbox')).not.toBeChecked();
+  await page.locator('#onboarding-child-name').fill('Mila'); await page.locator('#onboarding-child-birth-date').fill('2021-01-01');
+  await expect(page.getByRole('button', { name: 'Nieuw kindprofiel bewaren', exact: true })).toBeDisabled();
+  await page.getByRole('checkbox').check(); await page.getByRole('button', { name: 'Nieuw kindprofiel bewaren', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Ons gezin', exact: true })).toBeVisible(); await expect(page.getByText('Mila', { exact: true })).toBeVisible();
+  expect(state.snapshot!.family.children[0].id).not.toBe(firstId); expect(state.uploads).toHaveLength(2);
+  expect(state.consents).toEqual([firstId, state.snapshot!.family.children[0].id]); expect(state.withdrawn).toEqual([firstId]); expect(state.rejectedConsents).toBe(0);
+  if (initialFlow === 'import') expect(await page.evaluate(() => JSON.parse(localStorage.getItem('fabelpad-family')!))).toEqual(local.family);
 });
 
 test('an unused default profile offers only the new profile form', async ({ page }) => {
