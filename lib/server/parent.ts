@@ -35,7 +35,7 @@ export async function requireActiveParentAccount(client: SupabaseClient): Promis
   return status;
 }
 
-export async function parentRequest(request: Request, operation: 'status' | 'onboarding' | 'consent' | 'deletion' | 'restore' | 'activity'): Promise<Response> {
+export async function parentRequest(request: Request, operation: 'status' | 'onboarding' | 'consent' | 'deletion' | 'restore' | 'activity' | 'email-preferences'): Promise<Response> {
   try {
     if (request.method !== 'GET') checkMutationOrigin(request);
     const client = await createSupabaseRequestClient(request);
@@ -49,15 +49,30 @@ export async function parentRequest(request: Request, operation: 'status' | 'onb
       return privateJson({ deletionDeadlineMinute: data.deletionDeadlineMinute, ...(data.expiresAt !== undefined ? { expiresAt: data.expiresAt } : {}) });
     }
     if (request.headers.get('x-fabelpad-parent') !== parent.id) throw new RequestError(401, 'account_changed', 'Het ouderaccount is gewijzigd. Laad je accountoverzicht opnieuw voordat je deze handeling uitvoert.');
+    if (operation === 'email-preferences') {
+      await requireActiveParentAccount(client);
+      let parameters: Record<string, unknown> = {};
+      if (request.method !== 'GET') {
+        const input = await readJson(request);
+        if (!object(input) || Object.keys(input).length !== 1 || typeof input.marketingConsent !== 'boolean') throw new RequestError(422, 'invalid_marketing_consent');
+        parameters = { p_marketing_consent: input.marketingConsent };
+      }
+      const { data, error } = await client.rpc(request.method === 'GET' ? 'get_parent_email_preferences' : 'set_parent_email_preferences', parameters);
+      if (error) parentRpcError(error);
+      if (!object(data) || typeof data.marketingConsent !== 'boolean' || data.updatedAt !== null && (typeof data.updatedAt !== 'string' || data.updatedAt.length > 40 || !Number.isFinite(Date.parse(data.updatedAt)))) throw new Error('Invalid parent email preferences');
+      return privateJson({ marketingConsent: data.marketingConsent, updatedAt: data.updatedAt });
+    }
     const input = await readJson(request);
     if (!object(input)) throw new RequestError(422, 'invalid_request');
     let name: string; let parameters: Record<string, unknown>;
     const only = (fields: string[]) => { if (Object.keys(input).some(key => !fields.includes(key))) throw new RequestError(422, 'invalid_request'); };
     switch (operation) {
       case 'onboarding':
-        only(['termsVersion', 'privacyVersion', 'parentDeclaration', 'acceptTerms']);
+        only(['termsVersion', 'privacyVersion', 'parentDeclaration', 'acceptTerms', 'marketingConsent']);
         if (input.parentDeclaration !== true || input.acceptTerms !== true || typeof input.termsVersion !== 'string' || typeof input.privacyVersion !== 'string') throw new RequestError(422, 'declarations_required', 'Bevestig de ouderverklaring en de algemene voorwaarden afzonderlijk.');
-        name = 'complete_parent_onboarding'; parameters = { p_terms_version: input.termsVersion, p_privacy_version: input.privacyVersion, p_parent_declaration: true, p_accept_terms: true }; break;
+        if (input.marketingConsent !== undefined && typeof input.marketingConsent !== 'boolean') throw new RequestError(422, 'invalid_marketing_consent');
+        name = input.marketingConsent === undefined ? 'complete_parent_onboarding' : 'complete_parent_onboarding_with_marketing';
+        parameters = { p_terms_version: input.termsVersion, p_privacy_version: input.privacyVersion, p_parent_declaration: true, p_accept_terms: true, ...(input.marketingConsent === undefined ? {} : { p_marketing_consent: input.marketingConsent }) }; break;
       case 'consent': {
         only(['profileId', 'consent', 'guardianDeclaration']);
         if (typeof input.profileId !== 'string' || !/^[A-Za-z0-9_-]{1,80}$/u.test(input.profileId)) throw new RequestError(422, 'invalid_profile');

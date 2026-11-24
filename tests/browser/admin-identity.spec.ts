@@ -2,7 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 
 const a = { id: '00000000-0000-4000-8000-000000000701', email: 'a@example.test', displayName: 'Beheerder A' };
 const b = { id: '00000000-0000-4000-8000-000000000702', email: 'b@example.test', displayName: 'Beheerder B' };
-const lifecycle = { state: 'active', termsVersion: '2026-11-23.1', privacyVersion: '2026-11-23.1', acceptedTermsVersion: '2026-11-23.1', shownPrivacyVersion: '2026-11-23.1', lastActivityAt: '2026-11-23T12:00:00Z', deletionDeadline: null, consents: [] };
+const lifecycle = { state: 'active', termsVersion: '2026-11-23.1', privacyVersion: '2026-11-24', acceptedTermsVersion: '2026-11-23.1', shownPrivacyVersion: '2026-11-23.1', lastActivityAt: '2026-11-23T12:00:00Z', deletionDeadline: null, consents: [] };
 const draft = { metadata: { title: 'Concept van A', description: 'Een stationsavontuur.', image: '/art/station.webp' }, chapters: {}, updatedAt: '2026-11-23T12:00:00Z' };
 const settings = { fromName: 'Afzender A', fromEmail: 'noreply@example.test', replyTo: 'support@example.test', supportEmail: 'support@example.test', footerText: 'Een servicebericht van Fabelpad.', templates: {} };
 const email = { environment: 'staging', appOrigin: 'https://staging.example.test', configured: true, source: 'vault', revision: 3, keyConfigured: true, settings, lastTestAt: null, auth: { emailEnabled: true, googleEnabled: false } };

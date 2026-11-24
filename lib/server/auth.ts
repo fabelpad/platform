@@ -56,6 +56,7 @@ export async function authMutation(request: Request, action: 'otp' | 'verify' | 
     }
     const body = await readJson(request);
     if (!object(body)) throw new RequestError(422, 'invalid_request');
+    if (body.marketingConsent !== undefined && typeof body.marketingConsent !== 'boolean') throw new RequestError(422, 'invalid_marketing_consent');
     if (action === 'registration') {
       if (Object.keys(body).length) throw new RequestError(422, 'invalid_request');
       const parent = await getVerifiedParent(client);
@@ -72,7 +73,7 @@ export async function authMutation(request: Request, action: 'otp' | 'verify' | 
       if (resuming && await parentRegistrationChannel() !== 'google') throw new RequestError(422, 'registration_missing', 'Je eerdere registratie is verlopen. Start opnieuw en bevestig je keuzes.');
       const registering = resuming ? false : registrationIntent(body);
       if (!config.googleEnabled) throw new RequestError(503, 'provider_not_configured', 'Google-inloggen is niet beschikbaar. Gebruik een andere beschikbare inlogmethode.');
-      const proof = registering ? await beginParentRegistration(client, 'google') : null;
+      const proof = registering ? await beginParentRegistration(client, 'google', undefined, body.marketingConsent as boolean | undefined) : null;
       const callback = new URL('/auth/callback', config.appUrl);
       callback.searchParams.set('next', safeNext(body.next));
       const { data, error } = await client.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: callback.href, skipBrowserRedirect: true } });
@@ -101,7 +102,7 @@ export async function authMutation(request: Request, action: 'otp' | 'verify' | 
       const resuming = body.intent === 'resume_registration';
       if (resuming && await parentRegistrationChannel() !== 'otp') throw new RequestError(422, 'registration_missing', 'Je eerdere registratie is verlopen. Start opnieuw en bevestig je keuzes.');
       const shouldCreateUser = resuming ? false : registrationIntent(body);
-      const proof = shouldCreateUser ? await beginParentRegistration(client, 'otp', email) : null;
+      const proof = shouldCreateUser ? await beginParentRegistration(client, 'otp', email, body.marketingConsent as boolean | undefined) : null;
       const { error } = await client.auth.signInWithOtp({ email, options: { shouldCreateUser, emailRedirectTo: new URL('/inloggen', config.appUrl).href } });
       if (error) throw new RequestError(error.status === 429 ? 429 : 503, error.status === 429 ? 'too_many_requests' : 'mail_unavailable', error.status === 429 ? 'Wacht even voordat je een nieuwe code aanvraagt.' : 'Er kon nog geen code worden verzonden. Probeer het later opnieuw.');
       if (proof) await storeParentRegistration(proof);
