@@ -124,6 +124,16 @@ test('Edge REST client isolates user and machine authority and never returns raw
   const f = fixture(async () => { throw new Error('SQL private_table secret token=' + token); });
   const result = await f.handler(jsonRequest('admin/posts', null, 'GET')); assert.equal(result.status, 503); assert.ok(!(await result.text()).includes(token));
 });
+test('Edge identity derives only from the two exact known project URLs; explicit configuration must still agree', () => {
+  const credentials = { SUPABASE_ANON_KEY: 'synthetic-public', SUPABASE_SERVICE_ROLE_KEY: 'synthetic-service' };
+  for (const [name, project, origin] of [['staging','tlwfpivafcokcjyjwgmq','https://staging.fabelpad.nl'],['production','aptprpkosqctwrzeetgs','https://fabelpad.nl']]) {
+    const environment = { ...credentials, SUPABASE_URL: `https://${project}.supabase.co` };
+    const automatic = createBlogSupabaseDependencies(environment); assert.equal(automatic.site.environment, name); assert.equal(automatic.site.origin, origin);
+    assert.equal(createBlogSupabaseDependencies({ ...environment, FABELPAD_ENVIRONMENT: name, FABELPAD_APP_ORIGIN: origin }).site.origin, origin);
+    for (const override of [{ FABELPAD_ENVIRONMENT: name === 'staging' ? 'production' : 'staging' }, { FABELPAD_APP_ORIGIN: 'https://foreign.example' }, { FABELPAD_ENVIRONMENT: '' }, { FABELPAD_APP_ORIGIN: '' }]) assert.throws(() => createBlogSupabaseDependencies({ ...environment, ...override }), error => error.code === 'CONFIGURATION_REQUIRED');
+  }
+  for (const url of ['https://foreign.supabase.co','https://tlwfpivafcokcjyjwgmq.supabase.co.evil.example','https://user:password@tlwfpivafcokcjyjwgmq.supabase.co','https://tlwfpivafcokcjyjwgmq.supabase.co/','http://tlwfpivafcokcjyjwgmq.supabase.co','']) assert.throws(() => createBlogSupabaseDependencies({ ...credentials, SUPABASE_URL: url }), error => error.code === 'CONFIGURATION_REQUIRED');
+});
 test('factory uses the configured author and blog path; opaque bearers may exceed 43 characters and logs omit identifiers and secrets', async () => {
   const logs = [], customSite = { ...site, siteName: 'Boekenhuis', blogPath: '/artikelen' };
   const claim = { publicationId: ids.publication, leaseId: ids.lease, postId: ids.post, revision: 1, publicUrl: `${site.origin}/artikelen/voorbeeld`, proof: 'p'.repeat(43), alreadyPromoted: false };

@@ -45,6 +45,11 @@ test('only fixed method/path pairs are forwarded; bearer, actor and idempotency 
   assert.equal(outgoing.length, 1);
 });
 
+test('admin list forwards only bounded query/state filters to the real service route', async () => {
+  reset(); await blogApi(new Request('https://staging.fabelpad.nl/api/admin/blog?query=voorlezen&state=draft&destinationId=foreign', { headers: { 'X-Fabelpad-Parent': actor } }), 'admin', []);
+  const url = new URL(outgoing[0].request.url); assert.equal(url.searchParams.get('query'), 'voorlezen'); assert.equal(url.searchParams.get('state'), 'draft'); assert.equal(url.searchParams.get('destinationId'), null);
+});
+
 test('machine requests cannot use cookie auth or a query-selected destination; public media cannot fetch a private path', async () => {
   reset(); await failure(await blogApi(request('GET'), 'socialhero', ['capabilities']), 401, 'INVALID_CREDENTIAL'); assert.equal(outgoing.length, 0);
   const machine = new Request('https://staging.fabelpad.nl/api/socialhero/v1/capabilities?destinationId=foreign&token=bad', { headers: { Authorization: 'Bearer ' + 't'.repeat(43) } });

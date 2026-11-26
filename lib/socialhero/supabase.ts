@@ -12,12 +12,15 @@ async function bytes(response: Response, maximum: number): Promise<Uint8Array> {
 }
 /** Edge-only credentials. No opaque connector bearer is used as a Supabase JWT. */
 export function createBlogSupabaseDependencies(environment: Record<string, string | undefined>, fetcher: typeof fetch = fetch): BlogRuntimeDependencies {
-  const name = environment.FABELPAD_ENVIRONMENT;
-  if (name !== 'staging' && name !== 'production') throw new BlogRuntimeError('CONFIGURATION_REQUIRED', 503);
+  const origin = environment.SUPABASE_URL ?? '';
+  const known = (Object.entries(BLOG_ENVIRONMENTS) as ['staging' | 'production', typeof BLOG_ENVIRONMENTS.staging | typeof BLOG_ENVIRONMENTS.production][]).find(([,target]) => origin === `https://${target.projectRef}.supabase.co`);
+  if (!known) throw new BlogRuntimeError('CONFIGURATION_REQUIRED', 503);
+  const name = known[0];
+  if (environment.FABELPAD_ENVIRONMENT !== undefined && environment.FABELPAD_ENVIRONMENT !== name) throw new BlogRuntimeError('CONFIGURATION_REQUIRED', 503);
   const site = blogSite(name), target = BLOG_ENVIRONMENTS[name];
-  const origin = environment.SUPABASE_URL ?? '', key = environment.SUPABASE_ANON_KEY ?? environment.SUPABASE_PUBLISHABLE_KEY ?? '', service = environment.SUPABASE_SERVICE_ROLE_KEY ?? environment.SB_SECRET_KEY ?? '';
+  const key = environment.SUPABASE_ANON_KEY ?? environment.SUPABASE_PUBLISHABLE_KEY ?? '', service = environment.SUPABASE_SERVICE_ROLE_KEY ?? environment.SB_SECRET_KEY ?? '';
   verifyBlogIdentity(site, new URL(origin).hostname.split('.')[0]);
-  if (origin !== `https://${target.projectRef}.supabase.co` || environment.FABELPAD_APP_ORIGIN !== site.origin || !key || !service || /[\r\n]/u.test(key + service)) throw new BlogRuntimeError('CONFIGURATION_REQUIRED', 503);
+  if (origin !== `https://${target.projectRef}.supabase.co` || environment.FABELPAD_APP_ORIGIN !== undefined && environment.FABELPAD_APP_ORIGIN !== site.origin || !key || !service || /[\r\n]/u.test(key + service)) throw new BlogRuntimeError('CONFIGURATION_REQUIRED', 503);
   const serviceHeaders = { apikey: service, ...(!service.startsWith('sb_secret_') ? { Authorization: `Bearer ${service}` } : {}) };
   const client = (userJwt?: string): BlogRpcClient => ({
     async rpc(name, parameters) {

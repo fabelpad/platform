@@ -48,4 +48,3 @@ export const getPublicBlogPost = cache(async (slug: string): Promise<BlogPublicP
   const document = validateBlogDocument(article.document);
   return { ...result, article: { ...article, document, assets: assetsForPublic(article.assets, site.origin), publicUrl: `${site.origin}/blog/${document.slug}`, canonicalUrl: `${site.canonicalOrigin}/blog/${document.slug}` } };
 });
-

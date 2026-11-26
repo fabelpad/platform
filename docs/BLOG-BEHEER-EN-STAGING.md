@@ -43,7 +43,7 @@ Een publicatie blijft in verwerking totdat de echte openbare pagina de bedoelde 
 
 Staging heeft eigen data, assets en credentials en blijft noindex. `publicUrl` gebruikt altijd de werkelijke omgevingsorigin. De productiesitemap bevat alleen actuele live artikelen. De routes lezen bij ieder verzoek de actuele live revisie zonder persistente datacache; publiceren vereist daardoor geen herbuild of handmatige revalidatiehook.
 
-Next gebruikt uitsluitend de bestaande publieke Supabaseconfiguratie en eigen site-origin. Edge gebruikt `FABELPAD_ENVIRONMENT`, `FABELPAD_APP_ORIGIN` en de bestaande servercredentials van Supabase. De private bucket heet `fabelpad-blog`; zijn eigen cronworker gebruikt een automatisch gegenereerde Vault-HMAC. Er komen geen servicecredentials in de browser of in GitHub-webvariabelen.
+Next gebruikt uitsluitend de bestaande publieke Supabaseconfiguratie en eigen site-origin. Edge leidt omgeving en website-origin uitsluitend af uit de vaste koppeling met de automatisch verstrekte `SUPABASE_URL` van het bekende project en gebruikt de bestaande servercredentials van Supabase. Eventuele expliciete `FABELPAD_ENVIRONMENT`- en `FABELPAD_APP_ORIGIN`-instellingen moeten daar exact mee overeenkomen. De private bucket heet `fabelpad-blog`; zijn eigen cronworker gebruikt een automatisch gegenereerde Vault-HMAC. Er komen geen servicecredentials in de browser of in GitHub-webvariabelen.
 
 ## Installatie en verificatie
 

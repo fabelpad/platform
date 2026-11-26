@@ -22,6 +22,8 @@ const richURL = await component('BlogRichText', { '../../lib/blog/document': val
 // by React's server renderer. Full Next HTML/headers are checked after staging deploy.
 const shellURL = pathToFileURL(path.join(temporary, 'Shell.mjs')); await writeFile(shellURL, 'export default function Shell({children}){return children;}');
 const articleURL = await component('BlogArticleView', { './BlogShell': shellURL.href, './BlogRichText': richURL });
+const indexURL = await component('BlogIndexView', { './BlogShell': shellURL.href });
+const { default: Index } = await import(indexURL);
 const { default: RichText } = await import(richURL), { default: Article } = await import(articleURL);
 const { emptyBlogDocument } = await import(validator);
 after(() => rm(temporary, { recursive: true, force: true }));
@@ -45,4 +47,9 @@ test('private preview uses the real article renderer but has no publication proo
 
 test('server renderer refuses malicious structured content instead of rendering arbitrary HTML or image URLs', () => {
   for (const node of [{ type: 'iframe', attrs: { src: 'https://evil.invalid' } }, { type: 'image', attrs: { assetId, alt: 'Vos', src: 'https://evil.invalid' } }, { type: 'paragraph', content: [{ type: 'text', text: 'klik', marks: [{ type: 'link', attrs: { href: 'javascript:alert(1)' } }] }] }]) assert.throws(() => renderToStaticMarkup(createElement(RichText, { document: { type: 'doc', content: [node] }, assets })));
+});
+
+test('public pagination preserves the chosen category on both page directions', () => {
+  const html = renderToStaticMarkup(createElement(Index, { categoryId: assetId, catalog: { posts: [{ ...article, ...article.document, hero: null }], page: 2, totalPages: 3, total: 25, categories: [] } }));
+  assert.ok(html.includes('pagina=1&amp;categorie=' + assetId)); assert.ok(html.includes('pagina=3&amp;categorie=' + assetId));
 });

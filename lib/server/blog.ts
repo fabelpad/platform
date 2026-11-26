@@ -74,7 +74,12 @@ export async function blogApi(request: Request, context: Context, path: string[]
     const idempotencyKey = request.headers.get('idempotency-key'); if (idempotencyKey) headers.set('Idempotency-Key', idempotencyKey);
     const actor = request.headers.get('x-fabelpad-parent'); if (context === 'admin' && actor) headers.set('X-Fabelpad-Parent', actor);
     const body = await boundedBody(request, target.endsWith('/media') ? 8 * 1024 * 1024 + 64 * 1024 : 320 * 1024);
-    const upstream = await fetch(`${config.url}/functions/v1/blog-runtime${target}`, { method: request.method, headers, ...(body ? { body: body.slice().buffer } : {}), redirect: 'error', cache: 'no-store', signal: AbortSignal.timeout(40_000) });
+    const targetUrl = new URL(`${config.url}/functions/v1/blog-runtime${target}`);
+    if (context === 'admin' && !path.length && request.method === 'GET') {
+      const incoming = new URL(request.url);
+      for (const key of ['query', 'state']) { const value = incoming.searchParams.get(key); if (value !== null) targetUrl.searchParams.set(key, value.slice(0, 200)); }
+    }
+    const upstream = await fetch(targetUrl, { method: request.method, headers, ...(body ? { body: body.slice().buffer } : {}), redirect: 'error', cache: 'no-store', signal: AbortSignal.timeout(40_000) });
     const outgoing = new Headers({ 'Cache-Control': context === 'media' && upstream.ok ? 'public, max-age=300, must-revalidate' : 'private, no-store', 'X-Content-Type-Options': 'nosniff', 'X-Request-Id': requestId, Vary: 'Cookie, Authorization' });
     for (const name of ['Content-Type', 'Retry-After', 'Content-Length', 'ETag']) { const value = upstream.headers.get(name); if (value) outgoing.set(name, value); }
     if (context !== 'media') outgoing.set('X-Robots-Tag', 'noindex, nofollow');
