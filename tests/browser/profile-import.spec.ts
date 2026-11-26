@@ -2,7 +2,7 @@ import { test, expect, type Page } from '@playwright/test';
 import type { FamilySnapshot } from '../../src/profileStorage';
 
 const parent = { id: '00000000-0000-4000-8000-000000000811', email: 'parent@example.test', displayName: 'Voorbeeldouder' };
-const active = { state: 'active', termsVersion: '2026-11-23.1', privacyVersion: '2026-11-23.1', acceptedTermsVersion: '2026-11-23.1', shownPrivacyVersion: '2026-11-23.1', lastActivityAt: '2026-11-23T12:00:00Z', deletionDeadline: null, consents: [] };
+const active = { state: 'active', termsVersion: '2026-11-23.1', privacyVersion: '2026-11-24', acceptedTermsVersion: '2026-11-23.1', shownPrivacyVersion: '2026-11-23.1', lastActivityAt: '2026-11-23T12:00:00Z', deletionDeadline: null, consents: [] };
 const source: FamilySnapshot = {
   schemaVersion: 1,
   family: { version: 1, children: [{ id: 'used-adventurer', name: 'Avonturier', avatar: 2, readingLevelOverride: '9plus' }], activeId: 'used-adventurer' },

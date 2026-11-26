@@ -4,9 +4,11 @@ import type { FormEvent } from 'react';
 import { accountRequest, PageShell, readAccountSession, type AccountSession } from './AccountPage';
 import { localAccountDate, parentNeedsOnboarding, type ParentAccountStatus } from '../lib/parentAccount';
 import { safeNext } from '../lib/authNavigation';
+import { MARKETING_CONSENT_TEXT } from '../lib/email/marketingConsent';
 import { clearParentDeviceData, exportSnapshot } from './profileStorage';
 import CloudBoundary, { SyncBadge, useCloudFamily } from './CloudBoundary';
 import ParentShell, { ParentDialog } from './ParentShell';
+import AccountEmailPreferences from './AccountEmailPreferences';
 import { BookOpen, Download, LogOut, RefreshCw, ShieldCheck, UserRound } from 'lucide-react';
 
 async function getStatus(): Promise<ParentAccountStatus> {
@@ -21,6 +23,7 @@ export function ParentOnboardingPage() {
   const [status, setStatus] = useState<ParentAccountStatus | null>(null);
   const [adult, setAdult] = useState(false);
   const [terms, setTerms] = useState(false);
+  const [marketingConsent, setMarketingConsent] = useState(false);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState('');
   const [retryCompletion, setRetryCompletion] = useState(false);
@@ -55,12 +58,12 @@ export function ParentOnboardingPage() {
     event.preventDefault(); if (busy || !adult || !terms || !status) return;
     setBusy(true); setNotice('');
     try {
-      await accountRequest('/api/parent/onboarding', { parentDeclaration: true, acceptTerms: true, termsVersion: status.termsVersion, privacyVersion: status.privacyVersion }, session!.parent!.id);
+      await accountRequest('/api/parent/onboarding', { parentDeclaration: true, acceptTerms: true, ...(status.state === 'onboarding' ? { marketingConsent } : {}), termsVersion: status.termsVersion, privacyVersion: status.privacyVersion }, session!.parent!.id);
       const requested = safeNext(new URLSearchParams(location.search).get('next'));
       location.assign(requested === '/onboarding' ? '/gezin' : requested);
     } catch (error) {
       setNotice((error as Error).message);
-      try { const next = await getStatus(); if (next.termsVersion !== status.termsVersion || next.privacyVersion !== status.privacyVersion) { setStatus(next); setTerms(false); setAdult(false); setNotice('De documenten zijn bijgewerkt. Lees de huidige versie en bevestig je keuzes opnieuw.'); } } catch { /* Keep the original failed request visible. */ }
+      try { const next = await getStatus(); if (next.termsVersion !== status.termsVersion || next.privacyVersion !== status.privacyVersion) { setStatus(next); setTerms(false); setAdult(false); setMarketingConsent(false); setNotice('De documenten zijn bijgewerkt. Lees de huidige versie en bevestig je keuzes opnieuw.'); } } catch { /* Keep the original failed request visible. */ }
     } finally { setBusy(false); }
   }
   return <PageShell><section className="account-form"><h1>Welkom, ouder.</h1>
@@ -75,6 +78,7 @@ export function ParentOnboardingPage() {
         <p>Je meldt je aan met {session.parent.email}.</p>
         <label className="account-check"><input type="checkbox" required checked={adult} onChange={e => setAdult(e.target.checked)} /><span>Ik ben 18 jaar of ouder en maak dit account aan als ouder met gezag of voogd.</span></label>
         <label className="account-check"><input type="checkbox" required checked={terms} onChange={e => setTerms(e.target.checked)} /><span>Ik ga akkoord met de <a href={`/algemene-voorwaarden?versie=${encodeURIComponent(status.termsVersion)}`} target="_blank" rel="noopener">algemene voorwaarden van Fabelpad</a> (versie {status.termsVersion}).</span></label>
+        {status.state === 'onboarding' && <label className="account-check"><input type="checkbox" checked={marketingConsent} disabled={busy} onChange={e => setMarketingConsent(e.target.checked)} /><span>{MARKETING_CONSENT_TEXT} <small>(Optioneel)</small></span></label>}
         <p className="account-legal-note">Lees in de <a href={`/privacyverklaring?versie=${encodeURIComponent(status.privacyVersion)}`} target="_blank" rel="noopener">privacyverklaring</a> hoe DG Webservices met jouw gegevens en die van je kind omgaat. De privacyverklaring is informatie; je hoeft hiervoor geen toestemming te geven.</p>
         <p><a href="/privacy-voor-kinderen">Privacy voor kinderen</a></p>
         <button className="account-primary" disabled={busy || !adult || !terms} type="submit">{busy ? 'Je keuzes bewaren…' : 'Ouderaccount afronden'}</button>
@@ -188,6 +192,7 @@ export function ParentAccountPage() {
     {session?.parent && status && <div className="fp-parent-settings-grid">
       <section className="fp-parent-panel" aria-labelledby="account-details-heading"><div className="fp-parent-panel-heading"><UserRound size={24} aria-hidden="true" /><h2 id="account-details-heading">Accountgegevens</h2></div><div className="fp-parent-settings-row"><span className="fp-parent-setting-label">E-mailadres</span><strong>{session.parent.email}</strong></div><div className="fp-parent-settings-row"><span className="fp-parent-setting-label">Accountstatus</span><strong className="fp-parent-pill">{pending ? 'Verwijdering aangevraagd' : status.state === 'deleting' ? 'Wordt verwijderd' : parentNeedsOnboarding(status) ? 'Nog afronden' : 'Actief'}</strong></div><div className="fp-parent-settings-row"><span className="fp-parent-setting-label">Kindprofielen</span><a href="/gezin?ouders=1">Naar Mijn gezin</a></div></section>
       {activeAccount ? <AccountSynchronization deviceCleared={deviceCleared} /> : <section className="fp-parent-panel"><h2>Synchronisatie</h2><p>{pending || status.state === 'deleting' ? 'De online gezinsgegevens zijn afgeschermd. Synchronisatie is gestopt.' : 'Rond eerst je ouderaccount af voordat kinderprofielen worden gesynchroniseerd.'}</p></section>}
+      {activeAccount && <AccountEmailPreferences key={session.parent.id} parentId={session.parent.id} />}
       <section className="fp-parent-panel fp-parent-full fp-parent-subscription"><div><div className="fp-parent-panel-heading"><BookOpen size={24} aria-hidden="true" /><h2>Gezinsabonnement</h2></div><p>Bekijk jullie toegang, kortingscode, abonnement en bevestigde betalingen.</p></div><a className="fp-parent-button" href="/profiel/abonnement">Abonnement bekijken</a></section>
       <section className="fp-parent-panel fp-parent-full" aria-labelledby="account-privacy-heading"><div className="fp-parent-panel-heading"><ShieldCheck size={24} aria-hidden="true" /><h2 id="account-privacy-heading">Privacy en toegang</h2></div>
         {activeAccount && <AccountPrivacyActions parentId={session.parent.id} deviceCleared={deviceCleared} onCleared={() => setDeviceCleared(true)} />}

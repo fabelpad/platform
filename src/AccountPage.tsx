@@ -7,6 +7,7 @@ import type { ParentAccountStatus } from '../lib/parentAccount';
 import { parentNeedsOnboarding } from '../lib/parentAccount';
 import FoundersOffer from './FoundersOffer';
 import { TERMS_VERSION, PRIVACY_VERSION } from '../lib/legal/documents';
+import { MARKETING_CONSENT_TEXT } from '../lib/email/marketingConsent';
 import { clearParentDeviceData } from './profileStorage';
 import ParentShell from './ParentShell';
 import AdminShell from './AdminShell';
@@ -46,6 +47,7 @@ export function LoginPage() {
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [adult, setAdult] = useState(false);
   const [terms, setTerms] = useState(false);
+  const [marketingConsent, setMarketingConsent] = useState(false);
   const [resumeRegistration, setResumeRegistration] = useState(false);
   const [documents, setDocuments] = useState({ termsVersion: TERMS_VERSION, privacyVersion: PRIVACY_VERSION });
   useEffect(() => {
@@ -63,14 +65,14 @@ export function LoginPage() {
     event.preventDefault(); if (busy) return; setBusy(true); setNotice('');
     try {
       if (sent) { const result = await accountRequest('/api/auth/verify', { email, token, next }); setToken(''); location.assign(safeNext(result.next)); }
-      else { const result = await accountRequest('/api/auth/otp', { email, intent: resumeRegistration ? 'resume_registration' : mode, ...(!resumeRegistration && mode === 'register' ? { parentDeclaration: adult, acceptTerms: terms, ...documents } : {}) }); setSent(true); setNotice(result.message || 'Als dit adres is toegestaan, ontvang je een Fabelpad-inlogcode. Vul de code uit je e-mail in.'); }
-    } catch (error) { setNotice((error as Error).message); if (mode === 'register' && !sent) { setAdult(false); setTerms(false); void refreshDocuments(); } } finally { setBusy(false); }
+      else { const result = await accountRequest('/api/auth/otp', { email, intent: resumeRegistration ? 'resume_registration' : mode, ...(!resumeRegistration && mode === 'register' ? { parentDeclaration: adult, acceptTerms: terms, marketingConsent, ...documents } : {}) }); setSent(true); setNotice(result.message || 'Als dit adres is toegestaan, ontvang je een Fabelpad-inlogcode. Vul de code uit je e-mail in.'); }
+    } catch (error) { setNotice((error as Error).message); if (mode === 'register' && !sent) { setAdult(false); setTerms(false); setMarketingConsent(false); void refreshDocuments(); } } finally { setBusy(false); }
   }
   async function refreshDocuments() { try { const r = await fetch('/api/legal/documents', { cache: 'no-store' }); const data = await r.json(); if (r.ok && typeof data.termsVersion === 'string' && typeof data.privacyVersion === 'string') setDocuments({ termsVersion: data.termsVersion, privacyVersion: data.privacyVersion }); } catch { /* Keep registration server-validated and its error visible. */ } }
   async function google(resume = false) {
     if (busy) return; setBusy(true); setNotice('');
-    try { const result = await accountRequest('/api/auth/google', { next, intent: resume ? 'resume_registration' : mode, ...(!resume && mode === 'register' ? { parentDeclaration: adult, acceptTerms: terms, ...documents } : {}) }); location.assign(result.url); }
-    catch (error) { setNotice((error as Error).message); if (mode === 'register') { setAdult(false); setTerms(false); void refreshDocuments(); } setBusy(false); }
+    try { const result = await accountRequest('/api/auth/google', { next, intent: resume ? 'resume_registration' : mode, ...(!resume && mode === 'register' ? { parentDeclaration: adult, acceptTerms: terms, marketingConsent, ...documents } : {}) }); location.assign(result.url); }
+    catch (error) { setNotice((error as Error).message); if (mode === 'register') { setAdult(false); setTerms(false); setMarketingConsent(false); void refreshDocuments(); } setBusy(false); }
   }
   const pendingDeletion = session?.lifecycle?.state === 'deletion_pending' || session?.lifecycle?.state === 'deleting';
   return <PageShell><section className="account-form">
@@ -82,15 +84,15 @@ export function LoginPage() {
       {pendingDeletion ? <><p>Je account staat stil vanwege een verwijderaanvraag. Inloggen herstelt je account niet.</p><a className="account-primary" href="/profiel/account">Bekijk de verwijderstatus</a></> : <a className="account-primary" href={parentNeedsOnboarding(session.lifecycle) ? '/onboarding' : '/gezin'}>{parentNeedsOnboarding(session.lifecycle) ? 'Rond je ouderaccount af' : 'Open jullie gezinsomgeving'}</a>}
       {session.admin && <p><a href="/studio">Open de verhalenstudio</a></p>}
     </> : session?.configured ? <>
-      {mode==='register'&&!sent&&<FoundersOffer/>}{!sent && <div className="account-mode" role="group" aria-label="Inloggen of een ouderaccount maken"><button type="button" className="account-secondary" aria-pressed={mode === 'login'} disabled={busy} onClick={() => { setMode('login'); setResumeRegistration(false); setNotice(''); }}>Inloggen</button><button type="button" className="account-secondary" aria-pressed={mode === 'register'} disabled={busy || reauthenticate} onClick={() => { setMode('register'); setResumeRegistration(false); setAdult(false); setTerms(false); setNotice(''); }}>Ouderaccount maken</button></div>}
-      {!sent && session.registration?.channel === 'otp' && <p><button type="button" className="account-secondary" disabled={busy} onClick={() => { setMode('login'); setResumeRegistration(true); setNotice('Vul hetzelfde e-mailadres in om je eerdere registratiekeuzes veilig af te ronden.'); }}>Registratie hervatten met e-mailcode</button></p>}
+      {mode==='register'&&!sent&&<FoundersOffer/>}{!sent && <div className="account-mode" role="group" aria-label="Inloggen of een ouderaccount maken"><button type="button" className="account-secondary" aria-pressed={mode === 'login'} disabled={busy} onClick={() => { setMode('login'); setResumeRegistration(false); setMarketingConsent(false); setNotice(''); }}>Inloggen</button><button type="button" className="account-secondary" aria-pressed={mode === 'register'} disabled={busy || reauthenticate} onClick={() => { setMode('register'); setResumeRegistration(false); setAdult(false); setTerms(false); setMarketingConsent(false); setNotice(''); }}>Ouderaccount maken</button></div>}
+      {!sent && session.registration?.channel === 'otp' && <p><button type="button" className="account-secondary" disabled={busy} onClick={() => { setMode('login'); setResumeRegistration(true); setMarketingConsent(false); setNotice('Vul hetzelfde e-mailadres in om je eerdere registratiekeuzes veilig af te ronden.'); }}>Registratie hervatten met e-mailcode</button></p>}
       {!sent && session.registration?.channel === 'google' && session.providers?.google && <p><button type="button" className="google-signin-button" disabled={busy} onClick={() => { void google(true); }}><img src="/brand/google-g.svg" width="20" height="20" alt="" />Registratie hervatten met Google</button></p>}
-      {mode === 'register' && !sent && <div><label className="account-check"><input type="checkbox" checked={adult} onChange={e => setAdult(e.target.checked)} /><span>Ik ben 18 jaar of ouder en maak dit account aan als ouder met gezag of voogd.</span></label><label className="account-check"><input type="checkbox" checked={terms} onChange={e => setTerms(e.target.checked)} /><span>Ik ga akkoord met de <a href={`/algemene-voorwaarden?versie=${encodeURIComponent(documents.termsVersion)}`} target="_blank" rel="noopener">algemene voorwaarden van Fabelpad</a> (versie {documents.termsVersion}).</span></label><p className="account-legal-note">Lees in de <a href={`/privacyverklaring?versie=${encodeURIComponent(documents.privacyVersion)}`}>privacyverklaring</a> hoe DG Webservices met jouw gegevens en die van je kind omgaat.</p></div>}
+      {mode === 'register' && !sent && <div><label className="account-check"><input type="checkbox" checked={adult} onChange={e => setAdult(e.target.checked)} /><span>Ik ben 18 jaar of ouder en maak dit account aan als ouder met gezag of voogd.</span></label><label className="account-check"><input type="checkbox" checked={terms} onChange={e => setTerms(e.target.checked)} /><span>Ik ga akkoord met de <a href={`/algemene-voorwaarden?versie=${encodeURIComponent(documents.termsVersion)}`} target="_blank" rel="noopener">algemene voorwaarden van Fabelpad</a> (versie {documents.termsVersion}).</span></label><label className="account-check"><input type="checkbox" checked={marketingConsent} disabled={busy} onChange={e => setMarketingConsent(e.target.checked)} /><span>{MARKETING_CONSENT_TEXT} <small>(Optioneel)</small></span></label><p className="account-legal-note">Lees in de <a href={`/privacyverklaring?versie=${encodeURIComponent(documents.privacyVersion)}`}>privacyverklaring</a> hoe DG Webservices met jouw gegevens en die van je kind omgaat.</p></div>}
       {session.providers?.email && <form onSubmit={submit}>
         <label>Jouw e-mailadres<input type="email" autoComplete="email" required maxLength={254} value={email} disabled={sent || busy} onChange={e => setEmail(e.target.value)} /></label>
         {sent && <label>6-cijferige code uit je e-mail<input inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" required minLength={6} maxLength={6} value={token} onChange={e => setToken(e.target.value.replace(/\D/g, '').slice(0, 6))} /></label>}
         <button className="account-primary" disabled={busy || !sent && mode === 'register' && (!adult || !terms)} type="submit">{busy ? 'Een moment…' : sent ? 'Veilig inloggen' : 'Stuur mij een inlogcode'}</button>
-        {sent && <button type="button" className="account-secondary" disabled={busy} onClick={() => { setSent(false); setToken(''); }}>Ander adres of nieuwe code</button>}
+        {sent && <button type="button" className="account-secondary" disabled={busy} onClick={() => { setSent(false); setToken(''); setMarketingConsent(false); }}>Ander adres of nieuwe code</button>}
       </form>}
       {session.providers?.google && <><div className="account-divider" aria-hidden="true">of</div><button className="google-signin-button" disabled={busy || mode === 'register' && (!adult || !terms)} onClick={() => { void google(); }}><img src="/brand/google-g.svg" width="20" height="20" alt="" />Verder met Google</button></>}
       {!session.providers?.email && !session.providers?.google && <p className="notice">Inloggen is tijdelijk niet beschikbaar. Je kunt wel zonder account verder lezen.</p>}

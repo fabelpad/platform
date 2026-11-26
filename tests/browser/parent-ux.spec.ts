@@ -2,7 +2,7 @@ import { test, expect, type Page } from '@playwright/test';
 import type { FamilySnapshot } from '../../src/profileStorage';
 
 const parent = { id: '00000000-0000-4000-8000-000000000601', email: 'parent@example.test', displayName: 'Voorbeeldouder' };
-const lifecycle = { state: 'active', termsVersion: '2026-11-23.1', privacyVersion: '2026-11-23.1', acceptedTermsVersion: '2026-11-23.1', shownPrivacyVersion: '2026-11-23.1', lastActivityAt: '2026-11-23T12:00:00Z', deletionDeadline: null };
+const lifecycle = { state: 'active', termsVersion: '2026-11-23.1', privacyVersion: '2026-11-24', acceptedTermsVersion: '2026-11-23.1', shownPrivacyVersion: '2026-11-23.1', lastActivityAt: '2026-11-23T12:00:00Z', deletionDeadline: null };
 function fixture() {
   return { snapshot: { schemaVersion: 1, family: { version: 1, children: [{ id: 'noor', name: 'Noor', avatar: 1, birthDate: '2019-11-23' }, { id: 'mila', name: 'Mila', avatar: 2, birthDate: '2020-01-01' }], activeId: 'noor' }, data: { noor: { favorites: ['dream'] }, mila: { favorites: ['station'] } } } as FamilySnapshot, revision: 1, writes: 0, rejectWithdrawal: false, failReads: false, failAfterWithdrawal: false };
 }
