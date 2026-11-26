@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { usePathname } from 'next/navigation';
-import { BookOpen, ChevronRight, FileText, Headphones, LayoutDashboard, LockKeyhole, Mail, Menu, ShieldCheck, Wallet, X } from 'lucide-react';
+import { BookOpen, ChevronRight, FileText, Headphones, LayoutDashboard, Link2, LockKeyhole, Mail, Menu, Newspaper, ShieldCheck, Wallet, X } from 'lucide-react';
 import { lockBodyScroll } from './modalScroll';
 import './admin.css';
 
@@ -9,6 +9,8 @@ export const ADMIN_LINKS = [
   { href: '/studio/overzicht', label: 'Cockpit', icon: LayoutDashboard, description: 'Alle beheeronderdelen op één plek.' },
   { href: '/studio/betalingen', label: 'Abonnementen & betalingen', icon: Wallet, description: 'Betaalinstellingen, abonnementen en kortingscodes.' },
   { href: '/studio', label: 'Verhalen', icon: BookOpen, description: 'Concepten schrijven, controleren en publiceren.' },
+  { href: '/studio/blog', label: 'Blog & artikelen', icon: Newspaper, description: 'Artikelen schrijven, bekijken en publiceren.' },
+  { href: '/studio/integraties/socialhero', label: 'Integraties · SocialHero', icon: Link2, description: 'SocialHero koppelen en publicatierechten beheren.' },
   { href: '/studio/voorlezen', label: 'Voorlezen', icon: Headphones, description: 'Vertelstemmen, OpenAI-koppeling en voorleesaudio beheren.' },
   { href: '/studio/premium', label: 'Online verhalen', icon: LockKeyhole, description: 'Premiumpublicaties en toegang beheren.' },
   { href: '/studio/email', label: 'E-mailinstellingen', icon: Mail, description: 'Resend, afzender, domein en echte testmail.' },

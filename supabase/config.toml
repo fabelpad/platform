@@ -36,3 +36,9 @@ enabled = true
 verify_jwt = false # Dedicated staging HMAC, short validity and a one-use nonce.
 entrypoint = "./functions/voorlezen-worker/index.ts"
 import_map = "./functions/voorlezen-worker/deno.json"
+
+[functions.blog-runtime]
+enabled = true
+verify_jwt = false # Own Auth JWT/admin, hashed SocialHero bearer or one-use worker HMAC on every route.
+entrypoint = "./functions/blog-runtime/index.ts"
+import_map = "./functions/blog-runtime/deno.json"
