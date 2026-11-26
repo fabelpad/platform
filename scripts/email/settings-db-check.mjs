@@ -212,7 +212,9 @@ try {
     await db.exec('drop function private.test_rotate_email_snapshot()');
     for (const role of ['anon','authenticated']) {
       const functions=(await db.query("select p.oid::regprocedure::text as name,has_function_privilege($1,p.oid,'EXECUTE') as allowed from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='private' and p.prosecdef and p.proname like '%email%'",[role])).rows;
-      assert.deepEqual(functions.filter(value=>value.allowed).map(value=>value.name),role==='authenticated'?['private.get_email_settings()']:[]);
+      // Parent preferences contain only the caller's optional permission, while
+      // the provider/Vault functions must stay inaccessible to application roles.
+      assert.deepEqual(functions.filter(value=>value.allowed).map(value=>value.name).sort(),role==='authenticated'?['private.get_email_settings()','private.get_parent_email_preferences()','private.set_parent_email_preferences(boolean)']:[]);
     }
     const publicDefiners=(await db.query("select p.proname from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.prosecdef and p.proname like '%email%'" )).rows;
     assert.equal(publicDefiners.length,0,'Exposed RPC wrappers never become SECURITY DEFINER');
