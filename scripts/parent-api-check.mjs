@@ -28,10 +28,12 @@ try {
   await writeFile(fakeHeaders, 'export async function cookies() { return globalThis[Symbol.for("fabelpad.parent.api.cookies")]; }\n');
   const parentURL = await compileSource(new URL('lib/server/parent.ts', root), temporary);
   const deletionURL = await compileSource(new URL('app/api/parent/deletion/route.ts', root), temporary);
+  const preferencesURL = await compileSource(new URL('app/api/parent/email-preferences/route.ts', root), temporary);
   const serverURL = await compileSource(new URL('lib/supabase/server.ts', root), temporary);
   await writeFile(new URL(serverURL), (await readFile(new URL(serverURL), 'utf8')).replace("'next/headers'", JSON.stringify(fakeHeaders.href)).replace("'@supabase/ssr'", JSON.stringify(import.meta.resolve('@supabase/ssr'))).replace("'@supabase/supabase-js'", JSON.stringify(import.meta.resolve('@supabase/supabase-js'))));
   const { parentRequest } = await import(parentURL);
   const deletionRoute = await import(deletionURL);
+  const preferencesRoute = await import(preferencesURL);
   const { createSupabaseServerClient } = await import(serverURL);
   globalThis.fetch = async (input, init) => {
     const outgoing = new Request(input, init), url = new URL(outgoing.url);
@@ -51,7 +53,7 @@ try {
   };
   const outcome = async (operation, body, headers, method) => {
     const incoming = request(body, headers, method);
-    const response = operation === 'deletion' ? await deletionRoute[method === 'GET' ? 'GET' : 'POST'](incoming) : await parentRequest(incoming, operation);
+    const response = operation === 'deletion' ? await deletionRoute[method === 'GET' ? 'GET' : 'POST'](incoming) : operation === 'email-preferences' ? await preferencesRoute[method === 'GET' ? 'GET' : 'POST'](incoming) : await parentRequest(incoming, operation);
     const value = await response.json();
     assert.equal(response.headers.get('cache-control'), 'private, no-store'); assert.equal(response.headers.get('vary'), 'Cookie, Authorization');
     assert.equal(JSON.stringify(value).includes('synthetic-private'), false); assert.equal(JSON.stringify(value).includes('access_token'), false); assert.equal(JSON.stringify(value).includes('synthetic-parent-refresh'), false);
@@ -87,7 +89,7 @@ try {
   }
   await reset(); rpc = entry => { assert.equal(entry.path, '/rest/v1/rpc/get_account_lifecycle'); return json(active); };
   result = await outcome('status', undefined, {}, 'GET'); assert.equal(result.response.status, 200); assert.deepEqual(result.value, active);
-  await reset(); rpc = entry => { assert.equal(entry.path, '/rest/v1/rpc/complete_parent_onboarding'); assert.equal(entry.body.p_parent_declaration, true); assert.equal(entry.body.p_accept_terms, true); return json({ message: 'document_version_changed', code: '22023', details: 'synthetic-private-sql' }, 400); };
+  await reset(); rpc = entry => { assert.equal(entry.path, '/rest/v1/rpc/complete_parent_onboarding'); assert.equal('p_marketing_consent' in entry.body, false); assert.equal(entry.body.p_parent_declaration, true); assert.equal(entry.body.p_accept_terms, true); return json({ message: 'document_version_changed', code: '22023', details: 'synthetic-private-sql' }, 400); };
   result = await outcome('onboarding', { parentDeclaration: true, acceptTerms: true, termsVersion: 'obsolete', privacyVersion: PRIVACY_VERSION }); assert.equal(result.response.status, 409); assert.equal(result.value.error, 'document_version_changed');
   for (const [operation, body, error, expectedStatus, expectedCode] of [
     ['deletion', confirmedDeletion, { code: '28000', message: 'synthetic-private-session-diagnostic' }, 428, 'fresh_auth_required'],
@@ -110,6 +112,39 @@ try {
   await reset({authenticated:false});rpc=entry=>{assert.equal(entry.path,'/rest/v1/rpc/get_account_lifecycle');return json(active);};
   result=await outcome('status',undefined,{Authorization:`Bearer ${jwt}`},'GET');assert.equal(result.response.status,200);assert.ok(requests.some(r=>r.path==='/auth/v1/user'),'Native bearer always contacts Auth');assert.equal(jar.size,0,'Native authorization never sets cookie sessions');
   await reset({authenticated:false});authFailure='bad_jwt';result=await outcome('status',undefined,{Authorization:`Bearer ${jwt}`},'GET');assert.equal(result.response.status,401);assert.equal(requests.filter(r=>r.path.includes('/rpc/')).length,0);
+  await reset({ authenticated: false }); result = await outcome('email-preferences', undefined, {}, 'GET'); assert.equal(result.response.status, 401); assert.equal(requests.length, 0);
+  for (const method of ['GET', 'POST']) for (const actor of ['', 'other-parent']) {
+    await reset(); result = await outcome('email-preferences', { marketingConsent: true }, { 'X-Fabelpad-Parent': actor }, method);
+    assert.equal(result.response.status, 401); assert.equal(requests.filter(entry => entry.path.includes('/rpc/')).length, 0);
+  }
+  await reset(); result = await outcome('email-preferences', { marketingConsent: true }, { origin: 'https://attacker.example.test' }); assert.equal(result.response.status, 403); assert.equal(requests.length, 0);
+  const preferenceRpc = entry => {
+    if (entry.path.endsWith('/get_account_lifecycle')) return json(active);
+    if (entry.path.endsWith('/get_parent_email_preferences')) { assert.deepEqual(entry.body, {}); return json({ marketingConsent: false, updatedAt: null, secret: 'synthetic-private-discard-this-field' }); }
+    assert.equal(entry.path, '/rest/v1/rpc/set_parent_email_preferences'); assert.equal(typeof entry.body.p_marketing_consent, 'boolean');
+    assert.deepEqual(Object.keys(entry.body), ['p_marketing_consent']); return json({ marketingConsent: entry.body.p_marketing_consent, updatedAt: '2026-11-24T16:00:00Z', secret: 'synthetic-private-discard-this-field' });
+  };
+  await reset(); rpc = preferenceRpc; result = await outcome('email-preferences', undefined, { 'X-Fabelpad-Parent': parent.id }, 'GET'); assert.equal(result.response.status, 200); assert.deepEqual(result.value, { marketingConsent: false, updatedAt: null });
+  for (const marketingConsent of [false, true]) { await reset(); rpc = preferenceRpc; result = await outcome('email-preferences', { marketingConsent }); assert.equal(result.response.status, 200); assert.deepEqual(result.value, { marketingConsent, updatedAt: '2026-11-24T16:00:00Z' }); }
+  for (const body of [{}, { marketingConsent: 'true' }, { marketingConsent: null }, { marketingConsent: 1 }, { marketingConsent: true, parentId: 'another-parent' }]) {
+    await reset(); rpc = preferenceRpc; result = await outcome('email-preferences', body); assert.equal(result.response.status, 422); assert.equal(requests.some(entry => entry.path.endsWith('/set_parent_email_preferences')), false);
+  }
+  for (const state of ['onboarding', 'deletion_pending', 'deleting']) {
+    await reset(); rpc = entry => { assert.equal(entry.path, '/rest/v1/rpc/get_account_lifecycle'); return json({ ...active, state }); };
+    result = await outcome('email-preferences', undefined, { 'X-Fabelpad-Parent': parent.id }, 'GET'); assert.equal(result.response.status, 403);
+    assert.equal(requests.some(entry => entry.path.endsWith('/get_parent_email_preferences')), false);
+  }
+  for (const invalid of [{ marketingConsent: true }, { marketingConsent: 'true', updatedAt: null }, { marketingConsent: true, updatedAt: 'bad-time' }]) {
+    await reset(); rpc = entry => entry.path.endsWith('/get_account_lifecycle') ? json(active) : json(invalid);
+    result = await outcome('email-preferences', undefined, { 'X-Fabelpad-Parent': parent.id }, 'GET'); assert.equal(result.response.status, 503);
+  }
+  for (const marketingConsent of [undefined, false, true, 'true']) {
+    await reset(); rpc = entry => { assert.equal(entry.path, `/rest/v1/rpc/complete_parent_onboarding${marketingConsent === undefined ? '' : '_with_marketing'}`); assert.equal('p_marketing_consent' in entry.body, marketingConsent !== undefined); assert.equal(entry.body.p_marketing_consent, marketingConsent); return json(active); };
+    result = await outcome('onboarding', { parentDeclaration: true, acceptTerms: true, termsVersion: TERMS_VERSION, privacyVersion: PRIVACY_VERSION, ...(marketingConsent === undefined ? {} : { marketingConsent }) });
+    assert.equal(result.response.status, marketingConsent === 'true' ? 422 : 200);
+    if (marketingConsent === 'true') assert.equal(requests.some(entry => entry.path.includes('/rpc/')), false);
+  }
+  await reset({ authenticated: false }); rpc = preferenceRpc; result = await outcome('email-preferences', undefined, { Authorization: `Bearer ${jwt}`, 'X-Fabelpad-Parent': parent.id }, 'GET'); assert.equal(result.response.status, 200); assert.equal(jar.size, 0);
   console.log(`Parent API checks passed: ${checks} isolated SDK scenarios, owner binding, declarations, version conflicts, consent, fresh authentication, deletion transactions and safe error/purge signals.`);
 } finally {
   globalThis.fetch = beforeFetch;

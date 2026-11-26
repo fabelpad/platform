@@ -4,13 +4,14 @@ import {randomUUID} from 'node:crypto';
 import {PGlite} from '@electric-sql/pglite';
 import {pgcrypto} from '@electric-sql/pglite/contrib/pgcrypto';
 import {installBillingFixture} from './database-fixture.mjs';
+import {currentLegalVersions} from '../legal-fixture.mjs';
 
 test('production Play readiness uses an isolated fresh-admin sandbox proof and exact frozen price',async t=>{
  const db=new PGlite({extensions:{pgcrypto}});const admin=randomUUID(),other=randomUUID();let revision,ticket;
  const owner=()=>db.exec('reset role');const rpc=async(name,args=[]) => (await db.query(`select public.${name}(${args.map((_,i)=>'$'+(i+1)).join(',')}) result`,args)).rows[0].result;
  async function identity(id,age=0){await owner();await db.query('insert into auth.sessions(id,user_id) values($1,$1) on conflict do nothing',[id]);await db.query("select set_config('request.jwt.claims',$1,false)",[JSON.stringify({sub:id,session_id:id,amr:[{method:'otp',timestamp:Date.now()/1000-age}]})]);await db.exec('set role authenticated');}
  async function role(name){await owner();await db.exec("select set_config('request.jwt.claims','{}',false)");await db.exec(`set role ${name}`);}
- async function parent(id,isAdmin=false){await owner();await db.query("insert into auth.users(id,email,email_confirmed_at) values($1,$2,clock_timestamp())",[id,'synthetic-'+id+'@example.test']);if(isAdmin)await db.query('insert into public.content_admins(user_id) values($1)',[id]);await identity(id);await rpc('complete_parent_onboarding',['2026-11-23.1','2026-11-23.1',true,true]);}
+ async function parent(id,isAdmin=false){await owner();await db.query("insert into auth.users(id,email,email_confirmed_at) values($1,$2,clock_timestamp())",[id,'synthetic-'+id+'@example.test']);if(isAdmin)await db.query('insert into public.content_admins(user_id) values($1)',[id]);const versions=await currentLegalVersions(db);await identity(id);await rpc('complete_parent_onboarding',[versions.terms,versions.privacy,true,true]);}
  async function snapshot(){await identity(admin);return rpc('get_billing_settings');}
  async function prepare(){await owner();await db.query("update private.billing_play_license_proofs set created_at=clock_timestamp()-interval '2 minutes' where actor_id=$1",[admin]);await identity(admin);return rpc('prepare_billing_play_license_proof',[revision]);}
  const evidence=()=>({sandbox:true,acknowledged:true,ownerBinding:ticket.obfuscatedAccountId,tokenHash:'a'.repeat(64),packageName:'nl.fabelpad.app',productId:'family.month',basePlanId:'month',period:'month',amountCents:499,currency:'EUR',verifiedAt:new Date().toISOString()});

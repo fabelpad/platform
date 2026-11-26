@@ -40,6 +40,7 @@ function watchRepeatedDeclarations(page: Page) {
 async function expectNoParentDeclarations(page: Page) {
   await expect(page.getByRole('checkbox', { name: /Ik ben 18 jaar/ })).toHaveCount(0);
   await expect(page.getByRole('checkbox', { name: /Ik ga akkoord/ })).toHaveCount(0);
+  await expect(page.getByRole('checkbox', { name: /Ja, ik ontvang graag promotionele e-mails/ })).toHaveCount(0);
 }
 
 test('one registration declaration and terms choice survive OTP verification and open the first JSONB family profile', async ({ page }) => {
@@ -50,7 +51,7 @@ test('one registration declaration and terms choice survive OTP verification and
   let snapshot: FamilySnapshot | null = null;
   await page.route('**/api/auth/otp', route => {
     otpRequests++;
-    expect(route.request().postDataJSON()).toEqual({ email: parent.email, intent: 'register', parentDeclaration: true, acceptTerms: true, ...documents });
+    expect(route.request().postDataJSON()).toEqual({ email: parent.email, intent: 'register', parentDeclaration: true, acceptTerms: true, marketingConsent: true, ...documents });
     return route.fulfill({ json: { ok: true, message: 'De synthetische inlogcode is aangevraagd.' } });
   });
   await page.route('**/api/auth/verify', route => {
@@ -72,7 +73,10 @@ test('one registration declaration and terms choice survive OTP verification and
 
   await page.goto('/inloggen');
   await page.getByRole('button', { name: 'Ouderaccount maken', exact: true }).click();
-  await expect(page.getByRole('checkbox')).toHaveCount(2);
+  await expect(page.getByRole('checkbox')).toHaveCount(3);
+  const marketing = page.getByRole('checkbox', { name: /Ja, ik ontvang graag promotionele e-mails/ });
+  await expect(marketing).not.toBeChecked();
+  await marketing.check();
   await page.getByRole('checkbox', { name: /Ik ben 18 jaar/ }).check();
   await page.getByRole('checkbox', { name: /Ik ga akkoord/ }).check();
   await page.getByRole('textbox', { name: 'Jouw e-mailadres' }).fill(parent.email);
@@ -96,6 +100,7 @@ test('one registration declaration and terms choice survive OTP verification and
   await expectNoParentDeclarations(page);
   expect({ otpRequests, verifications, consents, uploads, completionRequests, repeated: repeated.count() }).toEqual({ otpRequests: 1, verifications: 1, consents: 1, uploads: 1, completionRequests: 0, repeated: 0 });
   expect(snapshot).toHaveProperty('family.children.length', 1);
+  expect(JSON.stringify(snapshot)).not.toContain('marketingConsent');
 });
 
 test('an already active parent opening onboarding goes directly to the family without another declaration or completion', async ({ page }) => {

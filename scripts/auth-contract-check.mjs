@@ -65,8 +65,10 @@ try {
     const text = outgoing.method === 'GET' ? '' : await outgoing.text();
     const item = { method: outgoing.method, url, body: text ? JSON.parse(text) : null, authorization: outgoing.headers.get('authorization') };
     requests.push(item);
-    if (url.pathname === '/rest/v1/rpc/begin_parent_registration') {
+    if (['/rest/v1/rpc/begin_parent_registration', '/rest/v1/rpc/begin_parent_registration_with_marketing'].includes(url.pathname)) {
       assert.match(item.body.p_nonce_hash, /^[a-f0-9]{64}$/);
+      if (url.pathname.endsWith('_with_marketing')) assert.equal(typeof item.body.p_marketing_consent, 'boolean');
+      else assert.equal('p_marketing_consent' in item.body, false, 'Legacy clients never claim that a marketing checkbox was shown');
       assert.equal(item.body.p_parent_declaration, true); assert.equal(item.body.p_accept_terms, true);
       assert.equal(item.body.p_terms_version, TERMS_VERSION); assert.equal(item.body.p_privacy_version, PRIVACY_VERSION);
       if (item.body.p_channel === 'google') assert.equal(item.body.p_email_hash, null);
@@ -110,6 +112,33 @@ try {
   assert.equal(response.status, 200); checks++;
 
   const declarations = { intent: 'register', parentDeclaration: true, acceptTerms: true, termsVersion: TERMS_VERSION, privacyVersion: PRIVACY_VERSION };
+  for (const marketingConsent of ['true', 1, null, {}, []]) {
+    for (const action of ['otp', 'google']) {
+      reset(); response = await authMutation(request({ email: parent.email, ...declarations, marketingConsent }), action);
+      assert.equal(response.status, 422); assert.equal((await response.json()).error, 'invalid_marketing_consent'); assert.equal(requests.length, 0); checks++;
+    }
+  }
+  for (const marketingConsent of [undefined, false, true]) {
+    reset(); handler = item => { assert.equal(item.url.pathname, '/auth/v1/otp'); return json({}); };
+    response = await authMutation(request({ email: parent.email, ...declarations, ...(marketingConsent === undefined ? {} : { marketingConsent }) }), 'otp');
+    assert.equal(response.status, 200);
+    const proofRequest = requests.find(item => item.url.pathname.includes('/begin_parent_registration'));
+    assert.equal(proofRequest.url.pathname, `/rest/v1/rpc/begin_parent_registration${marketingConsent === undefined ? '' : '_with_marketing'}`);
+    assert.equal('p_marketing_consent' in proofRequest.body, marketingConsent !== undefined);
+    assert.equal(proofRequest.body.p_marketing_consent, marketingConsent);
+    assert.equal(requests.some(item => item.url.pathname.includes('set_parent_email_preferences')), false, 'Pre-auth registration only creates a proof, never a preference'); checks++;
+  }
+  process.env.FABELPAD_AUTH_GOOGLE_ENABLED = 'true';
+  for (const marketingConsent of [undefined, false, true]) {
+    reset();
+    response = await authMutation(request({ ...declarations, ...(marketingConsent === undefined ? {} : { marketingConsent }) }), 'google');
+    assert.equal(response.status, 200);
+    const proofRequest = requests.find(item => item.url.pathname.includes('/begin_parent_registration'));
+    assert.equal(proofRequest.url.pathname, `/rest/v1/rpc/begin_parent_registration${marketingConsent === undefined ? '' : '_with_marketing'}`);
+    assert.equal('p_marketing_consent' in proofRequest.body, marketingConsent !== undefined);
+    assert.equal(proofRequest.body.p_marketing_consent, marketingConsent); checks++;
+  }
+  process.env.FABELPAD_AUTH_GOOGLE_ENABLED = 'false';
   const proofCookie = () => [...jar].find(([name]) => name === '__Host-fabelpad-registration')?.[1];
   const ordinaryAuth = item => {
     if (item.url.pathname === '/auth/v1/otp') return json({});
@@ -118,6 +147,15 @@ try {
     if (item.url.pathname === '/auth/v1/token') { assert.equal(item.url.searchParams.get('grant_type'), 'pkce'); assert.ok(item.body.code_verifier); return json(session()); }
     throw new Error('Unexpected isolated registration provider request');
   };
+  // Resending an OTP uses the original declaration, including its opt-in.
+  reset(); lifecycleState = 'onboarding'; handler = ordinaryAuth;
+  response = await authMutation(request({ email: parent.email, ...declarations, marketingConsent: true }), 'otp');
+  assert.equal(response.status, 200); const consentProof = proofCookie();
+  const originalConsent = [...registrationProofs.values()][0];
+  assert.equal(originalConsent.p_marketing_consent, true);
+  response = await authMutation(request({ email: parent.email, intent: 'resume_registration', marketingConsent: false }), 'otp');
+  assert.equal(response.status, 200); assert.equal(proofCookie(), consentProof);
+  assert.equal(registrationProofs.size, 1); assert.equal([...registrationProofs.values()][0].p_marketing_consent, true); checks++;
   // The only cookie is an opaque capability; real declarations and exact
   // versions are stored server-side before Auth creates an identity.
   reset(); lifecycleState = 'onboarding'; handler = ordinaryAuth;
@@ -175,11 +213,11 @@ try {
   // session. Only a fresh successful PKCE callback applies that declaration.
   reset(); lifecycleState = 'onboarding'; handler = ordinaryAuth; process.env.FABELPAD_AUTH_GOOGLE_ENABLED = 'true';
   const preexistingOtp = await createSupabaseServerClient(); await preexistingOtp.auth.verifyOtp({ email: parent.email, token: '123456', type: 'email' });
-  response = await authMutation(request({ ...declarations, next: '/studio' }), 'google'); assert.equal(response.status, 200); const googleProof = proofCookie(); assert.match(googleProof, /^google\./);
+  response = await authMutation(request({ ...declarations, marketingConsent: true, next: '/studio' }), 'google'); assert.equal(response.status, 200); const googleProof = proofCookie(); assert.match(googleProof, /^google\./); assert.equal([...registrationProofs.values()][0].p_marketing_consent, true);
   response = await completeRegistration(request({}, { 'X-Fabelpad-Parent': parent.id })); assert.equal(response.status, 428); assert.equal((await response.json()).error, 'google_registration_required'); assert.equal(proofCookie(), googleProof); assert.equal(requests.some(item => item.url.pathname.endsWith('/complete_parent_registration')), false); checks++;
   response = await callback(new Request('https://fabelpad.example.test/auth/callback?error=access_denied')); assert.equal(response.status, 303); assert.equal(proofCookie(), googleProof); checks++;
-  const beginCount = requests.filter(item => item.url.pathname.endsWith('/begin_parent_registration')).length;
-  response = await authMutation(request({ intent: 'resume_registration', next: '/studio' }), 'google'); assert.equal(response.status, 200); assert.equal(proofCookie(), googleProof); assert.equal(requests.filter(item => item.url.pathname.endsWith('/begin_parent_registration')).length, beginCount); checks++;
+  const beginCount = requests.filter(item => item.url.pathname.endsWith('/begin_parent_registration_with_marketing')).length;
+  response = await authMutation(request({ intent: 'resume_registration', marketingConsent: false, next: '/studio' }), 'google'); assert.equal(response.status, 200); assert.equal(proofCookie(), googleProof); assert.equal(requests.filter(item => item.url.pathname.endsWith('/begin_parent_registration_with_marketing')).length, beginCount); assert.equal([...registrationProofs.values()][0].p_marketing_consent, true); checks++;
   response = await callback(new Request('https://fabelpad.example.test/auth/callback?code=synthetic-google-code&next=/studio')); assert.equal(new URL(response.headers.get('location')).pathname, '/studio'); assert.equal(lifecycleState, 'active'); assert.equal(proofCookie(), undefined); checks++;
   process.env.FABELPAD_AUTH_GOOGLE_ENABLED = 'false'; lifecycleState = 'active';
 

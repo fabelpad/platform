@@ -14,11 +14,14 @@ function options() { return { httpOnly: true, sameSite: 'lax' as const, secure: 
 
 /** The browser only holds an opaque capability. Declarations live in the DB,
  * not in user_metadata or an unsigned cookie containing claimed consent. */
-export async function beginParentRegistration(client: SupabaseClient, channel: RegistrationChannel, email?: string) {
+export async function beginParentRegistration(client: SupabaseClient, channel: RegistrationChannel, email?: string, marketingConsent?: boolean) {
   const nonce = randomBytes(32).toString('base64url');
-  const { data, error } = await client.rpc('begin_parent_registration', {
+  // Older clients did not display a marketing choice. Keep their proof free of
+  // checkbox wording; only an explicit boolean records the optional declaration.
+  const { data, error } = await client.rpc(marketingConsent === undefined ? 'begin_parent_registration' : 'begin_parent_registration_with_marketing', {
     p_nonce_hash: digest(nonce), p_channel: channel, p_email_hash: channel === 'otp' && email ? digest(email) : null,
     p_terms_version: TERMS_VERSION, p_privacy_version: PRIVACY_VERSION, p_parent_declaration: true, p_accept_terms: true,
+    ...(marketingConsent === undefined ? {} : { p_marketing_consent: marketingConsent }),
   });
   if (error) {
     if (error.message === 'registration_rate_limited') throw new RequestError(429, 'registration_rate_limited', 'Wacht even voordat je een nieuwe registratie start.');

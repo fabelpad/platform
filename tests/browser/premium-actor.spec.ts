@@ -2,7 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 
 const a = { id: '00000000-0000-4000-8000-000000000801', email: 'a@example.test', displayName: 'Beheerder A' };
 const b = { id: '00000000-0000-4000-8000-000000000802', email: 'b@example.test', displayName: 'Beheerder B' };
-const lifecycle = { state: 'active', termsVersion: '2026-11-23.1', privacyVersion: '2026-11-23.1', acceptedTermsVersion: '2026-11-23.1', shownPrivacyVersion: '2026-11-23.1', consents: [] };
+const lifecycle = { state: 'active', termsVersion: '2026-11-23.1', privacyVersion: '2026-11-24', acceptedTermsVersion: '2026-11-23.1', shownPrivacyVersion: '2026-11-23.1', consents: [] };
 const file = { name: 'synthetic-private-story.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify({ redactional: 'Synthetic private story content' })) };
 async function session(page: Page) { const state = { parent: a }; await page.route('**/api/auth/session', route => route.fulfill({ json: { configured: true, parent: state.parent, admin: true, lifecycle } })); return state; }
 

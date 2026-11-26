@@ -21,18 +21,137 @@ test('OTP and Google registration require separate guardian and terms choices, w
   const googleBox = await google.boundingBox();
   expect(googleBox!.y).toBeGreaterThan(otpBox!.y);
   await page.getByRole('button', { name: 'Ouderaccount maken', exact: true }).click();
-  await expect(page.getByRole('checkbox')).toHaveCount(2);
+  await expect(page.getByRole('checkbox')).toHaveCount(3);
+  const marketing = page.getByRole('checkbox', { name: /Ja, ik ontvang graag promotionele e-mails/ });
+  await expect(marketing).not.toBeChecked();
+  await expect(marketing).not.toHaveAttribute('required');
   await expect(google).toBeDisabled();
+  await marketing.check();
+  await expect(google).toBeDisabled();
+  await marketing.uncheck();
   await page.getByRole('checkbox', { name: /Ik ben 18 jaar/ }).check();
   await expect(google).toBeDisabled();
   await page.getByRole('checkbox', { name: /Ik ga akkoord/ }).check();
   await expect(google).toBeEnabled();
   await page.getByRole('textbox', { name: 'Jouw e-mailadres' }).fill(parent.email);
   await page.getByRole('button', { name: 'Stuur mij een inlogcode' }).click();
-  expect(request).toEqual({ email: parent.email, intent: 'register', parentDeclaration: true, acceptTerms: true, ...current });
+  expect(request).toEqual({ email: parent.email, intent: 'register', parentDeclaration: true, acceptTerms: true, marketingConsent: false, ...current });
   const code = page.getByRole('textbox', { name: '6-cijferige code uit je e-mail' });
   await expect(code).toHaveAttribute('maxlength', '6');
   await expect(code).toHaveAttribute('pattern', '[0-9]{6}');
+});
+
+for (const { channel, consent } of [
+  { channel: 'otp', consent: true },
+  { channel: 'google', consent: false },
+  { channel: 'google', consent: true },
+] as const) test(`${channel} registration sends the separately chosen marketing consent ${consent}`, async ({ page }) => {
+  await page.route('**/api/auth/session', route => route.fulfill({ json: { configured: true, parent: null, admin: false, providers: { email: true, google: true } } }));
+  await page.route('**/api/legal/documents', route => route.fulfill({ json: current }));
+  let submitted: unknown;
+  await page.route(`**/api/auth/${channel}`, route => {
+    submitted = route.request().postDataJSON();
+    return route.fulfill({ json: channel === 'google' ? { url: '/inloggen?intent=register&mock=google' } : { ok: true } });
+  });
+  await page.goto('/inloggen?intent=register');
+  const marketing = page.getByRole('checkbox', { name: /Ja, ik ontvang graag promotionele e-mails/ });
+  await expect(marketing).not.toBeChecked();
+  await expect(marketing).not.toHaveAttribute('required');
+  await page.getByRole('checkbox', { name: /Ik ben 18 jaar/ }).check();
+  await page.getByRole('checkbox', { name: /Ik ga akkoord/ }).check();
+  const action = page.getByRole('button', { name: channel === 'google' ? 'Verder met Google' : 'Stuur mij een inlogcode', exact: true });
+  await expect(action).toBeEnabled();
+  if (consent) await marketing.check();
+  if (channel === 'otp') await page.getByRole('textbox', { name: 'Jouw e-mailadres' }).fill(parent.email);
+  await action.click();
+  await expect.poll(() => submitted).toEqual({ intent: 'register', parentDeclaration: true, acceptTerms: true, marketingConsent: consent, ...current, ...(channel === 'otp' ? { email: parent.email } : { next: '/gezin' }) });
+});
+
+test('returning to another registration address clears the optional marketing choice', async ({ page }) => {
+  await page.route('**/api/auth/session', route => route.fulfill({ json: { configured: true, parent: null, admin: false, providers: { email: true, google: false } } }));
+  await page.route('**/api/legal/documents', route => route.fulfill({ json: current }));
+  const requests: Record<string, unknown>[] = [];
+  await page.route('**/api/auth/otp', route => { requests.push(route.request().postDataJSON()); return route.fulfill({ json: { ok: true } }); });
+  await page.goto('/inloggen?intent=register');
+  await page.getByRole('checkbox', { name: /Ik ben 18 jaar/ }).check();
+  await page.getByRole('checkbox', { name: /Ik ga akkoord/ }).check();
+  await page.getByRole('checkbox', { name: /Ja, ik ontvang graag promotionele e-mails/ }).check();
+  await page.getByRole('textbox', { name: 'Jouw e-mailadres' }).fill(parent.email);
+  await page.getByRole('button', { name: 'Stuur mij een inlogcode', exact: true }).click();
+  await page.getByRole('button', { name: 'Ander adres of nieuwe code', exact: true }).click();
+  await expect(page.getByRole('checkbox', { name: /Ja, ik ontvang graag promotionele e-mails/ })).not.toBeChecked();
+  await page.getByRole('textbox', { name: 'Jouw e-mailadres' }).fill('other-parent@example.test');
+  await page.getByRole('button', { name: 'Stuur mij een inlogcode', exact: true }).click();
+  expect(requests.map(body => ({ email: body.email, marketingConsent: body.marketingConsent }))).toEqual([{ email: parent.email, marketingConsent: true }, { email: 'other-parent@example.test', marketingConsent: false }]);
+});
+
+for (const channel of ['otp', 'google'] as const) test(`${channel} registration resumption does not replace the server-stored marketing choice`, async ({ page }) => {
+  await page.route('**/api/auth/session', route => route.fulfill({ json: { configured: true, parent: null, admin: false, providers: { email: true, google: true }, registration: { channel } } }));
+  await page.route('**/api/legal/documents', route => route.fulfill({ json: current }));
+  let submitted: unknown;
+  await page.route(`**/api/auth/${channel}`, route => { submitted = route.request().postDataJSON(); return route.fulfill({ json: channel === 'google' ? { url: '/inloggen?mock=google' } : { ok: true } }); });
+  await page.goto('/inloggen?intent=register');
+  await page.getByRole('checkbox', { name: /Ja, ik ontvang graag promotionele e-mails/ }).check();
+  await page.getByRole('button', { name: channel === 'otp' ? 'Registratie hervatten met e-mailcode' : 'Registratie hervatten met Google', exact: true }).click();
+  if (channel === 'otp') {
+    await expect(page.getByRole('checkbox', { name: /Ja, ik ontvang graag promotionele e-mails/ })).toHaveCount(0);
+    await page.getByRole('textbox', { name: 'Jouw e-mailadres' }).fill(parent.email);
+    await page.getByRole('button', { name: 'Stuur mij een inlogcode', exact: true }).click();
+  }
+  await expect.poll(() => submitted).toEqual({ intent: 'resume_registration', ...(channel === 'otp' ? { email: parent.email } : { next: '/gezin' }) });
+});
+
+test('a registration failure resets marketing consent and ordinary login does not submit it', async ({ page }) => {
+  await page.route('**/api/auth/session', route => route.fulfill({ json: { configured: true, parent: null, admin: false, providers: { email: true, google: true } } }));
+  await page.route('**/api/legal/documents', route => route.fulfill({ json: current }));
+  const requests: Record<string, unknown>[] = [];
+  await page.route('**/api/auth/otp', route => { requests.push(route.request().postDataJSON()); return route.fulfill({ status: requests.length === 1 ? 503 : 200, json: requests.length === 1 ? { message: 'Probeer opnieuw.' } : { ok: true } }); });
+  await page.goto('/inloggen?intent=register');
+  for (const name of [/Ik ben 18 jaar/, /Ik ga akkoord/, /Ja, ik ontvang graag promotionele e-mails/]) await page.getByRole('checkbox', { name }).check();
+  await page.getByRole('textbox', { name: 'Jouw e-mailadres' }).fill(parent.email);
+  await page.getByRole('button', { name: 'Stuur mij een inlogcode', exact: true }).click();
+  await expect(page.getByText('Probeer opnieuw.', { exact: true })).toBeVisible();
+  for (const name of [/Ik ben 18 jaar/, /Ik ga akkoord/, /Ja, ik ontvang graag promotionele e-mails/]) await expect(page.getByRole('checkbox', { name })).not.toBeChecked();
+  await page.getByRole('button', { name: 'Inloggen', exact: true }).click();
+  await page.getByRole('button', { name: 'Stuur mij een inlogcode', exact: true }).click();
+  expect(requests[1]).toEqual({ email: parent.email, intent: 'login' });
+});
+
+for (const consent of [false, true]) test(`fallback onboarding preserves optional marketing consent ${consent} independently of family consent`, async ({ page }) => {
+  const fresh = { ...active, state: 'onboarding', acceptedTermsVersion: null, shownPrivacyVersion: null };
+  await session(page, fresh);
+  await page.route('**/api/auth/registration/complete', route => route.fulfill({ json: { completed: false, lifecycle: fresh } }));
+  let submitted: unknown;
+  await page.route('**/api/parent/onboarding', route => { expect(route.request().headers()['x-fabelpad-parent']).toBe(parent.id); submitted = route.request().postDataJSON(); return route.fulfill({ status: 503, json: { message: 'Probeer later opnieuw.' } }); });
+  let childMutations = 0;
+  await page.route('**/api/parent/consent', route => { childMutations++; return route.fulfill({ status: 500, json: {} }); });
+  await page.goto('/onboarding');
+  const marketing = page.getByRole('checkbox', { name: /Ja, ik ontvang graag promotionele e-mails/ });
+  await expect(marketing).not.toBeChecked();
+  await expect(marketing).not.toHaveAttribute('required');
+  await page.getByRole('checkbox', { name: /Ik ben 18 jaar/ }).check();
+  await page.getByRole('checkbox', { name: /Ik ga akkoord/ }).check();
+  const finish = page.getByRole('button', { name: 'Ouderaccount afronden', exact: true });
+  await expect(finish).toBeEnabled();
+  if (consent) await marketing.check();
+  await finish.click();
+  await expect.poll(() => submitted).toEqual({ parentDeclaration: true, acceptTerms: true, marketingConsent: consent, ...current });
+  expect(childMutations).toBe(0);
+});
+
+test('accepting changed terms for an active parent does not replace an existing marketing preference', async ({ page }) => {
+  const outdated = { ...active, acceptedTermsVersion: 'older-terms' };
+  await session(page, outdated);
+  await page.route('**/api/auth/registration/complete', route => route.fulfill({ json: { completed: false, lifecycle: outdated } }));
+  let submitted: unknown;
+  await page.route('**/api/parent/onboarding', route => { submitted = route.request().postDataJSON(); return route.fulfill({ status: 503, json: { message: 'Probeer later opnieuw.' } }); });
+  await page.goto('/onboarding');
+  await expect(page.getByRole('checkbox', { name: /Ik ben 18 jaar/ })).toBeVisible();
+  await expect(page.getByRole('checkbox', { name: /Ja, ik ontvang graag promotionele e-mails/ })).toHaveCount(0);
+  await page.getByRole('checkbox', { name: /Ik ben 18 jaar/ }).check();
+  await page.getByRole('checkbox', { name: /Ik ga akkoord/ }).check();
+  await page.getByRole('button', { name: 'Ouderaccount afronden', exact: true }).click();
+  await expect.poll(() => submitted).toEqual({ parentDeclaration: true, acceptTerms: true, ...current });
 });
 
 test('onboarding uses current server document versions and leaves family APIs untouched', async ({ page }) => {
@@ -47,7 +166,8 @@ test('onboarding uses current server document versions and leaves family APIs un
   await page.goto('/onboarding');
   const finish = page.getByRole('button', { name: 'Ouderaccount afronden' });
   await expect(finish).toBeDisabled();
-  await expect(page.getByRole('checkbox')).toHaveCount(2);
+  await expect(page.getByRole('checkbox')).toHaveCount(3);
+  await expect(page.getByRole('checkbox', { name: /Ja, ik ontvang graag promotionele e-mails/ })).not.toBeChecked();
   await page.getByRole('checkbox', { name: /Ik ben 18 jaar/ }).check();
   await expect(finish).toBeDisabled();
   await page.getByRole('checkbox', { name: /Ik ga akkoord/ }).check();
@@ -65,10 +185,12 @@ test('a document version change clears acceptance and shows the new version befo
   await page.route('**/api/auth/registration/complete', route => route.fulfill({ json: { completed: false, lifecycle: fresh } }));
   await page.route('**/api/parent/onboarding', route => { status = { ...fresh, termsVersion: '2026-11-23' }; return route.fulfill({ status: 409, json: { error: 'terms_changed', message: 'De versie is bijgewerkt.' } }); });
   await page.goto('/onboarding');
+  await page.getByRole('checkbox', { name: /Ja, ik ontvang graag promotionele e-mails/ }).check();
   await page.getByRole('checkbox', { name: /Ik ben 18 jaar/ }).check();
   await page.getByRole('checkbox', { name: /Ik ga akkoord/ }).check();
   await page.getByRole('button', { name: 'Ouderaccount afronden' }).click();
   await expect(page.getByRole('checkbox', { name: /Ik ga akkoord/ })).not.toBeChecked();
+  await expect(page.getByRole('checkbox', { name: /Ja, ik ontvang graag promotionele e-mails/ })).not.toBeChecked();
   await expect(page.getByText('De documenten zijn bijgewerkt.', { exact: false })).toBeVisible();
   await expect(page.getByRole('link', { name: 'algemene voorwaarden van Fabelpad' })).toHaveAttribute('href', '/algemene-voorwaarden?versie=2026-11-23');
 });
