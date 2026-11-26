@@ -1,0 +1,1 @@
+{"compilerOptions":{"lib":["deno.window","dom","dom.iterable","esnext"]},"imports":{"pngjs":"npm:pngjs@7.0.0","jpeg-js":"npm:jpeg-js@0.4.4","markdown-it":"npm:markdown-it@15.0.3","markdown-it/":"npm:markdown-it@15.0.3/"}}

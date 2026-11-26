@@ -20,16 +20,25 @@
     "check:billing": "node --test scripts/billing/*.test.mjs && node scripts/billing/database-check.mjs && node scripts/billing/legal-version-db-check.mjs",
     "check:native": "node scripts/native-runtime-check.mjs && node scripts/native-narration-check.mjs",
     "check:narration": "node --test scripts/narration/*.test.mjs",
-    "check:deploy": "node --test scripts/deploy/*.test.mjs && python3 -B scripts/deploy/install-host.test.py"
+    "check:deploy": "node --test scripts/deploy/*.test.mjs && python3 -B scripts/deploy/install-host.test.py",
+    "check:blog": "node --test --test-concurrency=1 scripts/blog/*.test.mjs"
   },
   "dependencies": {
     "@fontsource-variable/fredoka": "5.2.8",
     "@fontsource-variable/nunito": "5.2.7",
     "@supabase/ssr": "0.12.7",
     "@supabase/supabase-js": "2.118.0",
+    "@tiptap/extension-highlight": "3.35.0",
+    "@tiptap/extension-table": "3.35.0",
+    "@tiptap/pm": "3.35.0",
+    "@tiptap/react": "3.35.0",
+    "@tiptap/starter-kit": "3.35.0",
+    "jpeg-js": "0.4.4",
     "lucide-react": "1.61.0",
+    "markdown-it": "15.0.3",
     "motion": "14.6.0",
     "next": "16.3.4",
+    "pngjs": "7.0.0",
     "react": "19.2.6",
     "react-dom": "19.2.6"
   },
@@ -37,6 +46,7 @@
     "@electric-sql/pglite": "0.5.15",
     "@playwright/test": "1.64.1",
     "@types/node": "22.19.19",
+    "@types/pngjs": "6.0.5",
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
     "typescript": "5.9.3"

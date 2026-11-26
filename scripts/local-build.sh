@@ -18,6 +18,7 @@ pnpm check:backend
 pnpm check:email
 pnpm check:billing
 pnpm check:narration
+pnpm check:blog
 pnpm check:deploy
 pnpm check:native
 pnpm build
